@@ -84,9 +84,9 @@ class App {
         },
       },
       info: {
-        description: 'Generated with `routing-controllers-openapi`',
-        title: 'A sample API',
-        version: '1.0.0',
+        description: 'api endpoints for psnext.info',
+        title: 'PSNext API',
+        version: '0.2.0',
       },
     });
 
