@@ -10,8 +10,11 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- task: NodeTool@0
+  inputs:
+    versionSpec: '18.x'
+- script: npm i -g nx
+  displayName: 'install nx'
 
 - script: |
     echo Add other tasks to build, test, and deploy your project.
