@@ -15,6 +15,7 @@ steps:
     versionSpec: '18.x'
 - script: |
     npm i -g nx
+    cd s
     nx run api:build
   displayName: 'build'
 
