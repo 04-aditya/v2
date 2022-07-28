@@ -1,13 +1,9 @@
 FROM node:18-alpine
 RUN apk add dumb-init
 USER node
-COPY ./ /usr/psnext
-WORKDIR /usr/psnext
-RUN npm i --leagcy-peer-deps
-RUN nx build api
-# COPY --chown=node:node dist/packages/api /usr/apps/mserver
-# COPY --chown=node:node node_modules /usr/apps/mserver/node_modules
-WORKDIR /usr/psnext/dist/api
+COPY --chown=node:node dist/packages/api /usr/psnextv2/api
+COPY --chown=node:node node_modules /usr/psnextv2/api/node_modules
+WORKDIR /usr/psnextv2/api
 
 ENV NODE_ENV production
 ENV PORT=8080
