@@ -13,8 +13,10 @@ steps:
 - task: NodeTool@0
   inputs:
     versionSpec: '18.x'
-- script: npm i -g nx
-  displayName: 'install nx'
+- script: |
+    npm i -g nx
+    nx run api:build
+  displayName: 'build'
 
 - script: |
     echo Add other tasks to build, test, and deploy your project.
