@@ -16,9 +16,13 @@ steps:
 - script: |
     npm i -g nx
     npm i --legacy-peer-deps
+  displayName: 'install modules'
+- script: |
     nx run api:build
+  displayName: 'build apps'
+- script: |
     nx run api:build-docker
-  displayName: 'build'
+  displayName: 'build images'
 
 # - script: |
 #     pwd
