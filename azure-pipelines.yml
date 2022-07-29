@@ -26,8 +26,7 @@ steps:
 - task: Kubernetes@1
   inputs:
     connectionType: 'Kubernetes Service Connection'
-    kubernetesServiceEndpoint: 'psnextdev-psdppsnextaksdev-psnext-dev-1659012392966'
-    useClusterAdmin: true
+    kubernetesServiceEndpoint: 'psnextv2-psdppsnextaksdev-main-1659074506341'
     namespace: 'main'
     command: 'get'
     arguments: 'pods'
