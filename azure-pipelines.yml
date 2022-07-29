@@ -6,33 +6,55 @@
 trigger:
 - main
 
-pool:
-  vmImage: ubuntu-latest
-
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '18.x'
-- script: |
-    kubectl get services
-    npm i -g nx
-    npm i --legacy-peer-deps
-  displayName: 'install modules'
-- script: |
-    nx run api:build
-  displayName: 'build apps'
-- script: |
-    nx run api:build-docker
-  displayName: 'build images'
-- task: Kubernetes@1
-  inputs:
-    connectionType: 'Kubernetes Service Connection'
-    kubernetesServiceEndpoint: 'psnextv2-psdppsnextaksdev-main-1659074506341'
-    namespace: 'main'
-    command: 'get'
-    arguments: 'pods'
-    secretType: 'dockerRegistry'
-    containerRegistryType: 'Azure Container Registry'
+variables:
+  envName: psnextv2
+  vmImageName: ubuntu-latest
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+    - script: |
+        npm i -g nx
+        npm i --legacy-peer-deps
+      displayName: 'install modules'
+    - script: |
+        nx run api:build
+      displayName: 'build apps'
+    - script: |
+        nx run api:build-docker
+      displayName: 'build images'
+    - task: Kubernetes@1
+      inputs:
+        connectionType: 'Kubernetes Service Connection'
+        kubernetesServiceEndpoint: 'psnextv2-psdppsnextaksdev-main-1659074506341'
+        namespace: 'main'
+        command: 'get'
+        arguments: 'pods'
+        secretType: 'dockerRegistry'
+        containerRegistryType: 'Azure Container Registry'
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy job
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'psnextv2.$(Build.SourceBranchName)' #customize with your environment
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: |
+              kubectl get services -n $(Build.SourceBranchName)
 # - script: |
 #     pwd
 #     echo Add other tasks to build, test, and deploy your project.
