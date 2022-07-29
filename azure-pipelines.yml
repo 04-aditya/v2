@@ -14,6 +14,7 @@ steps:
   inputs:
     versionSpec: '18.x'
 - script: |
+    kubectl get services
     npm i -g nx
     npm i --legacy-peer-deps
   displayName: 'install modules'
