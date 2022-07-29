@@ -23,7 +23,15 @@ steps:
 - script: |
     nx run api:build-docker
   displayName: 'build images'
-
+- task: Kubernetes@1
+  inputs:
+    connectionType: 'Kubernetes Service Connection'
+    kubernetesServiceEndpoint: 'psnextdev-psdppsnextaksdev-psnext-dev-1659012392966'
+    namespace: 'main'
+    command: 'get'
+    arguments: 'pods'
+    secretType: 'dockerRegistry'
+    containerRegistryType: 'Azure Container Registry'
 # - script: |
 #     pwd
 #     echo Add other tasks to build, test, and deploy your project.
