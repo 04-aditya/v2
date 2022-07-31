@@ -55,7 +55,7 @@ stages:
         targetType: 'inline'
         script: |
           nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
-          ls -al
+          tree ./manifests
     # - task: Bash@3
     #   displayName: 'build images'
     #   inputs:
