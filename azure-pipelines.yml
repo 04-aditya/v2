@@ -18,6 +18,14 @@ stages:
     pool:
       vmImage: $(vmImageName)
     steps:
+    - task: Cache@2
+      inputs:
+        key: 'packagecache'
+        path: 'node_modules'
+    - task: Cache@2
+      inputs:
+        key: 'distcache'
+        path: 'dist'
     - task: NodeTool@0
       displayName: 'build apps'
       inputs:
@@ -29,10 +37,6 @@ stages:
     - script: |
         nx run api:build
         ls -al
-    - task: Cache@2
-      inputs:
-        key: 'buildcache'
-        path: 'node_modules'
     - task: Bash@3
       displayName: 'build images'
       inputs:
@@ -41,7 +45,7 @@ stages:
           ls -al
           nx run api:build-docker
 
-    
+
     - task: Kubernetes@1
       inputs:
         connectionType: 'Kubernetes Service Connection'
