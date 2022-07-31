@@ -63,10 +63,13 @@
           "find ./packages/api/k8s -name kustomization.yaml -type f -exec sed -i 's/REGISTRY/{args.registry}/g' {} \\;",
           "find ./packages/api/k8s -name kustomization.yaml -type f -exec sed -i 's/TAG/{args.sha}/g' {} \\;",
           {
-            "command": "kubectl kustomize ./packages/api/k8s",
+            "command": "cp -r ./packages/api/k8s ./manifests/api",
             "forwardAllArgs": false
           },
-          "cp -r ./packages/api/k8s ./manifests/api"
+          {
+            "command": "kubectl kustomize ./manifests/api",
+            "forwardAllArgs": false
+          }
         ],
         "parallel": false,
         "forwardAllArgs": false
