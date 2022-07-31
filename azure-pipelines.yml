@@ -48,8 +48,14 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          echo pushing to registry $(containerRegistry)
           nx run api:build-docker --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+    - task: Bash@3
+      displayName: 'build k8s manifests'
+      inputs:
+        targetType: 'inline'
+        script: |
+          nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+          ls -al
     # - task: Bash@3
     #   displayName: 'build images'
     #   inputs:

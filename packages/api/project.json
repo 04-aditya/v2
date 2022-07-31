@@ -54,7 +54,7 @@
         "forwardAllArgs": false
       }
     },
-    "k8s-deploy": {
+    "build-k8s-manifests": {
       "executor": "@nrwl/workspace:run-commands",
       "options": {
         "commands": [
@@ -66,7 +66,7 @@
             "command": "kubectl kustomize ./packages/api/k8s",
             "forwardAllArgs": false
           },
-          "kubectl apply -k ./packages/api/k8s -n {args.branch}"
+          "cp -r ./packages/api/k8s ./manifests/api"
         ],
         "parallel": false,
         "forwardAllArgs": false

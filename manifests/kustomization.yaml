@@ -1,0 +1,4 @@
+commonLabels:
+  program: psnextv2
+bases:
+- ./api
