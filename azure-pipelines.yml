@@ -19,10 +19,12 @@ stages:
       vmImage: $(vmImageName)
     steps:
     - task: Cache@2
+      displayName: Cache 'node_modules' folder
       inputs:
         key: 'packagecache'
         path: 'node_modules'
     - task: Cache@2
+      displayName: Cache 'dist' folder
       inputs:
         key: 'distcache'
         path: 'dist'
@@ -36,13 +38,11 @@ stages:
       displayName: 'install modules'
     - script: |
         nx run api:build
-        ls -al
     - task: Bash@3
       displayName: 'build images'
       inputs:
         targetType: 'inline'
         script: |
-          ls -al
           nx run api:build-docker
 
 
