@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dep
+  labels:
+    apptype: psniapp
+spec:
+  selector:
+    matchLabels:
+      apptype: psniapp
+  template:
+    metadata:
+      labels:
+        apptype: psniapp
+    spec:
+      containers:
+      - name: psni-app
+        image: app-image
+        ports:
+          - containerPort: 8080
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "500m"
+        envFrom:
+          - secretRef:
+              name: envsecrets
+        env:
+        - name: PORT
+          value: '8080'
+        - name: REDIS_PORT
+          value: '6379'
+        - name: REDIS_HOST
+          value: 'redis-master'
+        - name: REDIS_DB
+          value: '0'
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis
+              key: redis-password
+
+

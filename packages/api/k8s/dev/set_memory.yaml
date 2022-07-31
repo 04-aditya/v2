@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dep
+spec:
+  template:
+    spec:
+      containers:
+      - name: psni-api-app
+        resources:
+          requests:
+            memory: 1Gi
+          limits:
+            memory: 2Gi
+

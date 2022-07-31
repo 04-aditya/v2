@@ -1,0 +1,10 @@
+namePrefix: psni-api-
+commonLabels:
+  app: api
+  ENV: BRANCH
+bases:
+- ./BRANCH
+images:
+- name: app-image
+  newName: REGISTRY/psnextv2-api-BRANCH
+  newTag: TAG

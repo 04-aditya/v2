@@ -45,10 +45,28 @@
             "command": "docker build -f packages/api/Dockerfile -t psnextv2_api .",
             "forwardAllArgs": false
           },
-          "docker tag psnextv2_api {args.registry}/psnextv2-{args.branch}-api:{args.sha}",
-          "docker tag psnextv2_api {args.registry}/psnextv2-{args.branch}-api:latest",
-          "docker push {args.registry}/psnextv2-{args.branch}-api:{args.sha}",
-          "docker push {args.registry}/psnextv2-{args.branch}-api:latest"
+          "docker tag psnextv2_api {args.registry}/psnextv2-api-{args.branch}pi:{args.sha}",
+          "docker tag psnextv2_api {args.registry}/psnextv2-api-{args.branch}:latest",
+          "docker push {args.registry}/psnextv2-api-{args.branch}:{args.sha}",
+          "docker push {args.registry}/psnextv2-api-{args.branch}:latest"
+        ],
+        "parallel": false,
+        "forwardAllArgs": false
+      }
+    },
+    "k8s-deploy": {
+      "executor": "@nrwl/workspace:run-commands",
+      "options": {
+        "commands": [
+          "find ./packages/api/k8s -name kustomization.yaml -type f -exec sed -i 's/BRANCH/{args.branch}/g' {} \\;",
+          "find ./packages/api/k8s -name kustomization.yaml -type f -exec sed -i 's/PROJECTID/{args.projectid}/g' {} \\;",
+          "find ./packages/api/k8s -name kustomization.yaml -type f -exec sed -i 's/REGISTRY/{args.registry}/g' {} \\;",
+          "find ./packages/api/k8s -name kustomization.yaml -type f -exec sed -i 's/TAG/{args.sha}/g' {} \\;",
+          {
+            "command": "kubectl kustomize ./packages/api/k8s",
+            "forwardAllArgs": false
+          },
+          "kubectl apply -k ./packages/api/k8s -n {args.branch}"
         ],
         "parallel": false,
         "forwardAllArgs": false

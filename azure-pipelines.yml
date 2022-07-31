@@ -9,7 +9,7 @@ trigger:
 variables:
   envName: psnextv2
   vmImageName: ubuntu-latest
-  containerRegistry: rravuri
+  containerRegistry: $[dockerhub.username]
 stages:
 - stage: Build
   displayName: Build stage
@@ -49,6 +49,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
+          echo pushing to registry $(containerRegistry)
           nx run api:build-docker --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
     # - task: Bash@3
     #   displayName: 'build images'
