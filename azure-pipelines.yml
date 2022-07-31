@@ -78,20 +78,20 @@ stages:
           - task: DownloadPipelineArtifact@2
             inputs:
               artifactName: 'manifests'
-              downloadPath: '$(System.ArtifactsDirectory)/manifests'    
+              downloadPath: '$(System.ArtifactsDirectory)/manifests'
           - task: Bash@3
-            displayName: 'manifests'
+            displayName: 'List manifests'
             inputs:
               targetType: 'inline'
               script: |
-                tree ./manifests
+                tree $(System.ArtifactsDirectory)/manifests
           - task: Kubernetes@1
             inputs:
               connectionType: 'Kubernetes Service Connection'
               kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
               namespace: '$(Build.SourceBranchName)'
               command: 'apply'
-              arguments: '-k ./manifests -n $(Build.SourceBranchName)'
+              arguments: '-k $(System.ArtifactsDirectory)/manifests -n $(Build.SourceBranchName)'
               secretType: 'dockerRegistry'
               containerRegistryType: 'Azure Container Registry'
 # - script: |
