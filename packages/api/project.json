@@ -45,7 +45,7 @@
             "command": "docker build -f packages/api/Dockerfile -t psnextv2_api .",
             "forwardAllArgs": false
           },
-          "docker tag psnextv2_api {args.registry}/psnextv2-api-{args.branch}pi:{args.sha}",
+          "docker tag psnextv2_api {args.registry}/psnextv2-api-{args.branch}:{args.sha}",
           "docker tag psnextv2_api {args.registry}/psnextv2-api-{args.branch}:latest",
           "docker push {args.registry}/psnextv2-api-{args.branch}:{args.sha}",
           "docker push {args.registry}/psnextv2-api-{args.branch}:latest"
