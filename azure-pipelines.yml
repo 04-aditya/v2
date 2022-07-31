@@ -19,6 +19,7 @@ stages:
       vmImage: $(vmImageName)
     steps:
     - task: NodeTool@0
+      displayName: 'build apps'
       inputs:
         versionSpec: '18.x'
     - script: |
@@ -27,10 +28,18 @@ stages:
       displayName: 'install modules'
     - script: |
         nx run api:build
-      displayName: 'build apps'
-    - script: |
-        nx run api:build-docker
+    - task: Cache@2
+      inputs:
+        key: 'buildcache'
+        path: 'node_modules'
+    - task: Bash@3
       displayName: 'build images'
+      inputs:
+        targetType: 'inline'
+        script: |
+          nx run api:build-docker
+
+    
     - task: Kubernetes@1
       inputs:
         connectionType: 'Kubernetes Service Connection'
@@ -39,7 +48,9 @@ stages:
         command: 'get'
         arguments: 'pods'
         secretType: 'dockerRegistry'
-        containerRegistryType: 'Azure Container Registry'
+        containerRegistryType: 'Container Registry'
+        dockerRegistryEndpoint: 'rrdockerconn'
+        secretName: 'dockersecrets'
 - stage: Deploy
   displayName: Deploy stage
   dependsOn: Build
