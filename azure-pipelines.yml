@@ -48,7 +48,7 @@ stages:
     displayName: Deploy job
     pool:
       vmImage: $(vmImageName)
-    environment: 'psnextv2.$(Build.SourceBranchName)' #customize with your environment
+    environment: 'psnextv2.main' #customize with your environment
     strategy:
       runOnce:
         deploy:
