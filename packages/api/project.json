@@ -67,7 +67,7 @@
             "forwardAllArgs": false
           },
           {
-            "command": "kubectl kustomize ./manifests/api",
+            "command": "kubectl kustomize ./manifests/api/k8s",
             "forwardAllArgs": false
           }
         ],
