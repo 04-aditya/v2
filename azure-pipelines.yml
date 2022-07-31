@@ -35,59 +35,65 @@ stages:
     - script: |
         npm i -g nx
         npm i --legacy-peer-deps
-      displayName: 'install modules'
+      displayName: 'Install modules'
     - script: |
         nx run api:build
+      displayName: 'Build affected'
     - task: Docker@2
       displayName: Login to DockerHub
       inputs:
         command: login
         containerRegistry: 'rrdockerconn'
     - task: Bash@3
-      displayName: 'build and push images'
+      displayName: 'Build and Push docker images'
       inputs:
         targetType: 'inline'
         script: |
           nx run api:build-docker --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
     - task: Bash@3
-      displayName: 'build k8s manifests'
+      displayName: 'Build k8s manifests'
       inputs:
         targetType: 'inline'
         script: |
           nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           tree ./manifests
-    # - task: Bash@3
-    #   displayName: 'build images'
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       nx run api:build-docker
-#     - task: Kubernetes@1
-#       inputs:
-#         connectionType: 'Kubernetes Service Connection'
-#         kubernetesServiceEndpoint: 'psnextv2-psdppsnextaksdev-main-1659074506341'
-#         namespace: 'main'
-#         command: 'get'
-#         arguments: 'pods'
-#         secretType: 'dockerRegistry'
-#         containerRegistryType: 'Container Registry'
-#         dockerRegistryEndpoint: 'rrdockerconn'
-#         secretName: 'dockersecrets'
-# - stage: Deploy
-#   displayName: Deploy stage
-#   dependsOn: Build
-#   jobs:
-#   - deployment: Deploy
-#     displayName: Deploy job
-#     pool:
-#       vmImage: $(vmImageName)
-#     environment: 'psnextv2.main' #customize with your environment
-#     strategy:
-#       runOnce:
-#         deploy:
-#           steps:
-#           - script: |
-#               kubectl get services -n $(Build.SourceBranchName)
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Manifest Artifacts'
+      inputs:
+        artifactName: 'manifests'
+        path: 'manifests'
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy job
+    pool:
+      vmImage: $(vmImageName)
+    environment: 'psnextv2.main' #customize with your environment
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: 'manifests'
+              downloadPath: '$(System.ArtifactsDirectory)/manifests'    
+          - task: Bash@3
+            displayName: 'manifests'
+            inputs:
+              targetType: 'inline'
+              script: |
+                tree ./manifests
+          - task: Kubernetes@1
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
+              namespace: '$(Build.SourceBranchName)'
+              command: 'apply'
+              arguments: '-k ./manifests -n $(Build.SourceBranchName)'
+              secretType: 'dockerRegistry'
+              containerRegistryType: 'Azure Container Registry'
 # - script: |
 #     pwd
 #     echo Add other tasks to build, test, and deploy your project.
