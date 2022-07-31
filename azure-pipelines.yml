@@ -9,7 +9,6 @@ trigger:
 variables:
   envName: psnextv2
   vmImageName: ubuntu-latest
-  containerRegistry: $[dockerhub.username]
 stages:
 - stage: Build
   displayName: Build stage
