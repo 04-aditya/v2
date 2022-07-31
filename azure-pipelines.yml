@@ -28,6 +28,7 @@ stages:
       displayName: 'install modules'
     - script: |
         nx run api:build
+        ls -al
     - task: Cache@2
       inputs:
         key: 'buildcache'
@@ -37,6 +38,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
+          ls -al
           nx run api:build-docker
 
     
