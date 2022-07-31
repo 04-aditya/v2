@@ -43,35 +43,44 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          nx run api:build-docker
-
-
-    - task: Kubernetes@1
+          nx run api:build-docker --args="--projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+    - task: Docker@2
+      displayName: Login to DockerHub
       inputs:
-        connectionType: 'Kubernetes Service Connection'
-        kubernetesServiceEndpoint: 'psnextv2-psdppsnextaksdev-main-1659074506341'
-        namespace: 'main'
-        command: 'get'
-        arguments: 'pods'
-        secretType: 'dockerRegistry'
-        containerRegistryType: 'Container Registry'
-        dockerRegistryEndpoint: 'rrdockerconn'
-        secretName: 'dockersecrets'
-- stage: Deploy
-  displayName: Deploy stage
-  dependsOn: Build
-  jobs:
-  - deployment: Deploy
-    displayName: Deploy job
-    pool:
-      vmImage: $(vmImageName)
-    environment: 'psnextv2.main' #customize with your environment
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: |
-              kubectl get services -n $(Build.SourceBranchName)
+        command: login
+        containerRegistry: 'rrdockerconn'
+    # - task: Bash@3
+    #   displayName: 'build images'
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       nx run api:build-docker
+#     - task: Kubernetes@1
+#       inputs:
+#         connectionType: 'Kubernetes Service Connection'
+#         kubernetesServiceEndpoint: 'psnextv2-psdppsnextaksdev-main-1659074506341'
+#         namespace: 'main'
+#         command: 'get'
+#         arguments: 'pods'
+#         secretType: 'dockerRegistry'
+#         containerRegistryType: 'Container Registry'
+#         dockerRegistryEndpoint: 'rrdockerconn'
+#         secretName: 'dockersecrets'
+# - stage: Deploy
+#   displayName: Deploy stage
+#   dependsOn: Build
+#   jobs:
+#   - deployment: Deploy
+#     displayName: Deploy job
+#     pool:
+#       vmImage: $(vmImageName)
+#     environment: 'psnextv2.main' #customize with your environment
+#     strategy:
+#       runOnce:
+#         deploy:
+#           steps:
+#           - script: |
+#               kubectl get services -n $(Build.SourceBranchName)
 # - script: |
 #     pwd
 #     echo Add other tasks to build, test, and deploy your project.
