@@ -6,13 +6,15 @@ import express from 'express';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import morgan from 'morgan';
-import { useExpressServer, getMetadataArgsStorage } from 'routing-controllers';
+import { useExpressServer, getMetadataArgsStorage, Action } from 'routing-controllers';
 import { routingControllersToSpec } from 'routing-controllers-openapi';
 import swaggerUi from 'swagger-ui-express';
 import { NODE_ENV, PORT, LOG_FORMAT, ORIGIN, CREDENTIALS } from '@config';
 import errorMiddleware from '@middlewares/error.middleware';
 import { logger, stream } from '@utils/logger';
-
+import { AppDataSource } from '@/databases';
+import { UserRoleEntity } from '@/entiies/userrole.entity';
+import { UserEntity } from '@/entiies/user.entity';
 class App {
   public app: express.Application;
   public env: string;
@@ -30,12 +32,76 @@ class App {
   }
 
   public listen() {
-    this.app.listen(this.port, () => {
-      logger.info(`=================================`);
-      logger.info(`======= ENV: ${this.env} =======`);
-      logger.info(`🚀 App listening on the port ${this.port}`);
-      logger.info(`=================================`);
-    });
+    AppDataSource.initialize()
+      .then(async () => {
+        const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
+        try {
+          //create roles
+          const roles = [
+            { name: 'default', description: 'default role. every new user will start with this role.' },
+            { name: 'admin', description: 'master admin role.' },
+          ];
+
+          for (const role of roles) {
+            let urole = await rolesRepo.findOne({ where: { name: role.name } });
+            if (!urole) {
+              urole = new UserRoleEntity();
+              urole.name = role.name;
+              urole.description = role.description;
+              try {
+                await AppDataSource.getRepository(UserRoleEntity).save(urole);
+                logger.info(`${role.name} userrole created.`);
+              } catch (ex) {
+                if (ex.code !== '23505') {
+                  // if not duplicate
+                  logger.warn(`duplicate ${role.name}. userrole not created.`, ex);
+                } else {
+                  logger.error(ex);
+                }
+              }
+            }
+          }
+        } catch (ex) {
+          logger.error('Unable to create default data', ex);
+        }
+
+        const adminemail = process.env.ADMINUSEREMAIL;
+        try {
+          const adminUser = await AppDataSource.getRepository(UserEntity).findOne({
+            where: {
+              email: adminemail,
+            },
+            relations: {
+              roles: true,
+            },
+          });
+          if (!adminUser) {
+            logger.warn(`No user with email ${adminemail} found.`);
+          } else {
+            if (adminUser.roles.findIndex(r => r.name === 'admin') === -1) {
+              const adminrole = await rolesRepo.findOne({ where: { name: 'admin' } });
+              adminUser.roles = [...adminUser.roles, adminrole];
+              logger.info(`setting admin role to ${adminemail}`);
+              await AppDataSource.manager.save(adminUser);
+            }
+          }
+        } catch (ex) {
+          if (ex.code !== '23505') {
+            // if not duplicate
+            logger.warn(`Unable to set admin role to ${adminemail}.`, ex);
+          }
+        }
+
+        this.app.listen(this.port, () => {
+          logger.info(`=================================`);
+          logger.info(`======= ENV: ${this.env} =======`);
+          logger.info(`🚀 App listening on the port ${this.port}`);
+          logger.info(`=================================`);
+        });
+      })
+      .catch(error => {
+        logger.error('Unable to initialize database', error);
+      });
   }
 
   public getServer() {
@@ -59,6 +125,21 @@ class App {
         credentials: CREDENTIALS,
       },
       controllers: controllers,
+      currentUserChecker: async (action: Action) => {
+        return action.request.user as UserEntity;
+      },
+      authorizationChecker: async (action: Action, roles?: string[]) => {
+        // perform queries based on token from request headers
+        const user = action.request.user as UserEntity;
+        if (roles) {
+          let hasRole = false;
+          user.roles.forEach(r => {
+            if (roles.includes(r.name)) hasRole = true;
+          });
+          return hasRole;
+        }
+        return user ? true : false;
+      },
       defaultErrorHandler: false,
     });
   }
@@ -77,14 +158,14 @@ class App {
       components: {
         schemas,
         securitySchemes: {
-          basicAuth: {
-            scheme: 'basic',
-            type: 'http',
-          },
+          // basicAuth: {
+          //   scheme: 'basic',
+          //   type: 'http',
+          // },
         },
       },
       info: {
-        description: 'api endpoints for psnext.info',
+        description: 'API endpoints for psnext.info',
         title: 'PSNext API',
         version: '0.2.0',
       },

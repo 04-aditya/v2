@@ -32,9 +32,10 @@
       "@models/*": ["models/*"],
       "@routes/*": ["routes/*"],
       "@services/*": ["services/*"],
-      "@utils/*": ["utils/*"]
+      "@utils/*": ["utils/*"],
+      "sharedtypes": ["../../shared/types/src/index.ts"]
     }
   },
   "exclude": ["jest.config.ts", "**/*.spec.ts", "**/*.test.ts"],
-  "include": ["**/*.ts", "src/**/*.json", ".env", "src/controllers/auth.controller.bts", "src/controllers/users.controller.bts"]
+  "include": ["**/*.ts", "src/**/*.json", "../shared/types/src/lib/apiResponse.interface.ts"]
 }
