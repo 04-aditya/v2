@@ -1,0 +1,30 @@
+/* You can add global styles to this file, and also import other style files */
+body {
+  margin: 0; padding: 0;
+}
+#root{
+  margin: 0;
+  padding: 0;
+  min-width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+#content {
+  flex-grow: 1;
+  display: flex;
+}
+
+#contentbody {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.flexcenter{
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}

@@ -3,6 +3,8 @@
   "version": 2,
   "projects": {
     "api": "packages/api",
+    "dash": "packages/dash",
+    "dash-e2e": "packages/dash-e2e",
     "shared-types": "packages/shared/types"
   }
 }

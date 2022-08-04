@@ -1,6 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { verify } from 'jsonwebtoken';
-import { JWT_SECRET_KEY } from '@config';
+import { ACCESS_TOKEN_SECRET } from '@config';
 import { DataStoredInToken, RequestWithUser } from '@interfaces/auth.interface';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entiies/user.entity';
@@ -14,9 +14,9 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
     const Authorization = req.cookies['Authorization'] || (req.header('Authorization') ? req.header('Authorization').split('Bearer ')[1] : null);
     logger.info(Authorization);
     if (Authorization) {
-      const secretKey: string = JWT_SECRET_KEY;
+      const secretKey: string = ACCESS_TOKEN_SECRET;
       const verificationResponse = (await verify(Authorization, secretKey)) as DataStoredInToken;
-      const userId = verificationResponse.id;
+      const userId = verificationResponse.UserInfo.id;
 
       const matchedUser = await AppDataSource.getRepository(UserEntity).findOne({
         where: {

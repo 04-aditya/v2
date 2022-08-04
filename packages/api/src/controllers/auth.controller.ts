@@ -1,16 +1,32 @@
 import { Response } from 'express';
-import { Controller, Req, Body, Post, UseBefore, HttpCode, Res, BodyParam } from 'routing-controllers';
-import { RequestWithUser } from '@interfaces/auth.interface';
-import authMiddleware from '@middlewares/auth.middleware';
-import { validationMiddleware } from '@middlewares/validation.middleware';
+import {
+  Controller,
+  Req,
+  Body,
+  Post,
+  UseBefore,
+  HttpCode,
+  Res,
+  BodyParam,
+  CookieParam,
+  Get,
+  UnauthorizedError,
+  ForbiddenError,
+} from 'routing-controllers';
+
 import { logger } from '@/utils/logger';
 import { HttpException } from '@/exceptions/HttpException';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entiies/user.entity';
 import sgMail from '@sendgrid/mail';
-import { JwtUtils } from '@/utils/jwtUtils';
+import jwt from 'jsonwebtoken';
+import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS } from '@config';
+import { Like } from 'typeorm';
+import { UserRoleEntity } from '@/entiies/userrole.entity';
 
-function generateCODE(count) {
+const REFRESHTOKENCOOKIE = 'rt';
+
+function generateCODE(count: number): string {
   // Declare a digits variable
   // which stores all digits
   const digits = '0123456789';
@@ -19,6 +35,23 @@ function generateCODE(count) {
     CODE += digits[Math.floor(Math.random() * 10)];
   }
   return CODE;
+}
+
+function createRefeshToken(user: UserEntity) {
+  return jwt.sign({ username: user.id }, REFRESH_TOKEN_SECRET, { expiresIn: '1d' });
+}
+
+function createAccessToken(user: UserEntity) {
+  return jwt.sign(
+    {
+      UserInfo: {
+        id: user.id,
+        roles: user.roles,
+      },
+    },
+    ACCESS_TOKEN_SECRET,
+    { expiresIn: '10s' },
+  );
 }
 
 @Controller('/auth')
@@ -33,15 +66,18 @@ export class AuthController {
       throw new HttpException(400, 'Invalid email');
     }
 
-    if (emailParts[1] !== 'publicissapient.com') {
+    if (MAILDOMAINS.split(',').includes(emailParts[1]) === false) {
       throw new HttpException(400, 'Unsupported email domain.');
     }
-
-    let user = await AppDataSource.getRepository(UserEntity).findOne({ where: { email } });
+    const usersRepo = AppDataSource.getRepository(UserEntity);
+    const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
+    let user = await usersRepo.findOne({ where: { email } });
 
     if (!user) {
       user = new UserEntity();
       user.email = email.toLocaleLowerCase();
+      const defaultRole = await rolesRepo.findOne({ where: { name: 'default' } });
+      user.roles = [defaultRole];
     }
     const code = generateCODE(6);
     await user.setCode(code);
@@ -50,7 +86,7 @@ export class AuthController {
     const msg = {
       to: email,
       from: `${process.env.MAIL_FROM}`,
-      subject: 'Access code for api.v2.psnext.info',
+      subject: `Access code for ${DOMAIN}`,
       text: `Your PS Next access code is ${code}`,
       html: `Your <strong>PS Next</strong> access code is <h3>${code}</h3>`,
     };
@@ -67,28 +103,110 @@ export class AuthController {
 
     return { message: 'verification code sent to the email.' };
   }
+
+  @Get('/refreshtoken')
+  async refreshToken(@Res() res: Response, @CookieParam(REFRESHTOKENCOOKIE) cRT?: string) {
+    logger.info(cRT);
+    const userRepo = AppDataSource.getRepository(UserEntity);
+    if (!cRT) throw new UnauthorizedError();
+
+    res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true, domain: DOMAIN });
+
+    const foundUser = await userRepo.findOne({ where: { refreshTokens: Like(`%${cRT}%`) }, relations: { roles: true } });
+    // Detected refresh token reuse!
+    if (!foundUser) {
+      try {
+        const decoded: any = jwt.verify(cRT, REFRESH_TOKEN_SECRET);
+        // Delete refresh tokens of hacked user
+        const hackedUser = await userRepo.findOne({ where: { id: decoded.id } });
+        hackedUser.refreshTokens = null;
+        await hackedUser.save();
+      } catch (err) {
+        throw new ForbiddenError();
+      }
+    }
+    const existingTokens = (foundUser.refreshTokens || '').split(',');
+    const newRefreshTokenArray = existingTokens.filter(rt => rt !== cRT);
+
+    try {
+      // evaluate jwt
+      const decoded: any = jwt.verify(cRT, REFRESH_TOKEN_SECRET);
+      if (foundUser.id !== decoded.id) throw new ForbiddenError();
+    } catch (err) {
+      // expired refresh token
+      foundUser.refreshTokens = [...newRefreshTokenArray].join(',');
+      await foundUser.save();
+    }
+
+    // Refresh token was still valid
+    const accessToken = createAccessToken(foundUser);
+
+    const newRefreshToken = createRefeshToken(foundUser);
+    // Saving refreshToken with current user
+    foundUser.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
+    await foundUser.save();
+
+    // Creates Secure Cookie with refresh token
+    res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });
+
+    return { accessToken, user: { id: foundUser.id, email: foundUser.email, roles: foundUser.roles.map(r => ({ id: r.id, name: r.name })) } };
+  }
+
   @Post('/gettoken')
-  async gettoken(@BodyParam('email') emailValue: String, @BodyParam('code') codeValue: String) {
+  async gettoken(
+    @BodyParam('email') emailValue: String,
+    @BodyParam('code') codeValue: String,
+    @Res() res: Response,
+    @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string,
+  ) {
     const email = emailValue.toLocaleLowerCase().trim();
     const code = codeValue.trim();
+    const userRepo = AppDataSource.getRepository(UserEntity);
 
-    const user = await AppDataSource.getRepository(UserEntity).findOne({ where: { email } });
+    const user = await userRepo.findOne({ where: { email }, relations: { roles: true } });
 
     if (user === null) {
-      throw new HttpException(403, 'Invalid email or code');
+      throw new ForbiddenError('Invalid email or code');
     }
 
     const isValid = await user.validateCode(code);
 
     if (!isValid) {
-      throw new HttpException(403, 'Invalid email or code');
+      throw new ForbiddenError('Invalid email or code');
     }
 
     await user.setCode(generateCODE(6)); // reset the code
+
+    // create JWTs
+    const accessToken = createAccessToken(user);
+    const newRefreshToken = createRefeshToken(user);
+
+    const existingTokens = (user.refreshTokens || '').split(',');
+    let newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
+
+    if (cjwt) {
+      /*
+      Scenario added here:
+          1) User logs in but never uses RT and does not logout
+          2) RT is stolen
+          3) If 1 & 2, reuse detection is needed to clear all RTs when user logs in
+      */
+      const foundToken = await userRepo.findOne({ where: { refreshTokens: Like(`%${cjwt}%`) } });
+
+      // Detected refresh token reuse!
+      if (!foundToken) {
+        // clear out ALL previous refresh tokens
+        newRefreshTokenArray = [];
+      }
+      res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
+    }
+
+    // Saving refreshToken with current user
+    user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
     await user.save();
+    // Creates Secure Cookie with refresh token
+    res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });
 
-    const jwtToken = JwtUtils.generateToken(user);
-
-    return { jwtToken };
+    return { accessToken, user: { id: user.id, email: user.email, roles: user.roles.map(r => ({ id: r.id, name: r.name })) } };
   }
 }

@@ -17,6 +17,9 @@ export class UserEntity extends BaseEntity implements IUser {
   @Column()
   verificationCode: string;
 
+  @Column({ default: '' })
+  refreshTokens: string;
+
   @ManyToMany(() => UserRoleEntity)
   @JoinTable()
   roles: UserRoleEntity[];

@@ -2,7 +2,10 @@ import { Request } from 'express';
 import { UserEntity } from '@/entiies/user.entity';
 
 export interface DataStoredInToken {
-  id: number;
+  UserInfo: {
+    id: number;
+    roles: string[];
+  };
 }
 
 export interface TokenData {

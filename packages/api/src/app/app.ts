@@ -121,7 +121,7 @@ class App {
   private initializeRoutes(controllers: Function[]) {
     useExpressServer(this.app, {
       cors: {
-        origin: ORIGIN,
+        origin: ORIGIN.split(','),
         credentials: CREDENTIALS,
       },
       controllers: controllers,
