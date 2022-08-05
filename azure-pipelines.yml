@@ -40,10 +40,10 @@ stages:
         containerRegistryType: 'Azure Container Registry'
         outputFormat: 'jsonpath="{.data.LAST_BUILD_SHA}"'
     - script: |
-        echo $(GetBuildTag.KubectlOutput)
-        LAST_BUILD_COMMIT_SHA=$(echo -n $(GetBuildTag.KubectlOutput) | base64 --decode)"
-        echo -n $LAST_BUILD_COMMIT_SHA> LAST_BUILD_COMMIT_SHA
+        echo -n $(GetBuildTag.KubectlOutput) | base64 --decode > LAST_BUILD_COMMIT_SHA
+        LAST_BUILD_COMMIT_SHA=$(cat LAST_BUILD_COMMIT_SHA)
         echo last build $(cat LAST_BUILD_COMMIT_SHA)
+      displayName: Set Last build tag
     - task: NodeTool@0
       displayName: 'Ensure node 18.x'
       inputs:
