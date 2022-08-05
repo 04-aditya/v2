@@ -41,7 +41,7 @@ stages:
     - script: |
         git fetch --depth=10
         git log --pretty=oneline
-        nx affected --target=build --base=$(cat LAST_BUILD_COMMIT_SHA) --prod
+        #nx affected --target=build --base=$(cat LAST_BUILD_COMMIT_SHA) --prod
       displayName: 'Build affected'
     - task: Docker@2
       displayName: Login to DockerHub
@@ -53,14 +53,14 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          nx affected --target=build-docker --base=$(cat LAST_BUILD_COMMIT_SHA) --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+          #nx affected --target=build-docker --base=$(cat LAST_BUILD_COMMIT_SHA) --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           # nx run api:build-docker --args=" --registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
     - task: Bash@3
       displayName: 'Build k8s manifests'
       inputs:
         targetType: 'inline'
         script: |
-          nx affected --target=build-k8s-manifests --base=$(cat LAST_BUILD_COMMIT_SHA) --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+          #nx affected --target=build-k8s-manifests --base=$(cat LAST_BUILD_COMMIT_SHA) --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           # nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           tree ./manifests
           echo $(Build.SourceVersion) > ./node_modules/LAST_BUILD_COMMIT_SHA
