@@ -18,6 +18,16 @@ stages:
     pool:
       vmImage: $(vmImageName)
     steps:
+    - task: Kubernetes@1
+      inputs:
+        connectionType: 'Kubernetes Service Connection'
+        kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
+        namespace: 'main'
+        command: 'get'
+        arguments: 'secret buildtag -o jsonpath="{.data.LAST_BUILD_SHA}"'
+        secretType: 'dockerRegistry'
+        containerRegistryType: 'Azure Container Registry'
+        outputFormat: 'yaml'
     - task: Cache@2
       displayName: Cache 'node_modules' folder
       inputs:
