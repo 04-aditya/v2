@@ -24,7 +24,7 @@ stages:
         kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
         namespace: 'main'
         command: 'get'
-        arguments: 'secret buildtag -o jsonpath="{.data.LAST_BUILD_SHA}"'
+        arguments: 'secret buildtag -o jsonpath="{.data.LAST_BUILD_SHA}" > LAST_BUILD_COMMIT_SHA & echo'
         secretType: 'dockerRegistry'
         containerRegistryType: 'Azure Container Registry'
         outputFormat: 'yaml'
