@@ -40,8 +40,8 @@ stages:
         containerRegistryType: 'Azure Container Registry'
         outputFormat: 'jsonpath="{.data.LAST_BUILD_SHA}"'
     - script: |
-        LAST_BUILD_COMMIT_SHA="$(get.KubectlOutput)"
-        echo -n LAST_BUILD_COMMIT_SHA> LAST_BUILD_COMMIT_SHA
+        LAST_BUILD_COMMIT_SHA=$(echo -n $(KubectlOutput.commandOutput) | base64 --decode)"
+        echo -n $LAST_BUILD_COMMIT_SHA> LAST_BUILD_COMMIT_SHA
         echo last build $(cat LAST_BUILD_COMMIT_SHA)
     - task: NodeTool@0
       displayName: 'Ensure node 18.x'
