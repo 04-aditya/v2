@@ -37,6 +37,10 @@ stages:
         npm i --legacy-peer-deps
       displayName: 'Install modules'
     - script: |
+        git fetch --depth=10
+        git log --pretty=oneline
+        git show-branch
+        echo $(Build.SourceVersion)
         nx run api:build
       displayName: 'Build affected'
     - task: Docker@2
@@ -49,8 +53,6 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          git fetch --depth=10
-          git log --pretty=oneline
           nx affected --target=build-docker --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           # nx run api:build-docker --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
     - task: Bash@3
