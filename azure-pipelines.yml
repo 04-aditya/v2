@@ -29,7 +29,7 @@ stages:
         key: 'distcache'
         path: 'dist'
     - task: Kubernetes@1
-      displayName: KubectlOutput
+      displayName: GetBuildTag
       inputs:
         connectionType: 'Kubernetes Service Connection'
         kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
@@ -40,8 +40,8 @@ stages:
         containerRegistryType: 'Azure Container Registry'
         outputFormat: 'jsonpath="{.data.LAST_BUILD_SHA}"'
     - script: |
-        echo $(KubectlOutput.commandOutput)
-        LAST_BUILD_COMMIT_SHA=$(echo -n $(KubectlOutput.commandOutput) | base64 --decode)"
+        echo $(GetBuildTag.KubectlOutput)
+        LAST_BUILD_COMMIT_SHA=$(echo -n $(GetBuildTag.KubectlOutput) | base64 --decode)"
         echo -n $LAST_BUILD_COMMIT_SHA> LAST_BUILD_COMMIT_SHA
         echo last build $(cat LAST_BUILD_COMMIT_SHA)
     - task: NodeTool@0
