@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: buildtag
+type: Opaque
+stringData:
+  LAST_BUILD_SHA:

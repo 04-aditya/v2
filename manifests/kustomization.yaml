@@ -1,5 +1,6 @@
 commonLabels:
   program: psnextv2
 bases:
+- ./buildtag.yaml
 - ./api/k8s
 - ./dash/k8s
