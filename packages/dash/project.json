@@ -60,6 +60,44 @@
         }
       }
     },
+    "build-docker": {
+      "executor": "@nrwl/workspace:run-commands",
+      "options": {
+        "commands": [
+          {
+            "command": "docker build -f packages/dash/Dockerfile -t psnextv2_dash .",
+            "forwardAllArgs": false
+          },
+          "docker tag psnextv2_dash {args.registry}/psnextv2-dash-{args.branch}:{args.sha}",
+          "docker tag psnextv2_dash {args.registry}/psnextv2-dash-{args.branch}:latest",
+          "docker push {args.registry}/psnextv2-dash-{args.branch}:{args.sha}",
+          "docker push {args.registry}/psnextv2-dash-{args.branch}:latest"
+        ],
+        "parallel": false,
+        "forwardAllArgs": false
+      }
+    },
+    "build-k8s-manifests": {
+      "executor": "@nrwl/workspace:run-commands",
+      "options": {
+        "commands": [
+          "find ./packages/dash/k8s -name kustomization.yaml -type f -exec sed -i 's/BRANCH/{args.branch}/g' {} \\;",
+          "find ./packages/dash/k8s -name kustomization.yaml -type f -exec sed -i 's/PROJECTID/{args.projectid}/g' {} \\;",
+          "find ./packages/dash/k8s -name kustomization.yaml -type f -exec sed -i 's/REGISTRY/{args.registry}/g' {} \\;",
+          "find ./packages/dash/k8s -name kustomization.yaml -type f -exec sed -i 's/TAG/{args.sha}/g' {} \\;",
+          {
+            "command": "cp -r ./packages/dash/k8s/ ./manifests/dash/",
+            "forwardAllArgs": false
+          },
+          {
+            "command": "kubectl kustomize ./manifests/dash/k8s",
+            "forwardAllArgs": false
+          }
+        ],
+        "parallel": false,
+        "forwardAllArgs": false
+      }
+    },
     "lint": {
       "executor": "@nrwl/linter:eslint",
       "outputs": ["{options.outputFile}"],

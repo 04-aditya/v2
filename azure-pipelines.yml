@@ -49,13 +49,15 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          nx run api:build-docker --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+          nx affected --target=build-docker --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+          # nx run api:build-docker --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
     - task: Bash@3
       displayName: 'Build k8s manifests'
       inputs:
         targetType: 'inline'
         script: |
-          nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+          nx affected --target=build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+          # nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           tree ./manifests
     - task: PublishPipelineArtifact@1
       displayName: 'Publish Manifest Artifacts'

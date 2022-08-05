@@ -1,0 +1,10 @@
+namePrefix: psni-dash-
+commonLabels:
+  app: dash
+  ENV: BRANCH
+bases:
+- ./BRANCH
+images:
+- name: app-image
+  newName: REGISTRY/psnextv2-dash-BRANCH
+  newTag: TAG
