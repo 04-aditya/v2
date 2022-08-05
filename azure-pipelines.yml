@@ -18,15 +18,6 @@ stages:
     pool:
       vmImage: $(vmImageName)
     steps:
-    - task: Kubernetes@1
-      inputs:
-        connectionType: 'Kubernetes Service Connection'
-        kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
-        namespace: 'main'
-        command: 'get'
-        arguments: 'secret buildtag -o jsonpath="{.data.LAST_BUILD_SHA}" > LAST_BUILD_COMMIT_SHA'
-        secretType: 'dockerRegistry'
-        containerRegistryType: 'Azure Container Registry'
     - task: Cache@2
       displayName: Cache 'node_modules' folder
       inputs:
@@ -37,6 +28,20 @@ stages:
       inputs:
         key: 'distcache'
         path: 'dist'
+    - task: Kubernetes@1
+      inputs:
+        connectionType: 'Kubernetes Service Connection'
+        kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
+        namespace: 'main'
+        command: 'get'
+        arguments: 'secret buildtag'
+        secretType: 'dockerRegistry'
+        containerRegistryType: 'Azure Container Registry'
+        outputFormat: 'jsonpath="{.data.LAST_BUILD_SHA}"'
+    - script: |
+        LAST_BUILD_COMMIT_SHA="$(get.KubectlOutput)"
+        echo -n LAST_BUILD_COMMIT_SHA> LAST_BUILD_COMMIT_SHA
+        echo last build $(cat LAST_BUILD_COMMIT_SHA)
     - task: NodeTool@0
       displayName: 'Ensure node 18.x'
       inputs:
@@ -44,8 +49,6 @@ stages:
     - script: |
         npm i -g nx
         npm i --legacy-peer-deps
-        cat ./node_modules/LAST_BUILD_COMMIT_SHA > LAST_BUILD_COMMIT_SHA
-        echo last build $(cat LAST_BUILD_COMMIT_SHA)
       displayName: 'Install modules'
     - script: |
         git fetch --depth=10
