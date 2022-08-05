@@ -76,7 +76,7 @@ class App {
             },
           });
           if (!adminUser) {
-            logger.warn(`No user with email ${adminemail} found.`);
+            logger.warn(`No user with email ${adminemail} found. create one by requesting access`);
           } else {
             if (adminUser.roles.findIndex(r => r.name === 'admin') === -1) {
               const adminrole = await rolesRepo.findOne({ where: { name: 'admin' } });

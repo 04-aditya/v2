@@ -85,7 +85,7 @@ export function Login(props: LoginProps) {
         component="img"
         alt="green iguana"
         height="140"
-        image="https://via.placeholder.com/600x280/1976d2/ffffff?text=Login+Image"
+        image="https://via.placeholder.com/600x280/1976d2/ffffff?text=Login+Placeholder+Image"
       />
       <CardContent>
         <Typography gutterBottom variant="h5" component="div">
