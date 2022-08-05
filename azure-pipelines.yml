@@ -29,7 +29,7 @@ stages:
         key: 'distcache'
         path: 'dist'
     - task: Kubernetes@1
-      displayName: GetBuildTag
+      name: GetBuildTag
       inputs:
         connectionType: 'Kubernetes Service Connection'
         kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
