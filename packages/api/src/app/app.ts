@@ -118,7 +118,7 @@ class App {
     this.app.use(cookieParser());
     this.app.use(function (req, res, next) {
       const whitelist = ORIGIN.split(',');
-      const host = req.get('host');
+      const host = req.get('origin');
 
       whitelist.forEach(function (val) {
         if (host.indexOf(val) > -1) {
