@@ -83,9 +83,9 @@ export function Login(props: LoginProps) {
       <Card sx={{minWidth:'45ch'}}>
         <CardMedia
         component="img"
-        alt="green iguana"
+        alt="Login Banner"
         height="140"
-        image="https://via.placeholder.com/600x280/1976d2/ffffff?text=Login+Placeholder+Image"
+        image="https://dummyimage.com/426x240/1975d2/fff.png&text=Login+image"
       />
       <CardContent>
         <Typography gutterBottom variant="h5" component="div">
@@ -118,7 +118,7 @@ export function Login(props: LoginProps) {
           value={email}
           onChange={handleEmailChange}
           error={email===''}
-          helperText="Please use your @publicissapient.com email"
+          helperText={`Please use your @${process.env['NX_EMAILDOMAINS']} email`}
           InputProps={{
             ref: inputRef,
             startAdornment: (
