@@ -4,4 +4,4 @@ metadata:
   name: buildtag
 type: Opaque
 stringData:
-  LAST_BUILD_SHA:
+  LAST_BUILD_SHA: BUILDCOMMITTAG

@@ -77,9 +77,7 @@ stages:
           nx affected --target=build-k8s-manifests --base=$(cat LAST_BUILD_COMMIT_SHA) --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           # nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           tree ./manifests
-          echo $(Build.SourceVersion) > BUILD_COMMIT_SHA
-          cat ./manifests/buildtag.yaml
-          cat ./manifests/buildtag.yaml BUILD_COMMIT_SHA > ./manifests/buildtag.yaml
+          find ./manifests -name buildtag.yaml -type f -exec sed -i 's/BUILDCOMMITTAG/$(Build.SourceVersion)/g' {} \\;
           cat ./manifests/buildtag.yaml
     - task: PublishPipelineArtifact@1
       displayName: 'Publish Manifest Artifacts'
