@@ -116,6 +116,18 @@ class App {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cookieParser());
+    this.app.use(function (req, res, next) {
+      const whitelist = ORIGIN.split(',');
+      const host = req.get('host');
+
+      whitelist.forEach(function (val) {
+        if (host.indexOf(val) > -1) {
+          res.setHeader('Access-Control-Allow-Origin', host);
+        }
+      });
+
+      next();
+    });
   }
 
   private initializeRoutes(controllers: Function[]) {
