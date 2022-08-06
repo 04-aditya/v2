@@ -161,7 +161,7 @@ const AppLayout = ()=>{
       <Outlet/>
     </section>
   </div>
-  <footer>footer</footer>
+  <footer>v2</footer>
   </ThemeProvider>
 }
 

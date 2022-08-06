@@ -76,12 +76,12 @@ class App {
             },
           });
           if (!adminUser) {
-            logger.warn(`No user with email ${adminemail} found. create one by requesting access`);
+            logger.warn(`No user with email ${adminemail} found. Create one by requesting access`);
           } else {
             if (adminUser.roles.findIndex(r => r.name === 'admin') === -1) {
               const adminrole = await rolesRepo.findOne({ where: { name: 'admin' } });
               adminUser.roles = [...adminUser.roles, adminrole];
-              logger.info(`setting admin role to ${adminemail}`);
+              logger.info(`Setting admin role to ${adminemail}`);
               await AppDataSource.manager.save(adminUser);
             }
           }

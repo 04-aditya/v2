@@ -78,6 +78,7 @@ stages:
           # nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
           tree ./manifests
           echo $(Build.SourceVersion) > BUILD_COMMIT_SHA
+          cat ./manifests/buildtag.yaml
           cat ./manifests/buildtag.yaml BUILD_COMMIT_SHA > ./manifests/buildtag.yaml
           cat ./manifests/buildtag.yaml
     - task: PublishPipelineArtifact@1
