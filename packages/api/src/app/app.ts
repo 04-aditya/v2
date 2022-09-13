@@ -121,7 +121,7 @@ class App {
       const host = req.get('origin');
 
       whitelist.forEach(function (val) {
-        if (host.indexOf(val) > -1) {
+        if (host?.indexOf(val) > -1) {
           res.setHeader('Access-Control-Allow-Origin', host);
         }
       });
@@ -170,6 +170,11 @@ class App {
       components: {
         schemas,
         securitySchemes: {
+          bearerAuth:{
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
           // basicAuth: {
           //   scheme: 'basic',
           //   type: 'http',

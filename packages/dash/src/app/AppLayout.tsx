@@ -16,6 +16,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PersonIcon from '@mui/icons-material/Person';
+import ExtensionIcon from '@mui/icons-material/Extension';
 import GroupIcon from '@mui/icons-material/Group';
 import GroupsIcon from '@mui/icons-material/Groups';
 import Divider from '@mui/material/Divider';
@@ -54,6 +55,8 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
       position: 'relative',
       whiteSpace: 'nowrap',
       width: drawerWidth,
+      borderWidth:0,
+      background: 'transparent',
       transition: theme.transitions.create('width', {
         easing: theme.transitions.easing.sharp,
         duration: theme.transitions.duration.enteringScreen,
@@ -77,20 +80,18 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 const AppLayout = ()=>{
 
   const [open, setOpen] = React.useState(false);
-  const toggleDrawer = () => {
-    setOpen(!open);
-  };
+  const toggleDrawer = () => setOpen(!open);
 
   return <ThemeProvider theme={theme}>
   <CssBaseline />
 
-  <AppBar position="absolute" open={open}>
+  <AppBar position="absolute" open={open} elevation={0}>
     <Toolbar
       sx={{
         pr: '24px', // keep right padding when drawer closed
       }}
     >
-      <IconButton
+      {/* <IconButton
         edge="start"
         color="inherit"
         aria-label="open drawer"
@@ -101,7 +102,8 @@ const AppLayout = ()=>{
         }}
       >
         <MenuIcon />
-      </IconButton>
+      </IconButton> */}
+
       <Typography
         component="h1"
         variant="h6"
@@ -119,7 +121,7 @@ const AppLayout = ()=>{
     </Toolbar>
   </AppBar>
   <div id='content'>
-    <Drawer variant="permanent" open={open}>
+    <Drawer variant="permanent" open={open} onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}>
       <AppBar position='static' elevation={0}>
       <Toolbar
         sx={{
@@ -134,25 +136,30 @@ const AppLayout = ()=>{
         </IconButton>
       </Toolbar>
       </AppBar>
-      <Divider />
       <List component="nav">
         <ListItemButton component={Link} to="/">
-          <ListItemIcon>
+          <ListItemIcon sx={{color:"inherit"}}>
             <DashboardIcon />
           </ListItemIcon>
-          <ListItemText primary="Dashboard" />
+          <ListItemText primary="Dashboard"/>
         </ListItemButton>
         <ListItemButton component={Link} to="/profile">
-          <ListItemIcon>
+          <ListItemIcon sx={{color:"inherit"}}>
             <PersonIcon />
           </ListItemIcon>
           <ListItemText primary="Profile" />
         </ListItemButton>
         <ListItemButton component={Link} to="/teams">
-          <ListItemIcon>
+          <ListItemIcon sx={{color:"inherit"}}>
             <GroupsIcon />
           </ListItemIcon>
           <ListItemText primary="Teams" />
+        </ListItemButton>
+        <ListItemButton component={Link} to="/developer">
+          <ListItemIcon sx={{color:"inherit"}}>
+            <ExtensionIcon />
+          </ListItemIcon>
+          <ListItemText primary="Developer Settings" />
         </ListItemButton>
       </List>
     </Drawer>
@@ -161,7 +168,7 @@ const AppLayout = ()=>{
       <Outlet/>
     </section>
   </div>
-  <footer><Typography variant='subtitle2'>Buit on <em>{process.env['NX_BUILD_DATE']}</em>&nbsp; &nbsp; Version: <em>{process.env['NX_BUILD_VERSION']}</em></Typography> </footer>
+  <footer><Typography variant='subtitle2' sx={{color:'#555'}}>Buit on <em>{process.env['NX_BUILD_DATE']}</em>&nbsp; &nbsp; Version: <em>{process.env['NX_BUILD_VERSION']}</em></Typography> </footer>
   </ThemeProvider>
 }
 

@@ -50,7 +50,7 @@ function createAccessToken(user: UserEntity) {
       },
     },
     ACCESS_TOKEN_SECRET,
-    { expiresIn: '10s' },
+    { expiresIn: '1h' },
   );
 }
 

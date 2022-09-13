@@ -14,15 +14,15 @@ export class UserEntity extends BaseEntity implements IUser {
   @Unique(['email'])
   email: string;
 
+  @ManyToMany(() => UserRoleEntity)
+  @JoinTable()
+  roles: UserRoleEntity[];
+
   @Column()
   verificationCode: string;
 
   @Column({ default: '' })
   refreshTokens: string;
-
-  @ManyToMany(() => UserRoleEntity)
-  @JoinTable()
-  roles: UserRoleEntity[];
 
   @Column()
   @CreateDateColumn()
@@ -37,5 +37,13 @@ export class UserEntity extends BaseEntity implements IUser {
   }
   async setCode(code: string) {
     this.verificationCode = await hash(code, 10);
+  }
+
+  toJSON(): IUser {
+    return {
+      id: this.id,
+      email: this.email,
+      roles: this.roles.map(r => ({ id: r.id, name: r.name })),
+    };
   }
 }

@@ -19,9 +19,9 @@ export class UsersController {
           id: parseInt(userId),
         },
       });
-      result.data = matchedUser;
+      result.data = matchedUser.toJSON();
     } else {
-      result.data = currentUser;
+      result.data = currentUser.toJSON();
     }
     return result;
   }

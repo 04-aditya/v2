@@ -5,7 +5,7 @@ body {
 #root{
   margin: 0;
   padding: 0;
-  min-width: 100vw;
+  max-width: 100vw;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -13,6 +13,7 @@ body {
 #content {
   flex-grow: 1;
   display: flex;
+  flex-direction: row;
 }
 
 #contentbody {
