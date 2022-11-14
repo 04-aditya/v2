@@ -132,10 +132,11 @@ class App {
 
   private initializeRoutes(controllers: Function[]) {
     useExpressServer(this.app, {
-      cors: {
-        origin: ORIGIN.split(','),
-        credentials: CREDENTIALS,
-      },
+      cors: false,
+      // {
+      //   origin: ORIGIN.split(','),
+      //   credentials: CREDENTIALS,
+      // },
       controllers: controllers,
       currentUserChecker: async (action: Action) => {
         return action.request.user as UserEntity;
