@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { Button, Card, CardActions, CardContent, CardHeader, CardMedia, InputAdornment, TextField, Typography } from '@mui/material';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Button, Card, CardActions, CardContent, CardMedia, InputAdornment, TextField, Typography } from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
 import useAuth from '@hooks/useAuth';
