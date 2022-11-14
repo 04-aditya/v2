@@ -4,7 +4,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
 import useAuth from '@hooks/useAuth';
-import styles from './login.module.scss';
 import axios from '@/api/axios';
 
 const LOGIN_URL = '/auth/requestaccess';
@@ -21,7 +20,7 @@ export function Login(props: LoginProps) {
   const [codeEntry, showCodeEntry] = useState(false);
 
   const navigate = useNavigate();
-  const location :any = useLocation();
+  const location = useLocation();
   const from = location.state?.from?.pathname || "/";
 
   const inputRef = useRef<HTMLInputElement>();
@@ -68,7 +67,6 @@ export function Login(props: LoginProps) {
       );
       if (response.status!==200) return;
       const data = await response.data;
-      console.log(data);
       const accessToken = data?.accessToken;
       const user = data?.user;
       setAuth({ user, accessToken });
