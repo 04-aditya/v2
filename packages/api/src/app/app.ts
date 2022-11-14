@@ -111,23 +111,23 @@ class App {
   private initializeMiddlewares() {
     this.app.use(morgan(LOG_FORMAT, { stream }));
     this.app.use(hpp());
-    this.app.use(helmet());
+    // this.app.use(helmet());
     this.app.use(compression());
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cookieParser());
-    this.app.use(function (req, res, next) {
-      const whitelist = ORIGIN.split(',');
-      const host = req.get('origin');
+    // this.app.use(function (req, res, next) {
+    //   const whitelist = ORIGIN.split(',');
+    //   const host = req.get('origin');
 
-      whitelist.forEach(function (val) {
-        if (host?.indexOf(val) > -1) {
-          res.setHeader('Access-Control-Allow-Origin', host);
-        }
-      });
+    //   whitelist.forEach(function (val) {
+    //     if (host?.indexOf(val) > -1) {
+    //       res.setHeader('Access-Control-Allow-Origin', host);
+    //     }
+    //   });
 
-      next();
-    });
+    //   next();
+    // });
   }
 
   private initializeRoutes(controllers: Function[]) {
