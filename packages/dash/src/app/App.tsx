@@ -2,38 +2,56 @@ import React from 'react';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import styles from './App.module.scss';
 
-import { Route, Routes, Link } from 'react-router-dom';
-import Dashboard from '../pages/Dashboard/dashboard';
+import { Route, Routes, Link, RouteMatch } from 'react-router-dom';
 import AppLayout from './AppLayout';
 import { Typography } from '@mui/material';
-import Login from '../pages/Login/login';
-import Profile from '../pages/Profile/profile';
-import Teams from '../pages/Teams/teams';
 import RequireAuth from '../components/RequireAuth';
 import { AuthProvider } from '@/context/AuthProvider';
+import routemap, { RouteMap } from './Routes';
+import {
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+const queryClient = new QueryClient();
+
+function generateRoute(r:RouteMap, idx:number){
+  let childRoutes=null;
+  if (r.routes && r.routes.length) {
+    const routes = r.routes.map((cr,i)=>generateRoute(cr,i))
+    if (r.roles && r.roles.length) {
+      childRoutes = <Route element={<RequireAuth allowedRoles={r.roles}/>}>
+        {routes}
+      </Route>
+    } else childRoutes = routes;
+
+  }
+  return <Route key={idx} path={r.path} element={r.element} index={r.index}>
+    {childRoutes}
+  </Route>
+}
 export function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route
-          path="/"
-          element={<AppLayout/>}
-        >
-          <Route path='/login' element={<Login/>}/>
-          <Route path='/unauthorized' element={
-            <div>
-              <Typography variant='h2' color='error'>Unauthorized!</Typography>
-            </div>
-          }/>
-          <Route element={<RequireAuth allowedRoles={['default']} />}>
-            <Route index element={<Dashboard/>}/>
-            <Route path="/profile" element={<Profile/>}/>
-            <Route path="/teams" element={<Teams/>}/>
-          </Route>
-        </Route>
-      </Routes>
-      {/* END: routes */}
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Routes>
+          {generateRoute(routemap,1)}
+          {/*
+          <Route
+            path="/"
+            element={<AppLayout/>}
+          >
+            <Route path='/login' element={<Login/>}/>
+            <Route element={<RequireAuth allowedRoles={['default']} />}>
+              <Route index element={<Dashboard/>}/>
+              <Route path="/profile" element={<Profile/>}/>
+            </Route>
+          </Route> */}
+        </Routes>
+      </AuthProvider>
+      <ReactQueryDevtools />
+    </QueryClientProvider>
   );
 }
 

@@ -2,9 +2,11 @@ import App from '@/app/app';
 import { IndexController } from '@controllers/index.controller';
 import { AuthController } from '@controllers/auth.controller';
 import { UsersController } from '@controllers/users.controller';
+import { AdminController } from '@controllers/admin.controller';
+import { QApiController } from '@controllers/qapi.controller';
 import validateEnv from '@utils/validateEnv';
 
 validateEnv();
 
-const app = new App([IndexController, AuthController, UsersController]);
+const app = new App([IndexController, AuthController, UsersController, AdminController, QApiController]);
 app.listen();

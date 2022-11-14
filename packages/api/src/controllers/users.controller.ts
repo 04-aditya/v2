@@ -2,11 +2,11 @@ import { Controller, Param, Body, Get, Post, Put, Delete, HttpCode, UseBefore, J
 import { OpenAPI } from 'routing-controllers-openapi';
 import { validationMiddleware } from '@middlewares/validation.middleware';
 import { AppDataSource } from '@/databases';
-import { UserEntity } from '@/entiies/user.entity';
+import { UserEntity } from '@/entities/user.entity';
 import { IUser, APIResponse } from 'sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 
-@JsonController('/users')
+@JsonController('/api/users')
 @UseBefore(authMiddleware)
 export class UsersController {
   @Get('/:id')
@@ -19,9 +19,9 @@ export class UsersController {
           id: parseInt(userId),
         },
       });
-      result.data = matchedUser;
+      result.data = matchedUser.toJSON();
     } else {
-      result.data = currentUser;
+      result.data = currentUser.toJSON();
     }
     return result;
   }

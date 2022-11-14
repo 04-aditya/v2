@@ -13,8 +13,8 @@ import { NODE_ENV, PORT, LOG_FORMAT, ORIGIN, CREDENTIALS } from '@config';
 import errorMiddleware from '@middlewares/error.middleware';
 import { logger, stream } from '@utils/logger';
 import { AppDataSource } from '@/databases';
-import { UserRoleEntity } from '@/entiies/userrole.entity';
-import { UserEntity } from '@/entiies/user.entity';
+import { UserRoleEntity } from '@/entities/userrole.entity';
+import { UserEntity } from '@/entities/user.entity';
 class App {
   public app: express.Application;
   public env: string;
@@ -121,7 +121,7 @@ class App {
       const host = req.get('origin');
 
       whitelist.forEach(function (val) {
-        if (host.indexOf(val) > -1) {
+        if (host?.indexOf(val) > -1) {
           res.setHeader('Access-Control-Allow-Origin', host);
         }
       });
@@ -170,6 +170,11 @@ class App {
       components: {
         schemas,
         securitySchemes: {
+          bearerAuth:{
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
           // basicAuth: {
           //   scheme: 'basic',
           //   type: 'http',

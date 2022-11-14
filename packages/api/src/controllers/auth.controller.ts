@@ -17,12 +17,12 @@ import {
 import { logger } from '@/utils/logger';
 import { HttpException } from '@/exceptions/HttpException';
 import { AppDataSource } from '@/databases';
-import { UserEntity } from '@/entiies/user.entity';
+import { UserEntity } from '@/entities/user.entity';
 import sgMail from '@sendgrid/mail';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS } from '@config';
 import { Like } from 'typeorm';
-import { UserRoleEntity } from '@/entiies/userrole.entity';
+import { UserRoleEntity } from '@/entities/userrole.entity';
 
 const REFRESHTOKENCOOKIE = 'rt';
 
@@ -50,7 +50,7 @@ function createAccessToken(user: UserEntity) {
       },
     },
     ACCESS_TOKEN_SECRET,
-    { expiresIn: '10s' },
+    { expiresIn: '1h' },
   );
 }
 
@@ -106,9 +106,9 @@ export class AuthController {
 
   @Get('/refreshtoken')
   async refreshToken(@Res() res: Response, @CookieParam(REFRESHTOKENCOOKIE) cRT?: string) {
-    logger.info(cRT);
+    logger.info('cookie: ' + cRT);
     const userRepo = AppDataSource.getRepository(UserEntity);
-    if (!cRT) throw new UnauthorizedError();
+    if (!cRT) throw new HttpException(403, 'Unauthorized');
 
     res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true, domain: DOMAIN });
 

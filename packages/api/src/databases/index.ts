@@ -1,8 +1,8 @@
 import { join } from 'path';
 import { DataSource } from 'typeorm';
 import { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_DATABASE } from '@config';
-import { UserEntity } from '@/entiies/user.entity';
-import { UserRoleEntity } from '@/entiies/userrole.entity';
+import { UserEntity } from '@/entities/user.entity';
+import { UserRoleEntity } from '@/entities/userrole.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -12,8 +12,8 @@ export const AppDataSource = new DataSource({
   password: DB_PASSWORD,
   database: DB_DATABASE,
   synchronize: true,
-  logging: false,
+  logging: Boolean(process.env.DB_LOG),
   entities: [UserEntity, UserRoleEntity],
-  migrations: [join(__dirname, '../**/*.migration{.ts,.js}')],
-  subscribers: [join(__dirname, '../**/*.subscriber{.ts,.js}')],
+  // migrations: [join(__dirname, '../**/*.migration{.ts,.js}')],
+  // subscribers: [join(__dirname, '../**/*.subscriber{.ts,.js}')],
 });

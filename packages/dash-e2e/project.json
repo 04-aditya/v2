@@ -1,4 +1,5 @@
 {
+  "name": "dash-e2e",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/dash-e2e/src",
   "projectType": "application",

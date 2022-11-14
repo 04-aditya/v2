@@ -17,4 +17,7 @@ export const {
   DB_DATABASE,
   MAILDOMAINS,
   DOMAIN,
+  CLID,
+  CLIS,
+  TID,
 } = process.env;
