@@ -120,7 +120,7 @@ class App {
       const whitelist = ORIGIN.split(',');
       const host = req.get('origin').toLowerCase();
 
-      whitelist.forEach(function (val) {
+      whitelist.forEach((val: string) => {
         if (host?.indexOf(val) > -1) {
           res.setHeader('Access-Control-Allow-Origin', host);
           res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, PATCH, DELETE, OPTION');
