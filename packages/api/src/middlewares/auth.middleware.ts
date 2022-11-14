@@ -3,7 +3,7 @@ import { TokenExpiredError, verify } from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET } from '@config';
 import { DataStoredInToken, RequestWithUser } from '@interfaces/auth.interface';
 import { AppDataSource } from '@/databases';
-import { UserEntity } from '@/entiies/user.entity';
+import { UserEntity } from '@/entities/user.entity';
 import { ForbiddenError } from 'routing-controllers';
 import { logger } from '@/utils/logger';
 import { isInstance } from 'class-validator';
@@ -31,18 +31,18 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
         req.user = matchedUser;
         next();
       } else {
-        next(new ForbiddenError('Wrong authentication token'));
+        return res.status(403).send('Wrong authentication token');
       }
     } else {
-      next(new ForbiddenError('Authentication token missing'));
+      return res.status(403).send('Authentication token missing');
     }
   } catch (error) {
-    console.dir(error);
+    //console.dir(error);
     if (isInstance(error, TokenExpiredError)) {
-      return next(new ForbiddenError('Token Expired'));
+      return res.status(403).send('Token Expired');
     }
 
-    next(new ForbiddenError('Invalid token'));
+    return res.status(403).send('Invalid token');
   }
 };
 

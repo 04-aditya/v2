@@ -32,6 +32,9 @@ const DevSettings = React.lazy(() => import('@/pages/devsettings/devsettings'));
 const DevSettingsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><DevSettings/></React.Suspense>
 
 
+const AdminUsers = React.lazy(() => import('@/pages/admin/users/admin.users'));
+const AdminUsersPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminUsers/></React.Suspense>
+
 export type RouteMap = {
   path?: string,
   element?: JSX.Element,
@@ -55,9 +58,18 @@ const routeMap:RouteMap ={
       roles:['default'],
       routes:[
         {index:true, path:'/', element:<DashboardPage/>},
-        {path:'/profile', element:<ProfilePage/>},
+        {path:'/profile/:userId', element:<ProfilePage/>},
         {path:'/teams', element:<TeamsPage/>},
         {path:'/developer', element:<DevSettingsPage/>},
+      ]
+    },
+    {
+      roles:['admin'],
+      routes:[
+        {path:'/admin',routes:[
+          {index:true, path:'dashboard', element:<AdminUsersPage/>},
+          {path:'users', element:<AdminUsersPage/>},
+        ]}
       ]
     }
   ]

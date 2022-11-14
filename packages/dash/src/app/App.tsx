@@ -8,11 +8,18 @@ import { Typography } from '@mui/material';
 import RequireAuth from '../components/RequireAuth';
 import { AuthProvider } from '@/context/AuthProvider';
 import routemap, { RouteMap } from './Routes';
+import {
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
-function generateRoute(r:RouteMap){
+const queryClient = new QueryClient();
+
+function generateRoute(r:RouteMap, idx:number){
   let childRoutes=null;
   if (r.routes && r.routes.length) {
-    const routes = r.routes.map(cr=>generateRoute(cr))
+    const routes = r.routes.map((cr,i)=>generateRoute(cr,i))
     if (r.roles && r.roles.length) {
       childRoutes = <Route element={<RequireAuth allowedRoles={r.roles}/>}>
         {routes}
@@ -20,29 +27,31 @@ function generateRoute(r:RouteMap){
     } else childRoutes = routes;
 
   }
-  return <Route path={r.path} element={r.element} index={r.index}>
+  return <Route key={idx} path={r.path} element={r.element} index={r.index}>
     {childRoutes}
   </Route>
 }
 export function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        {generateRoute(routemap)}
-{/*
-        <Route
-          path="/"
-          element={<AppLayout/>}
-        >
-          <Route path='/login' element={<Login/>}/>
-          <Route element={<RequireAuth allowedRoles={['default']} />}>
-            <Route index element={<Dashboard/>}/>
-            <Route path="/profile" element={<Profile/>}/>
-          </Route>
-        </Route> */}
-      </Routes>
-      {/* END: routes */}
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Routes>
+          {generateRoute(routemap,1)}
+          {/*
+          <Route
+            path="/"
+            element={<AppLayout/>}
+          >
+            <Route path='/login' element={<Login/>}/>
+            <Route element={<RequireAuth allowedRoles={['default']} />}>
+              <Route index element={<Dashboard/>}/>
+              <Route path="/profile" element={<Profile/>}/>
+            </Route>
+          </Route> */}
+        </Routes>
+      </AuthProvider>
+      <ReactQueryDevtools />
+    </QueryClientProvider>
   );
 }
 

@@ -1,12 +1,18 @@
 import { Box, Typography } from '@mui/material';
 import { Route, Link, Outlet } from 'react-router-dom';
+import { appstateDispatch } from '@/hooks/useAppState';
 
 import styles from './dashboard.module.scss';
+import { useEffect } from 'react';
 
 /* eslint-disable-next-line */
 export interface DashboardProps {}
 
 export function Dashboard(props: DashboardProps) {
+  useEffect(() => {
+    appstateDispatch({type:'title', data:'Dashboard - PSNext'});
+  }, []);
+
   return (
     <div className={styles['container']}>
       <Outlet/>

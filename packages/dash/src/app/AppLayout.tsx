@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 
 import { styled, ThemeProvider } from '@mui/material/styles';
@@ -23,7 +23,14 @@ import Divider from '@mui/material/Divider';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { theme } from './theme';
+import {notificationDispatch, useNotificationStore} from '@/hooks/useNotificationState';
+import {useAppStore} from '@/hooks/useAppState';
+import { CircularProgress, ListItem, ListItemAvatar, Menu, MenuItem } from '@mui/material';
+import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 interface AppBarProps extends MuiAppBarProps {
   open?: boolean;
@@ -35,6 +42,7 @@ const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== 'open',
 })<AppBarProps>(({ theme, open }) => ({
   zIndex: theme.zIndex.drawer + 1,
+  background: 'transparent',
   transition: theme.transitions.create(['width', 'margin'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
@@ -87,8 +95,7 @@ const AppLayout = ()=>{
 
   <AppBar position="absolute" open={open} elevation={0}>
     <Toolbar
-      sx={{
-        pr: '24px', // keep right padding when drawer closed
+      sx={{ml:(open?-2:7), pr: '24px', // keep right padding when drawer closed
       }}
     >
       {/* <IconButton
@@ -103,21 +110,8 @@ const AppLayout = ()=>{
       >
         <MenuIcon />
       </IconButton> */}
-
-      <Typography
-        component="h1"
-        variant="h6"
-        color="inherit"
-        noWrap
-        sx={{ flexGrow: 1 }}
-      >
-        Dashboard
-      </Typography>
-      <IconButton color="inherit">
-        <Badge badgeContent={4} color="secondary">
-          <NotificationsIcon />
-        </Badge>
-      </IconButton>
+      <Title/>
+      <NotificationIcon/>
     </Toolbar>
   </AppBar>
   <div id='content'>
@@ -131,36 +125,18 @@ const AppLayout = ()=>{
           px: [1],
         }}
       >
-        <IconButton onClick={toggleDrawer} color="inherit">
+        {open?<IconButton onClick={toggleDrawer} color="inherit">
           <ChevronLeftIcon />
-        </IconButton>
+        </IconButton>:null}
       </Toolbar>
       </AppBar>
       <List component="nav">
-        <ListItemButton component={Link} to="/">
-          <ListItemIcon sx={{color:"inherit"}}>
-            <DashboardIcon />
-          </ListItemIcon>
-          <ListItemText primary="Dashboard"/>
-        </ListItemButton>
-        <ListItemButton component={Link} to="/profile">
-          <ListItemIcon sx={{color:"inherit"}}>
-            <PersonIcon />
-          </ListItemIcon>
-          <ListItemText primary="Profile" />
-        </ListItemButton>
-        <ListItemButton component={Link} to="/teams">
-          <ListItemIcon sx={{color:"inherit"}}>
-            <GroupsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Teams" />
-        </ListItemButton>
-        <ListItemButton component={Link} to="/developer">
-          <ListItemIcon sx={{color:"inherit"}}>
-            <ExtensionIcon />
-          </ListItemIcon>
-          <ListItemText primary="Developer Settings" />
-        </ListItemButton>
+        <MenuEntry path="/" text="Dashboard" icon={<DashboardIcon />}/>
+        <MenuEntry path="/profile/me" text="Profile" icon={<PersonIcon />}/>
+        <MenuEntry path="/teams" text="Teams" icon={<GroupsIcon/>}/>
+        <MenuEntry path="/developer" text="Developer Settings" icon={<ExtensionIcon />}/>
+        <Divider/>
+        <MenuEntry path="/admin/users" text="Admin" icon={<AdminPanelSettingsIcon/>}/>
       </List>
     </Drawer>
     <section id='contentbody'>
@@ -172,4 +148,109 @@ const AppLayout = ()=>{
   </ThemeProvider>
 }
 
+function Title() {
+  const title = useAppStore('title');
+  return <Typography
+    component="h1"
+    variant="h6"
+    color="inherit"
+    noWrap
+    sx={{ flexGrow: 1 }}
+  >
+    {title}
+  </Typography>;
+}
+
+function NotificationIcon() {
+  const unreadCount = useNotificationStore('unreadCount');
+  const notifications = useNotificationStore('notifications');
+  const busy = useNotificationStore('busy');
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+    notificationDispatch({type: 'resetunreadcount'})
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  return <React.Fragment>
+    <IconButton color="inherit" onClick={handleClick}
+      aria-controls={open ? 'notifications-menu' : undefined}
+      aria-haspopup="true"
+      aria-expanded={open ? 'true' : undefined}
+    >
+      <Badge badgeContent={unreadCount} color="secondary">
+        {busy?<CircularProgress sx={{
+                position:'absolute',
+                top: -8,
+                left: -8,
+                zIndex: 1
+            }}/>:null}
+        <NotificationsIcon color="inherit"/>
+      </Badge>
+    </IconButton>
+    <Menu
+      anchorEl={anchorEl}
+      id="notifications-menu"
+      open={open}
+      onClose={handleClose}
+      onClick={handleClose}
+      PaperProps={{
+        elevation: 0,
+        sx: {
+          maxWidth: 400,
+          overflow: 'visible',
+          filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+          mt: 1.5,
+          '& .MuiAvatar-root': {
+            width: 32,
+            height: 32,
+            ml: -0.5,
+            mr: 1,
+          },
+          '&:before': {
+            content: '""',
+            display: 'block',
+            position: 'absolute',
+            top: 0,
+            right: 14,
+            width: 10,
+            height: 10,
+            bgcolor: 'background.paper',
+            transform: 'translateY(-50%) rotate(45deg)',
+            zIndex: 0,
+          },
+        },
+      }}
+      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+    >
+      {notifications.map(n=>{
+        return <ListItem key={n.id} dense>
+          <ListItemAvatar>
+            {n.status==='pending'?<QueryBuilderIcon color='info'/>:(
+              n.status==='done'?<TaskAltIcon color='success'/>:<ErrorOutlineIcon color='error'/>
+            )}
+          </ListItemAvatar>
+          <ListItemText primary={n.title} secondary={n.description}/>
+        </ListItem>
+      })}
+      {notifications.length===0?<ListItem key={'empty'} dense>
+        <ListItemText primary={''} secondary={'no notifications'}/>
+      </ListItem>:null}
+    </Menu>
+  </React.Fragment>;
+}
+
+function MenuEntry({path, text, icon}:{path:string, text:string, icon:React.ReactNode}) {
+  return <ListItemButton component={Link} to={path}>
+    <ListItemIcon sx={{ color: "inherit" }}>
+      {icon}
+    </ListItemIcon>
+    <ListItemText primary={text} />
+  </ListItemButton>;
+}
 export default AppLayout;
+

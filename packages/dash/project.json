@@ -1,10 +1,11 @@
 {
+  "name": "dash",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/dash/src",
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nrwl/web:webpack",
+      "executor": "@nrwl/webpack:webpack",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
@@ -44,7 +45,7 @@
       }
     },
     "serve": {
-      "executor": "@nrwl/web:dev-server",
+      "executor": "@nrwl/webpack:dev-server",
       "defaultConfiguration": "development",
       "options": {
         "buildTarget": "dash:build",
@@ -61,7 +62,7 @@
       }
     },
     "build-docker": {
-      "executor": "@nrwl/workspace:run-commands",
+      "executor": "nx:run-commands",
       "options": {
         "commands": [
           {
@@ -78,7 +79,7 @@
       }
     },
     "build-k8s-manifests": {
-      "executor": "@nrwl/workspace:run-commands",
+      "executor": "nx:run-commands",
       "options": {
         "commands": [
           "find ./packages/dash/k8s -name kustomization.yaml -type f -exec sed -i 's/BRANCH/{args.branch}/g' {} \\;",
@@ -107,7 +108,7 @@
     },
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": ["coverage/packages/dash"],
+      "outputs": ["{workspaceRoot}/coverage/packages/dash"],
       "options": {
         "jestConfig": "packages/dash/jest.config.ts",
         "passWithNoTests": true

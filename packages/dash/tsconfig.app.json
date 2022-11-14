@@ -9,7 +9,7 @@
       "@/*": ["*"],
       "@hooks/*": ["hooks/*"],
       "sharedtypes": ["../../shared/types/src/index.ts"]
-    },
+    }
   },
   "files": [
     "../../node_modules/@nrwl/react/typings/cssmodule.d.ts",

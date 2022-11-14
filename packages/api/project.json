@@ -1,16 +1,19 @@
 {
+  "name": "api",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/api/src",
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nrwl/node:webpack",
+      "executor": "@nrwl/webpack:webpack",
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/packages/api",
         "main": "packages/api/src/server.ts",
         "tsConfig": "packages/api/tsconfig.app.json",
-        "assets": ["packages/api/src/assets"]
+        "assets": ["packages/api/src/assets"],
+        "target": "node",
+        "compiler": "tsc"
       },
       "configurations": {
         "production": {
@@ -38,7 +41,7 @@
       }
     },
     "build-docker": {
-      "executor": "@nrwl/workspace:run-commands",
+      "executor": "nx:run-commands",
       "options": {
         "commands": [
           {
@@ -55,7 +58,7 @@
       }
     },
     "build-k8s-manifests": {
-      "executor": "@nrwl/workspace:run-commands",
+      "executor": "nx:run-commands",
       "options": {
         "commands": [
           "find ./packages/api/k8s -name kustomization.yaml -type f -exec sed -i 's/BRANCH/{args.branch}/g' {} \\;",
@@ -84,7 +87,7 @@
     },
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": ["coverage/packages/api"],
+      "outputs": ["{workspaceRoot}/coverage/packages/api"],
       "options": {
         "jestConfig": "packages/api/jest.config.ts",
         "passWithNoTests": true
