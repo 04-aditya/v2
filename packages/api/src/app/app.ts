@@ -138,6 +138,7 @@ class App {
       cors: {
         origin: whitelist,
         credentials: CREDENTIALS,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTION', 'DELETE'],
       },
       controllers: controllers,
       currentUserChecker: async (action: Action) => {
