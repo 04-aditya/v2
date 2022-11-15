@@ -111,7 +111,7 @@ class App {
   private initializeMiddlewares() {
     this.app.use(morgan(LOG_FORMAT, { stream }));
     this.app.use(hpp());
-    // this.app.use(helmet());
+    this.app.use(helmet());
     this.app.use(compression());
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
@@ -134,11 +134,10 @@ class App {
 
   private initializeRoutes(controllers: Function[]) {
     useExpressServer(this.app, {
-      cors: false,
-      // {
-      //   origin: ORIGIN.split(','),
-      //   credentials: CREDENTIALS,
-      // },
+      cors: {
+        origin: ORIGIN.split(','),
+        credentials: CREDENTIALS,
+      },
       controllers: controllers,
       currentUserChecker: async (action: Action) => {
         return action.request.user as UserEntity;
