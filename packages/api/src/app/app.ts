@@ -133,9 +133,10 @@ class App {
   }
 
   private initializeRoutes(controllers: Function[]) {
+    const whitelist = ORIGIN.split(',');
     useExpressServer(this.app, {
       cors: {
-        origin: ORIGIN.split(','),
+        origin: whitelist,
         credentials: CREDENTIALS,
       },
       controllers: controllers,
