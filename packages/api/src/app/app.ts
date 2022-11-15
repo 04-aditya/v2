@@ -124,7 +124,7 @@ class App {
         if (host?.indexOf(val) > -1) {
           res.setHeader('Access-Control-Allow-Origin', host);
           // res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, PATCH, DELETE, OPTION');
-          // res.setHeader('Access-Control-Allow-Headers', '*');
+          res.setHeader('Access-Control-Allow-Headers', '*');
         }
       });
 
