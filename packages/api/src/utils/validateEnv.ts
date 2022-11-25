@@ -21,6 +21,7 @@ const validateEnv = () => {
     CLID: str(),
     CLIS: str(),
     TID: str(),
+    PDAAPI: str(),
   });
 };
 

@@ -78,6 +78,11 @@ export class AuthController {
       user.email = email.toLocaleLowerCase();
       const defaultRole = await rolesRepo.findOne({ where: { name: 'default' } });
       user.roles = [defaultRole];
+      try {
+        user.refresh();
+      } catch (ex) {
+        logger.warn(`Unable to refresh PDA data for ${user.email}`);
+      }
     }
     const code = generateCODE(6);
     await user.setCode(code);

@@ -20,26 +20,6 @@ import { IUser, APIResponse } from 'sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { HttpException } from '@/exceptions/HttpException';
 import AsyncTask from '@/utils/asyncTask';
-import axios from 'axios';
-import axiosRetry from 'axios-retry';
-import { CLID, CLIS, TID } from '@/config';
-
-const pdaclient = axios.create({
-  baseURL: 'https://psdpanalyticsdev.azurewebsites.net/queryaascube/api',
-  headers: {
-    clid: CLID,
-    clis: CLIS,
-    tid: TID,
-  },
-});
-axiosRetry(pdaclient, {
-  retries: 3,
-  retryDelay: axiosRetry.exponentialDelay,
-  retryCondition: error => {
-    console.log(error);
-    return true;
-  },
-});
 
 @JsonController('/api/admin')
 @UseBefore(authMiddleware)
@@ -62,35 +42,7 @@ export class AdminController {
   @OpenAPI({ summary: 'Refresh users data from pda' })
   @Authorized(['admin'])
   async refreshUsers(@BodyParam('email') email: string, @CurrentUser() currentUser: UserEntity) {
-    const refresh = async () => {
-      const ar = await pdaclient.post('/getPerson/bySupervisor', {
-        supervisorEmail: email,
-      });
-
-      if (ar.status !== 200) {
-        throw new Error('Unable to find the record in PDA data');
-      }
-
-      let pdadata: any;
-      if (ar.data) {
-        (ar.data || []).forEach((emp: any) => {
-          if (emp.email_address === email.toLowerCase()) {
-            pdadata = emp;
-            console.log(pdadata);
-          }
-        });
-      }
-
-      if (!pdadata) {
-        throw new Error('Unable to find the record in PDA data');
-      }
-      const matchedUser = await AppDataSource.getRepository(UserEntity).findOne({ where: { email } });
-      matchedUser.pdadata = JSON.stringify(pdadata);
-      await matchedUser.save();
-      return { snapshot_date: pdadata.snapshot_date };
-    };
-
-    const qt = new AsyncTask(refresh(), currentUser.id + '');
+    const qt = new AsyncTask(currentUser.refresh(), currentUser.id + '');
     return { data: qt.id, message: 'created' };
   }
 

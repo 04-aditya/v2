@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 
 import { styled, ThemeProvider } from '@mui/material/styles';
@@ -27,10 +27,13 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { theme } from './theme';
 import {notificationDispatch, useNotificationStore} from '@/hooks/useNotificationState';
 import {useAppStore} from '@/hooks/useAppState';
-import { CircularProgress, ListItem, ListItemAvatar, Menu, MenuItem } from '@mui/material';
+import { CircularProgress, ListItem, ListItemAvatar, Menu, MenuItem, useTheme } from '@mui/material';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { useUser } from '@/api/users';
+import { IUser } from '@/../../shared/types/src';
+import useAuth from '@/hooks/useAuth';
 
 interface AppBarProps extends MuiAppBarProps {
   open?: boolean;
@@ -42,14 +45,14 @@ const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== 'open',
 })<AppBarProps>(({ theme, open }) => ({
   zIndex: theme.zIndex.drawer + 1,
-  background: 'transparent',
+  background: theme.palette.background.paper,
   transition: theme.transitions.create(['width', 'margin'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
   ...(open && {
-    marginLeft: drawerWidth,
-    width: `calc(100% - ${drawerWidth}px)`,
+    // marginLeft: drawerWidth,
+    // width: `calc(100% - ${drawerWidth}px)`,
     transition: theme.transitions.create(['width', 'margin'], {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
@@ -64,7 +67,7 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
       whiteSpace: 'nowrap',
       width: drawerWidth,
       borderWidth:0,
-      background: 'transparent',
+      background: theme.palette.background.default,
       transition: theme.transitions.create('width', {
         easing: theme.transitions.easing.sharp,
         duration: theme.transitions.duration.enteringScreen,
@@ -89,13 +92,18 @@ const AppLayout = ()=>{
 
   const [open, setOpen] = React.useState(false);
   const toggleDrawer = () => setOpen(!open);
+  const {auth}= useAuth();
+
+  const isAdmin = useMemo(()=>{
+    return auth.user?auth.user.roles.find(r=>r.name==='admin'):false;
+  }, [auth.user]);
 
   return <ThemeProvider theme={theme}>
   <CssBaseline />
 
   <AppBar position="absolute" open={open} elevation={0}>
     <Toolbar
-      sx={{ml:(open?-2:7), pr: '24px', // keep right padding when drawer closed
+      sx={{//ml:(open?-2:7), pr: '24px', // keep right padding when drawer closed
       }}
     >
       {/* <IconButton
@@ -110,6 +118,9 @@ const AppLayout = ()=>{
       >
         <MenuIcon />
       </IconButton> */}
+      <Box sx={{pr:2, pt:1}}>
+        <img src='/assets/ps-logo.png' height={'32px'} alt='publicis sapient logo'/>
+      </Box>
       <Title/>
       <NotificationIcon/>
     </Toolbar>
@@ -130,14 +141,7 @@ const AppLayout = ()=>{
         </IconButton>:null}
       </Toolbar>
       </AppBar>
-      <List component="nav">
-        <MenuEntry path="/" text="Dashboard" icon={<DashboardIcon />}/>
-        <MenuEntry path="/profile/me" text="Profile" icon={<PersonIcon />}/>
-        <MenuEntry path="/teams" text="Teams" icon={<GroupsIcon/>}/>
-        <MenuEntry path="/developer" text="Developer Settings" icon={<ExtensionIcon />}/>
-        <Divider/>
-        <MenuEntry path="/admin/users" text="Admin" icon={<AdminPanelSettingsIcon/>}/>
-      </List>
+      <DrawerMenu isAdmin={isAdmin}/>
     </Drawer>
     <section id='contentbody'>
       <Toolbar/>
@@ -149,11 +153,12 @@ const AppLayout = ()=>{
 }
 
 function Title() {
+  const theme = useTheme();
   const title = useAppStore('title');
   return <Typography
     component="h1"
     variant="h6"
-    color="inherit"
+    color={theme.palette.primary.dark}
     noWrap
     sx={{ flexGrow: 1 }}
   >
@@ -244,6 +249,16 @@ function NotificationIcon() {
   </React.Fragment>;
 }
 
+function DrawerMenu(props:any) {
+  return <List component="nav">
+  <MenuEntry path="/" text="Dashboard" icon={<DashboardIcon />}/>
+  <MenuEntry path="/profile/me" text="Profile" icon={<PersonIcon />}/>
+  <MenuEntry path="/teams" text="Teams" icon={<GroupsIcon/>}/>
+  <MenuEntry path="/developer" text="Developer Settings" icon={<ExtensionIcon />}/>
+  <Divider/>
+  {props.isAdmin?<MenuEntry path="/admin/users" text="Admin" icon={<AdminPanelSettingsIcon/>}/>:null}
+</List>
+}
 function MenuEntry({path, text, icon}:{path:string, text:string, icon:React.ReactNode}) {
   return <ListItemButton component={Link} to={path}>
     <ListItemIcon sx={{ color: "inherit" }}>

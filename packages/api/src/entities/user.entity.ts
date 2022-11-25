@@ -15,6 +15,26 @@ import {
 } from 'typeorm';
 import { UserRoleEntity } from './userrole.entity';
 import { hash, compare } from 'bcrypt';
+import axios from 'axios';
+import axiosRetry from 'axios-retry';
+import { CLID, CLIS, TID, PDAAPI } from '@/config';
+
+const pdaclient = axios.create({
+  baseURL: PDAAPI,
+  headers: {
+    clid: CLID,
+    clis: CLIS,
+    tid: TID,
+  },
+});
+axiosRetry(pdaclient, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: error => {
+    console.log(error);
+    return true;
+  },
+});
 
 @Entity({ name: 'psuser' })
 export class UserEntity extends BaseEntity implements IUser {
@@ -96,5 +116,32 @@ export class UserEntity extends BaseEntity implements IUser {
       email: this.email,
       roles: this.roles?.map(r => ({ id: r.id, name: r.name })),
     };
+  }
+
+  async refresh() {
+    const ar = await pdaclient.post('/getPerson/bySupervisor', {
+      supervisorEmail: this.email,
+    });
+
+    if (ar.status !== 200) {
+      throw new Error('Unable to find the record in PDA data');
+    }
+
+    let pdadata: any;
+    if (ar.data) {
+      (ar.data || []).forEach((emp: any) => {
+        if (emp.email_address === this.email) {
+          pdadata = emp;
+          console.log(pdadata);
+        }
+      });
+    }
+
+    if (!pdadata) {
+      throw new Error('Unable to find the record in PDA data');
+    }
+    this.pdadata = JSON.stringify(pdadata);
+    await this.save();
+    return { snapshot_date: pdadata.snapshot_date };
   }
 }
