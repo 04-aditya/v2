@@ -15,6 +15,7 @@ import { logger, stream } from '@utils/logger';
 import { AppDataSource } from '@/databases';
 import { UserRoleEntity } from '@/entities/userrole.entity';
 import { UserEntity } from '@/entities/user.entity';
+
 class App {
   public app: express.Application;
   public env: string;
@@ -35,6 +36,7 @@ class App {
     AppDataSource.initialize()
       .then(async () => {
         const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
+        const usersRepo = AppDataSource.getRepository(UserEntity);
         try {
           //create roles
           const roles = [
@@ -49,11 +51,11 @@ class App {
               urole.name = role.name;
               urole.description = role.description;
               try {
-                await AppDataSource.getRepository(UserRoleEntity).save(urole);
+                await urole.save();
                 logger.info(`${role.name} userrole created.`);
               } catch (ex) {
-                if (ex.code !== '23505') {
-                  // if not duplicate
+                if (ex.code === '23505') {
+                  // if duplicate
                   logger.warn(`duplicate ${role.name}. userrole not created.`, ex);
                 } else {
                   logger.error(ex);
@@ -65,30 +67,30 @@ class App {
           logger.error('Unable to create default data', ex);
         }
 
-        const adminemail = process.env.ADMINUSEREMAIL;
+        const adminEmail = process.env.ADMINUSEREMAIL;
         try {
-          const adminUser = await AppDataSource.getRepository(UserEntity).findOne({
+          const adminUser = await usersRepo.findOne({
             where: {
-              email: adminemail,
+              email: adminEmail,
             },
             relations: {
               roles: true,
             },
           });
           if (!adminUser) {
-            logger.warn(`No user with email ${adminemail} found. Create one by requesting access`);
+            logger.warn(`No user with email ${adminEmail} found. Create one by requesting access`);
           } else {
             if (adminUser.roles.findIndex(r => r.name === 'admin') === -1) {
-              const adminrole = await rolesRepo.findOne({ where: { name: 'admin' } });
-              adminUser.roles = [...adminUser.roles, adminrole];
-              logger.info(`Setting admin role to ${adminemail}`);
-              await AppDataSource.manager.save(adminUser);
+              const adminRole = await rolesRepo.findOne({ where: { name: 'admin' } });
+              adminUser.roles = [...adminUser.roles, adminRole];
+              logger.info(`Setting admin role to ${adminEmail}`);
+              await adminUser.save();
             }
           }
         } catch (ex) {
-          if (ex.code !== '23505') {
-            // if not duplicate
-            logger.warn(`Unable to set admin role to ${adminemail}.`, ex);
+          if (ex.code === '23505') {
+            // if duplicate
+            logger.warn(`Unable to set admin role to ${adminEmail}.`, ex);
           }
         }
 
@@ -116,20 +118,6 @@ class App {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cookieParser());
-    // this.app.use(function (req, res, next) {
-    //   const whitelist = ORIGIN.split(',');
-    //   const host = req.get('origin').toLowerCase();
-
-    //   whitelist.forEach((val: string) => {
-    //     if (host?.indexOf(val) > -1) {
-    //       res.setHeader('Access-Control-Allow-Origin', host);
-    //       // res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, PATCH, DELETE, OPTION');
-    //       res.setHeader('Access-Control-Allow-Headers', '*');
-    //     }
-    //   });
-
-    //   next();
-    // });
   }
 
   private initializeRoutes(controllers: Function[]) {
@@ -174,15 +162,11 @@ class App {
       components: {
         schemas,
         securitySchemes: {
-          bearerAuth:{
+          bearerAuth: {
             type: 'http',
             scheme: 'bearer',
             bearerFormat: 'JWT',
           },
-          // basicAuth: {
-          //   scheme: 'basic',
-          //   type: 'http',
-          // },
         },
       },
       info: {

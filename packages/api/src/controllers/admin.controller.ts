@@ -12,14 +12,18 @@ import {
   Authorized,
   CurrentUser,
   BodyParam,
+  QueryParam,
 } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
-import { IUser, APIResponse } from 'sharedtypes';
+import { IUser, APIResponse, IPermission, IUserRole } from 'sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { HttpException } from '@/exceptions/HttpException';
 import AsyncTask from '@/utils/asyncTask';
+import { PermissionEntity } from '@/entities/permission.entity';
+import { UserRoleEntity } from '@/entities/userrole.entity';
+import { logger } from '@/utils/logger';
 
 @JsonController('/api/admin')
 @UseBefore(authMiddleware)
@@ -27,7 +31,7 @@ export class AdminController {
   @Get('/users')
   @OpenAPI({ summary: 'Return users matched by the query`' })
   @Authorized(['admin'])
-  async getUsers(@CurrentUser() currentUser: UserEntity) {
+  async listUsers(@CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
     const result = new APIResponse<IUser[]>();

@@ -18,6 +18,8 @@ import { hash, compare } from 'bcrypt';
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import { CLID, CLIS, TID, PDAAPI } from '@/config';
+import { logger } from '@/utils/logger';
+import { AppDataSource } from '@/databases';
 
 const pdaclient = axios.create({
   baseURL: PDAAPI,
@@ -101,6 +103,7 @@ export class UserEntity extends BaseEntity implements IUser {
   @AfterUpdate()
   public handleAfterUpdate() {
     console.log(`Updated User : ${this.id}`);
+    AppDataSource.queryResultCache.remove([`user_${this.id}`]);
   }
 
   async validateCode(code: string) {
@@ -114,7 +117,7 @@ export class UserEntity extends BaseEntity implements IUser {
     return {
       id: this.id,
       email: this.email,
-      roles: this.roles?.map(r => ({ id: r.id, name: r.name })),
+      roles: this.roles?.map(r => r.toJSON()),
     };
   }
 
@@ -124,6 +127,7 @@ export class UserEntity extends BaseEntity implements IUser {
     });
 
     if (ar.status !== 200) {
+      logger.error(ar.data);
       throw new Error('Unable to find the record in PDA data');
     }
 
@@ -138,10 +142,32 @@ export class UserEntity extends BaseEntity implements IUser {
     }
 
     if (!pdadata) {
+      logger.error(ar.data);
       throw new Error('Unable to find the record in PDA data');
     }
     this.pdadata = JSON.stringify(pdadata);
     await this.save();
     return { snapshot_date: pdadata.snapshot_date };
+  }
+
+  static async CreateUser(email: string, getpdadata = false) {
+    const usersRepo = AppDataSource.getRepository(UserEntity);
+    const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
+    let user = await usersRepo.findOne({ where: { email: email.toLocaleLowerCase() } });
+    if (user) {
+      throw new Error('Duplicate email: Cannot create another user with the same email');
+    }
+    user = new UserEntity();
+    user.email = email.toLocaleLowerCase();
+    const defaultRole = await rolesRepo.findOne({ where: { name: 'default' } });
+    user.roles = [defaultRole];
+    await user.save();
+    if (getpdadata) {
+      user.refresh().catch(ex => {
+        logger.error(ex);
+        logger.warn(`Unable to refresh PDA data for ${user.email}`);
+      });
+    }
+    return user;
   }
 }

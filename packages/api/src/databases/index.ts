@@ -3,6 +3,8 @@ import { DataSource } from 'typeorm';
 import { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_DATABASE } from '@config';
 import { UserEntity } from '@/entities/user.entity';
 import { UserRoleEntity } from '@/entities/userrole.entity';
+import { PermissionEntity } from '@/entities/permission.entity';
+import { redisOptions } from '@/utils/redisInstance';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -13,7 +15,11 @@ export const AppDataSource = new DataSource({
   database: DB_DATABASE,
   synchronize: true,
   logging: Boolean(process.env.DB_LOG),
-  entities: [UserEntity, UserRoleEntity],
+  entities: [UserEntity, UserRoleEntity, PermissionEntity],
   // migrations: [join(__dirname, '../**/*.migration{.ts,.js}')],
   // subscribers: [join(__dirname, '../**/*.subscriber{.ts,.js}')],
+  cache: {
+    type: 'ioredis',
+    options: redisOptions,
+  },
 });

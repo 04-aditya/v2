@@ -1,4 +1,4 @@
-import React, { Children, useEffect } from 'react';
+import React, { Children, useCallback, useEffect, useMemo } from 'react';
 import styles from './devsettings.module.scss';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from "yup";
@@ -14,10 +14,13 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import ControlledFormInput from '@/components/ControlledFormInput';
-import { Checkbox, FormLabel, MenuItem, Paper, Select, Stack } from '@mui/material';
+import { Checkbox, FormControlLabel, FormLabel, List, ListItem, ListItemButton, ListItemIcon, ListItemText, MenuItem, Paper, Select, Stack, Switch } from '@mui/material';
 import DTextField from '@/components/DTextField';
 import HTree, { HItemData, updateHTreeData } from '@/components/HCheckBox';
 import { appstateDispatch } from '@/hooks/useAppState';
+import useAuth from '@/hooks/useAuth';
+import { IPermission, IUserRole } from '@/../../shared/types/src';
+import { useUser } from '@/api/users';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,45 +62,12 @@ type GeneratePATFormData = {
 };
 
 
-const patschema = yup.object({
-  note: yup.string().min(1, 'Please specify a name for this token.').required('Please specify a name for this token.'),
-  expiration: yup.string().required(),
-});
-
-const defaultScopes:Array<HItemData> =[
-  {
-    id:'1',
-    label:'Self',
-    value: 1,
-    children:[
-      {id:'1.1', label:'Read', value:1, children:[]},
-      {id:'1.2', label:'Write', value:1, children:[]}
-    ]
-  },
-  {
-    id:'2',
-    label:'User',
-    value: 1,
-    children:[
-      {id:'2.1', label:'Read', value:1, children:[]},
-      {id:'2.2', label:'Write', value:-1, children:[]}
-    ]
-  },
-  {
-    id:'3',
-    label:'Team',
-    value: 1,
-    children:[
-      {id:'3.1', label:'Read', value:-1, children:[]},
-      {id:'3.2', label:'Write', value:-1, children:[]}
-    ]
-  }
-]
-
 function GeneratePAT() {
+  const {data: user} = useUser()
   const [open, setOpen] = React.useState(false);
   const [scroll, setScroll] = React.useState<DialogProps['scroll']>('paper');
-  const [scopes, setScopes] = React.useState(defaultScopes);
+  const [selectedPerms, setSelectedPerms] = React.useState<IPermission[]>([]);
+
   const { control, handleSubmit, formState:{ errors } } = useForm<GeneratePATFormData>({
     defaultValues:{
       name: '',
@@ -105,9 +75,27 @@ function GeneratePAT() {
     }
   });
 
-  const onSubmit = (data:any, e:any) => console.log(data);
+  const onSubmit = (data:any, e:any) => console.log({...data, permissions: selectedPerms});
   const onError = (errors:any, e:any) => console.log(errors);
 
+  const perms = useMemo(()=>{
+    if (!user) return [];
+    let perms: IPermission[] = [];
+
+    function getPerms(role:IUserRole): IPermission[] {
+      let p = [...role.permissions||[]];
+      role.children?.forEach(r=>{
+        p = p.concat(getPerms(r))
+      })
+      return p;
+    }
+
+    user.roles.forEach(r=>{
+      perms=perms.concat(getPerms(r));
+    })
+    console.log(perms);
+    return perms;
+  }, [user]);
 
   const handleClickOpen = (scrollType: DialogProps['scroll']) => () => {
     setOpen(true);
@@ -118,9 +106,25 @@ function GeneratePAT() {
     setOpen(false);
   };
 
-  const handleScopeSelection = (id:string, value: number) => {
-    const newscopes=scopes.map(s=>updateHTreeData(s, id, value));
-    setScopes(newscopes);
+  const toggleSelected = useCallback((p:IPermission)=>{
+    return ()=>{
+      setSelectedPerms(s => {
+        const idx = s.findIndex(v=>v.id===p.id);
+        if (idx!==-1) {
+          s.splice(idx,1);
+          return [...s];
+        }
+        return [...s, p];
+      })
+    }
+  }, []);
+
+  const selectAll = (e: React.ChangeEvent<HTMLInputElement>)=>{
+    if (e.target.checked) {
+      setSelectedPerms([...perms]);
+    } else {
+      setSelectedPerms([]);
+    }
   }
 
   return (
@@ -165,9 +169,34 @@ function GeneratePAT() {
                     {value: "na",  label: "No expiration"},
                   ].map(op=><MenuItem key={op.value} value={op.value}>{op.label}</MenuItem>)}
                 </DTextField>}/>
-              <FormLabel><span>Select Scopes</span></FormLabel>
+                <FormControlLabel
+                  control={
+                    <Switch checked={perms.length===selectedPerms.length} onChange={selectAll}/>
+                  }
+                  label="Select All"
+                />
+              <FormLabel><span>Select Permissions</span></FormLabel>
               <Paper variant="outlined" sx={{p:1}}>
-                <HTree data={scopes} onChange={handleScopeSelection}/>
+                <List sx={{ width: '100%' }}>
+                  {perms.map(p=>{
+                    return (
+                      <ListItem key={p.id} disablePadding>
+                        <ListItemButton role={undefined} onClick={toggleSelected(p)} dense>
+                          <ListItemIcon>
+                            <Checkbox
+                              edge="start"
+                              checked={selectedPerms.find(v=>v.id===p.id)?true:false}
+                              tabIndex={-1}
+                              disableRipple
+                              inputProps={{ 'aria-labelledby': p.name }}
+                          />
+                        </ListItemIcon>
+                        <ListItemText id={p.name} primary={p.name} secondary={p.description} />
+                      </ListItemButton>
+                    </ListItem>
+                    )
+                  })}
+                </List>
               </Paper>
             </Stack>
           </DialogContent>

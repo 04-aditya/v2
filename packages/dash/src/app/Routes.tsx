@@ -2,7 +2,7 @@
 import * as React from 'react';
 import AppLayout from './AppLayout';
 import Typography from "@mui/material/Typography";
-import { jsx } from '@emotion/react';
+import AdminLayout from '@/pages/admin/layout/layout';
 
 const Unauthorized = ()=>(
   <div>
@@ -32,8 +32,17 @@ const DevSettings = React.lazy(() => import('@/pages/devsettings/devsettings'));
 const DevSettingsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><DevSettings/></React.Suspense>
 
 
+const AdminDashboard = React.lazy(() => import('@/pages/admin/dashboard/dashboard'));
+const AdminDashboardPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminDashboard/></React.Suspense>
+
 const AdminUsers = React.lazy(() => import('@/pages/admin/users/admin.users'));
 const AdminUsersPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminUsers/></React.Suspense>
+
+const AdminRoles = React.lazy(() => import('@/pages/admin/roles/admin.roles'));
+const AdminRolesPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminRoles/></React.Suspense>
+
+const AdminPerms = React.lazy(() => import('@/pages/admin/permissions/admin.permissions'));
+const AdminPermsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminPerms/></React.Suspense>
 
 export type RouteMap = {
   path?: string,
@@ -66,9 +75,11 @@ const routeMap:RouteMap ={
     {
       roles:['admin'],
       routes:[
-        {path:'/admin',routes:[
-          {index:true, path:'dashboard', element:<AdminUsersPage/>},
+        {path:'/admin', element:<AdminLayout/>, routes:[
+          {index:true, path:'', element:<AdminDashboardPage/>},
           {path:'users', element:<AdminUsersPage/>},
+          {path:'roles', element:<AdminRolesPage/>},
+          {path:'permissions', element:<AdminPermsPage/>},
         ]}
       ]
     }

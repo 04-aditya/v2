@@ -256,7 +256,7 @@ function DrawerMenu(props:any) {
   <MenuEntry path="/teams" text="Teams" icon={<GroupsIcon/>}/>
   <MenuEntry path="/developer" text="Developer Settings" icon={<ExtensionIcon />}/>
   <Divider/>
-  {props.isAdmin?<MenuEntry path="/admin/users" text="Admin" icon={<AdminPanelSettingsIcon/>}/>:null}
+  {props.isAdmin?<MenuEntry path="/admin" text="Admin" icon={<AdminPanelSettingsIcon/>}/>:null}
 </List>
 }
 function MenuEntry({path, text, icon}:{path:string, text:string, icon:React.ReactNode}) {

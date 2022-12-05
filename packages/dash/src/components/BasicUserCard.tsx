@@ -1,5 +1,5 @@
 import React from 'react';
-import { IUser } from '@/../../shared/types/src';
+import { IUser } from 'sharedtypes';
 import Avatar from '@mui/material/Avatar';
 import Card, { CardProps } from '@mui/material/Card';
 import CardHeader from '@mui/material/CardHeader';

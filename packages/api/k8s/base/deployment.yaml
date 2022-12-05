@@ -24,8 +24,8 @@ spec:
             memory: "128Mi"
             cpu: "250m"
           limits:
-            memory: "2Gi"
-            cpu: "500m"
+            memory: "4Gi"
+            cpu: "1500m"
         envFrom:
           - secretRef:
               name: envsecrets

@@ -69,21 +69,14 @@ export class AuthController {
     if (MAILDOMAINS.split(',').includes(emailParts[1]) === false) {
       throw new HttpException(400, 'Unsupported email domain.');
     }
-    const usersRepo = AppDataSource.getRepository(UserEntity);
-    const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
-    let user = await usersRepo.findOne({ where: { email } });
 
+    let user = await AppDataSource.getRepository(UserEntity).findOne({
+      where: { email },
+    });
     if (!user) {
-      user = new UserEntity();
-      user.email = email.toLocaleLowerCase();
-      const defaultRole = await rolesRepo.findOne({ where: { name: 'default' } });
-      user.roles = [defaultRole];
-      try {
-        user.refresh();
-      } catch (ex) {
-        logger.warn(`Unable to refresh PDA data for ${user.email}`);
-      }
+      user = await UserEntity.CreateUser(email, true);
     }
+
     const code = generateCODE(6);
     await user.setCode(code);
 

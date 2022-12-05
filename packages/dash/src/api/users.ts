@@ -1,9 +1,6 @@
-
-import { useState, useEffect, useCallback } from "react";
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
-import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IUser } from "@/../../shared/types/src";
+import { IUser } from "sharedtypes";
 
 
 const USERAPI = '/api/users';

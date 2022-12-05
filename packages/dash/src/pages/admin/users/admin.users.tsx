@@ -18,6 +18,7 @@ import { SelectionChangedEvent } from 'ag-grid-community';
 import { notificationDispatch, NotificationInfo } from '@/hooks/useNotificationState';
 import { appstateDispatch } from '@/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
+
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 
 // create Plotly renderers via dependency injection

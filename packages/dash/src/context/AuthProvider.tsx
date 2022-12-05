@@ -17,9 +17,9 @@ export const AuthProvider = ({ children }:{children:React.ReactNode}) => {
     const [auth, setAuth] = useState<IAuth>({});
 
     return (
-        <AuthContext.Provider value={{ auth, setAuth }}>
-            {children}
-        </AuthContext.Provider>
+      <AuthContext.Provider value={{ auth, setAuth }}>
+        {children}
+      </AuthContext.Provider>
     )
 }
 

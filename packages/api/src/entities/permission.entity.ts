@@ -1,6 +1,5 @@
 import { IPermission } from 'sharedtypes';
-import { IsNotEmpty } from 'class-validator';
-import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, Unique, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity, Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity({ name: 'permission' })
 export class PermissionEntity extends BaseEntity implements IPermission {
@@ -12,4 +11,12 @@ export class PermissionEntity extends BaseEntity implements IPermission {
 
   @Column({ nullable: true })
   description: string;
+
+  toJSON(): IPermission {
+    return {
+      id: this.id,
+      name: this.name,
+      description: this.description,
+    };
+  }
 }
