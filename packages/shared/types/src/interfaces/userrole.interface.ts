@@ -4,6 +4,7 @@ export interface IUserRole {
   id: number;
   name: string;
   description?: string;
-  permissions: IPermission[];
+  permissions?: IPermission[];
+  includedRoleNames?: string[];
   children?: IUserRole[];
 }

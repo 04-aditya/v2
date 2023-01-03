@@ -5,6 +5,7 @@ import { UserEntity } from '@/entities/user.entity';
 import { UserRoleEntity } from '@/entities/userrole.entity';
 import { PermissionEntity } from '@/entities/permission.entity';
 import { redisOptions } from '@/utils/redisInstance';
+import { UserPATEntity } from '@/entities/userpat.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -15,7 +16,7 @@ export const AppDataSource = new DataSource({
   database: DB_DATABASE,
   synchronize: true,
   logging: Boolean(process.env.DB_LOG),
-  entities: [UserEntity, UserRoleEntity, PermissionEntity],
+  entities: [UserEntity, UserRoleEntity, PermissionEntity, UserPATEntity],
   // migrations: [join(__dirname, '../**/*.migration{.ts,.js}')],
   // subscribers: [join(__dirname, '../**/*.subscriber{.ts,.js}')],
   cache: {

@@ -1,4 +1,4 @@
-import { IUser } from 'sharedtypes';
+import { IPermission, IUser } from 'sharedtypes';
 import { IsNotEmpty } from 'class-validator';
 import {
   BaseEntity,
@@ -12,14 +12,21 @@ import {
   ManyToMany,
   AfterInsert,
   AfterUpdate,
+  OneToMany,
+  Tree,
+  TreeChildren,
+  TreeParent,
 } from 'typeorm';
 import { UserRoleEntity } from './userrole.entity';
-import { hash, compare } from 'bcrypt';
+import { hash, compare, compareSync } from 'bcrypt';
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import { CLID, CLIS, TID, PDAAPI } from '@/config';
 import { logger } from '@/utils/logger';
 import { AppDataSource } from '@/databases';
+import { UserPATEntity } from './userpat.entity';
+import jwt from 'jsonwebtoken';
+import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config';
 
 const pdaclient = axios.create({
   baseURL: PDAAPI,
@@ -39,9 +46,16 @@ axiosRetry(pdaclient, {
 });
 
 @Entity({ name: 'psuser' })
+@Tree('closure-table')
 export class UserEntity extends BaseEntity implements IUser {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @TreeChildren()
+  teams: UserEntity[];
+
+  @TreeParent()
+  manager: UserEntity;
 
   @Column()
   @IsNotEmpty()
@@ -86,7 +100,10 @@ export class UserEntity extends BaseEntity implements IUser {
   @JoinTable()
   roles: UserRoleEntity[];
 
-  @Column()
+  @OneToMany(() => UserPATEntity, pat => pat.user)
+  pats: UserPATEntity[];
+
+  @Column({ nullable: true })
   verificationCode: string;
 
   @Column({ nullable: true })
@@ -121,6 +138,65 @@ export class UserEntity extends BaseEntity implements IUser {
     };
   }
 
+  createRefeshToken(expiresIn = '1d') {
+    return jwt.sign({ username: this.id }, REFRESH_TOKEN_SECRET, { expiresIn });
+  }
+
+  createAccessToken(expiresIn = '1h', patid?: string) {
+    return jwt.sign(
+      {
+        UserInfo: {
+          id: this.id,
+          roles: this.roles.map(r => r.name),
+          patid,
+        },
+      },
+      ACCESS_TOKEN_SECRET,
+      { expiresIn },
+    );
+  }
+
+  async hasRoleOrPermission(perms: ReadonlyArray<string>): Promise<boolean> {
+    for (const role of this.roles) {
+      if (perms.includes(role.name)) return true;
+    }
+    const userPermissions = (await this.getPermissions()).values();
+    for (const p of userPermissions) {
+      for (const reqpermission of perms) {
+        if (p.name.startsWith(reqpermission)) return true;
+      }
+    }
+    return false;
+  }
+
+  private _roles: Map<string, UserRoleEntity>;
+  async getAllRoles(ignoreCache = false): Promise<Map<string, UserRoleEntity>> {
+    if (this._roles && !ignoreCache) return this._roles;
+    const allroles = new Map<string, UserRoleEntity>();
+    for await (const role of this.roles) {
+      allroles.set(role.name, role);
+      for await (const crole of await role.loadChildren()) {
+        allroles.set(crole.name, crole);
+      }
+    }
+    this._roles = allroles;
+    return this._roles;
+  }
+
+  private _permissions: Map<string, IPermission>;
+  async getPermissions(ignoreCache = false) {
+    if (this._permissions && !ignoreCache) return this._permissions;
+
+    const perms = new Map<string, IPermission>();
+
+    for await (const role of (await this.getAllRoles()).values()) {
+      await role.loadPermissions();
+      role.permissions?.forEach(p => perms.set(p.name, p));
+    }
+    this._permissions = perms;
+    return perms;
+  }
+
   async refresh() {
     const ar = await pdaclient.post('/getPerson/bySupervisor', {
       supervisorEmail: this.email,
@@ -150,6 +226,13 @@ export class UserEntity extends BaseEntity implements IUser {
     return { snapshot_date: pdadata.snapshot_date };
   }
 
+  static async getUserById(userId: number | string) {
+    return await AppDataSource.getRepository(UserEntity).findOne({
+      where: {
+        id: parseInt(userId + ''),
+      },
+    });
+  }
   static async CreateUser(email: string, getpdadata = false) {
     const usersRepo = AppDataSource.getRepository(UserEntity);
     const rolesRepo = AppDataSource.getRepository(UserRoleEntity);

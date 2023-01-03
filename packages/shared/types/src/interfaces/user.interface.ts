@@ -1,3 +1,4 @@
+import { IUserPAT } from './userpat.interface';
 import { IUserRole } from './userrole.interface';
 
 export interface IUser {
@@ -122,4 +123,6 @@ export interface IUser {
   */
 
   roles: IUserRole[];
+
+  pats?: IUserPAT[];
 }

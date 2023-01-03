@@ -14,9 +14,10 @@ import { In } from 'typeorm';
 export class RolesController {
   @Get('/')
   @OpenAPI({ summary: 'Return roles matched by the query`' })
+  @Authorized(['roles.read.all'])
   async listRoles() {
     const result = new APIResponse<IUserRole[]>();
-    const matchedRoles = await AppDataSource.getTreeRepository(UserRoleEntity).findTrees({
+    const matchedRoles = await AppDataSource.getRepository(UserRoleEntity).find({
       relations: ['permissions'],
     });
     logger.info(`fetched ${matchedRoles.length} roles.`);
@@ -26,7 +27,7 @@ export class RolesController {
 
   @Post('/')
   @OpenAPI({ summary: 'Create a new role`' })
-  @Authorized(['admin'])
+  @Authorized(['roles.write.all'])
   async upsertRole(@Body() data: IUserRole) {
     const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
     const permRepo = AppDataSource.getRepository(PermissionEntity);
@@ -44,8 +45,6 @@ export class RolesController {
         where: { id: data.id },
         relations: { permissions: true },
       });
-      console.log(role);
-      console.log(data);
       if (role === null) throw new HttpException(400, 'Invalid role to update');
 
       if (role.name !== data.name) {
@@ -54,6 +53,8 @@ export class RolesController {
       }
 
       if (role.description !== data.description) role.description = data.description;
+
+      if (data.includedRoleNames) role.includedRoleNames = data.includedRoleNames;
 
       if (data.permissions) {
         role.permissions = await permRepo.find({

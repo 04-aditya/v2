@@ -1,17 +1,35 @@
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IUser } from "sharedtypes";
+import { IPermission, IUser, IUserPAT } from "sharedtypes";
 
 
 const USERAPI = '/api/users';
 
 const CACHEKEY = 'users';
 
-export const useUser = (id='me') => {
+export const useUserPermissions = (id = 'me') => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const query = useQuery([CACHEKEY, id], async ()=>{
-    const res = await axios.get(`${USERAPI}/${id}`)
+  const keys = [CACHEKEY, id, 'permissions'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/${id}/permissions`)
+    return res.data.data as IPermission[];
+  },{
+    enabled: !!axios,
+    staleTime:  5 * 60 * 1000 // 5 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
+export const useUser = (id = 'me') => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, id];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/${id}`);
     return res.data.data as IUser;
   },{
     enabled: !!axios,
@@ -22,10 +40,29 @@ export const useUser = (id='me') => {
     return res.data.data;
   });
   const invalidateCache = ()=>{
-    queryClient.invalidateQueries([CACHEKEY,id]);
+    queryClient.invalidateQueries(keys);
   }
   return {...query, mutation, invalidateCache};
 }
+
+
+export const useUserPATs = (id = 'me') => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, id, 'pat'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/${id}/pat`);
+    return res.data.data as IUserPAT[];
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 5 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
 
 // export const useUserFiles = (id='me') => {
 //   const queryClient = useQueryClient();

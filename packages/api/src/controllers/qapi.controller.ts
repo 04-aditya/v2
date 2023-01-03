@@ -1,13 +1,7 @@
-import { Res, Param, Body, Get, Post, Put, Delete, HttpCode, UseBefore, JsonController, Authorized, CurrentUser } from 'routing-controllers';
+import { Param, Get, JsonController, CurrentUser } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
-import { validationMiddleware } from '@middlewares/validation.middleware';
-import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
-import { IUser, APIResponse } from 'sharedtypes';
-import authMiddleware from '@/middlewares/auth.middleware';
 import cache from '@/utils/cache';
-import { Response } from 'express';
-import { logger } from '@/utils/logger';
 import { HttpException } from '@/exceptions/HttpException';
 
 @JsonController('/api/q')
@@ -19,6 +13,9 @@ export class QApiController {
     if (!workrequestjson) {
       throw new HttpException(404, 'invaild id');
     }
+
+    if (workrequestjson.userId !== currentUser.id) throw new HttpException(403, 'Forbiddened');
+
     const workrequest: any = JSON.parse(workrequestjson);
     if (workrequest.status === 'done' || workrequest.status === 'error') {
       setTimeout(async () => {

@@ -6,39 +6,21 @@ import 'ag-grid-enterprise';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-import { ColDef, GetDataPath, ICellRendererParams, SelectionChangedEvent } from 'ag-grid-community';
+import { ColDef, GetDataPath, ICellRendererParams, RowValueChangedEvent, SelectionChangedEvent } from 'ag-grid-community';
 import { appstateDispatch } from '@/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useRoles } from '@/api/roles';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import ButtonPopover from '@/components/ButtonPopover';
 import { usePermissions } from '@/api/permissions';
+import { RoleNamesRenderer } from '@/components/RolesRenderer';
+import { checkboxSelection, headerCheckboxSelection } from '@/components/checkboxSelection';
+import { MenuProps } from '@/components/MenuProps';
 
 
 /* eslint-disable-next-line */
 export interface AdminRolesProps {}
 
-const checkboxSelection = function (params:any) {
-  // we put checkbox on the name if we are not doing grouping
-  //return params.columnApi.getRowGroupColumns().length === 0;
-  return !!params.data && params.data.id!==-1;
-};
-
-const headerCheckboxSelection = function (params:any) {
-  // we put checkbox on the name if we are not doing grouping
-  return params.columnApi.getRowGroupColumns().length === 0;
-};
-
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
 const PermissionsRenderer = (params: ICellRendererParams) => {
   const {data: permissions=[]} = usePermissions();
   const [perms, setPerms] = useState<IPermission[]>(params.value||[]);
@@ -92,13 +74,36 @@ const PermissionsRenderer = (params: ICellRendererParams) => {
 export function AdminRoles(props: AdminRolesProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const {data: roles, mutation, invalidateCache, isLoading} = useRoles();
+  const {data, mutation, invalidateCache, isLoading} = useRoles();
   const [selectedRoles, setSelectedRoles] = useState<IUserRole[]>([]);
-  const gridRef = useRef<AgGridReact<IUserRole>>();
+  const gridRef = useRef<AgGridReact>();
   const [columnDefs] = useState<ColDef[]>([
-      { field: 'description', flex:1, editable: true},
-      { field: 'permissions', flex:0, cellRenderer: PermissionsRenderer, editable: true},
+    {
+      field: 'name', floatingFilter: false, flex:0, editable: true,
+      checkboxSelection: checkboxSelection,
+      headerCheckboxSelection: headerCheckboxSelection,
+    },
+    { field: 'description', flex:1, editable: true},
+    { field: 'includedRoleNames', flex:0, cellRenderer: RoleNamesRenderer},
+    { field: 'permissions', flex:0, cellRenderer: PermissionsRenderer},
   ]);
+
+  // const roles: Array<any> = useMemo(()=>{
+  //   if (!data) return [];
+  //   function getRoles(r: Array<any>, hierarchy: string[]) {
+  //     const list:Array<any> = [];
+  //     r.forEach(r=>{
+  //       r.Hierarchy=[...hierarchy, r.name];
+  //       list.push(r);
+  //       if (r.children)
+  //         list.push(...getRoles(r.children, r.Hierarchy))
+  //     })
+  //     return list
+  //   };
+  //   const l = [...getRoles(data,[])];
+  //   console.log(l);
+  //   return l;
+  // }, [data]);
 
   useEffect(() => {
     appstateDispatch({type:'title', data:'Roles (Admin) - PSNext'});
@@ -119,17 +124,17 @@ export function AdminRoles(props: AdminRolesProps) {
 
   const autoGroupColumnDef = useMemo<ColDef>(() => {
     return {
-      headerName: 'name',
+      headerName: 'Name',
       minWidth: 300,
-      editable: true,
       cellRendererParams: {
         suppressCount: true,
-        checkbox: true,
+        checkbox: true
       },
     };
   }, []);
 
-  const onRowValueChanged = useCallback((event:any) => {
+  const onRowValueChanged = useCallback((event:RowValueChangedEvent<IUserRole>) => {
+    if (!event.data) return;
     const data = event.data;
     console.log(data);
     mutation.mutate({id: data.id, name: data.name, description: data.description, permissions:[]},{
@@ -138,8 +143,8 @@ export function AdminRoles(props: AdminRolesProps) {
     });
   }, [mutation, invalidateCache]);
 
-  const onCellValueChanged =  useCallback((e:any)=>{
-    const role:any = {...e.data};
+  const onCellValueChanged =  useCallback((e:any) =>{
+    const role: any = {...e.data};
     if (role) {
       role[e.colDef.field] = e.newValue;
       mutation.mutate({id: role.id, name: role.name, description: role.description, permissions:role.permissions},{
@@ -150,9 +155,7 @@ export function AdminRoles(props: AdminRolesProps) {
   }, [mutation, invalidateCache]);
 
   const getDataPath = useMemo<GetDataPath>(() => {
-    return (data: any) => {
-      return [data.name].concat((data.children||[]).map((c:any) => c.name));
-    };
+    return (data: any) => data.Hierarchy;
   }, []);
 
   return (
@@ -166,15 +169,11 @@ export function AdminRoles(props: AdminRolesProps) {
       <Box className="ag-theme-alpine" sx={{height: '70vh', width: '100%'}}>
         <AgGridReact ref={r => gridRef}
             getRowId={params => params.data.id}
-            rowData={[...roles||[],{id:-1, name:''}]}
+            rowData={data||[]}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
-            autoGroupColumnDef={autoGroupColumnDef}
-            treeData={true}
             animateRows={true}
-            groupDefaultExpanded={-1}
             rowSelection={'multiple'}
-            groupSelectsChildren={true}
             suppressRowClickSelection={true}
             getDataPath={getDataPath}
             editType={'fullRow'}

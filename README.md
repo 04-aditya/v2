@@ -17,6 +17,18 @@
 
   # connect to db
   $ docker exec -it timescaledb psql -U postgres
+  # create new db by command 'create DATABASE psniv2;'
   ```
 
   create .env.local in packages/api & packages/dash by copying the .env.example
+
+  ```sh
+  $ npm i --legacy-peer-deps
+  $ npm i nx -g
+  ```
+
+# running the application
+
+* run api in development mode `nx serve api` watches for changes and auto restarts on changes
+
+* run the dashboard web ui in development mode `nx serve dashboard`

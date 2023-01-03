@@ -27,9 +27,13 @@ function generateRoute(r:RouteMap, idx:number){
     } else childRoutes = routes;
 
   }
-  return <Route key={idx} path={r.path} element={r.element} index={r.index}>
+  if (r.index) {
+    return <Route key={idx} path={r.path} element={r.element||null} index/>
+  } else {
+  return <Route key={idx} path={r.path} element={r.element} >
     {childRoutes}
   </Route>
+  }
 }
 export function App() {
   return (

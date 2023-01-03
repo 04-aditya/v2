@@ -5,6 +5,7 @@ export interface DataStoredInToken {
   UserInfo: {
     id: number;
     roles: string[];
+    patid?: string;
   };
 }
 
@@ -15,4 +16,5 @@ export interface TokenData {
 
 export interface RequestWithUser extends Request {
   user: UserEntity;
+  permissions: string[];
 }

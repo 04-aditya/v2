@@ -23,6 +23,7 @@ import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS } from '@config';
 import { Like } from 'typeorm';
 import { UserRoleEntity } from '@/entities/userrole.entity';
+import { IUserRole } from '@/../../shared/types/src';
 
 const REFRESHTOKENCOOKIE = 'rt';
 
@@ -35,23 +36,6 @@ function generateCODE(count: number): string {
     CODE += digits[Math.floor(Math.random() * 10)];
   }
   return CODE;
-}
-
-function createRefeshToken(user: UserEntity) {
-  return jwt.sign({ username: user.id }, REFRESH_TOKEN_SECRET, { expiresIn: '1d' });
-}
-
-function createAccessToken(user: UserEntity) {
-  return jwt.sign(
-    {
-      UserInfo: {
-        id: user.id,
-        roles: user.roles,
-      },
-    },
-    ACCESS_TOKEN_SECRET,
-    { expiresIn: '1h' },
-  );
 }
 
 @Controller('/auth')
@@ -117,13 +101,15 @@ export class AuthController {
         const decoded: any = jwt.verify(cRT, REFRESH_TOKEN_SECRET);
         // Delete refresh tokens of hacked user
         const hackedUser = await userRepo.findOne({ where: { id: decoded.id } });
-        hackedUser.refreshTokens = null;
-        await hackedUser.save();
+        if (hackedUser) {
+          hackedUser.refreshTokens = null;
+          await hackedUser.save();
+        }
       } catch (err) {
         throw new ForbiddenError();
       }
     }
-    const existingTokens = (foundUser.refreshTokens || '').split(',');
+    const existingTokens = (foundUser?.refreshTokens || '').split(',');
     const newRefreshTokenArray = existingTokens.filter(rt => rt !== cRT);
 
     try {
@@ -137,9 +123,10 @@ export class AuthController {
     }
 
     // Refresh token was still valid
-    const accessToken = createAccessToken(foundUser);
+    const accessToken = foundUser.createAccessToken();
 
-    const newRefreshToken = createRefeshToken(foundUser);
+    const newRefreshToken = foundUser.createRefeshToken();
+
     // Saving refreshToken with current user
     foundUser.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
     await foundUser.save();
@@ -147,7 +134,18 @@ export class AuthController {
     // Creates Secure Cookie with refresh token
     res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });
 
-    return { accessToken, user: { id: foundUser.id, email: foundUser.email, roles: foundUser.roles.map(r => ({ id: r.id, name: r.name })) } };
+    const roleMap = new Map<string, IUserRole>();
+    for await (const role of foundUser.roles) {
+      roleMap.set(role.name, { id: role.id, name: role.name, permissions: role.permissions });
+      const includedRoles = await role.loadChildren();
+      includedRoles.forEach(prole => {
+        roleMap.set(prole.name, { id: prole.id, name: prole.name, permissions: prole.permissions });
+      });
+    }
+    return {
+      accessToken,
+      user: { id: foundUser.id, email: foundUser.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) },
+    };
   }
 
   @Post('/gettoken')
@@ -176,8 +174,8 @@ export class AuthController {
     await user.setCode(generateCODE(6)); // reset the code
 
     // create JWTs
-    const accessToken = createAccessToken(user);
-    const newRefreshToken = createRefeshToken(user);
+    const accessToken = user.createAccessToken();
+    const newRefreshToken = user.createRefeshToken();
 
     const existingTokens = (user.refreshTokens || '').split(',');
     let newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
@@ -205,6 +203,14 @@ export class AuthController {
     // Creates Secure Cookie with refresh token
     res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });
 
-    return { accessToken, user: { id: user.id, email: user.email, roles: user.roles.map(r => ({ id: r.id, name: r.name })) } };
+    const roleMap = new Map<string, IUserRole>();
+    for await (const role of user.roles) {
+      roleMap.set(role.name, { id: role.id, name: role.name, permissions: role.permissions });
+      const includedRoles = await role.loadChildren();
+      includedRoles.forEach(prole => {
+        roleMap.set(prole.name, { id: prole.id, name: prole.name, permissions: prole.permissions });
+      });
+    }
+    return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
   }
 }

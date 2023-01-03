@@ -30,7 +30,7 @@ import { logger } from '@/utils/logger';
 export class AdminController {
   @Get('/users')
   @OpenAPI({ summary: 'Return users matched by the query`' })
-  @Authorized(['admin'])
+  @Authorized(['user.read.all.all'])
   async listUsers(@CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -44,9 +44,9 @@ export class AdminController {
 
   @Post('/refreshuser/pda')
   @OpenAPI({ summary: 'Refresh users data from pda' })
-  @Authorized(['admin'])
+  @Authorized(['user.write.all.all'])
   async refreshUsers(@BodyParam('email') email: string, @CurrentUser() currentUser: UserEntity) {
-    const qt = new AsyncTask(currentUser.refresh(), currentUser.id + '');
+    const qt = new AsyncTask(currentUser.refresh(), currentUser.id);
     return { data: qt.id, message: 'created' };
   }
 

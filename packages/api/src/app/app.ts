@@ -13,8 +13,8 @@ import { NODE_ENV, PORT, LOG_FORMAT, ORIGIN, CREDENTIALS } from '@config';
 import errorMiddleware from '@middlewares/error.middleware';
 import { logger, stream } from '@utils/logger';
 import { AppDataSource } from '@/databases';
-import { UserRoleEntity } from '@/entities/userrole.entity';
 import { UserEntity } from '@/entities/user.entity';
+import { bootstrapDB } from '../databases/bootstrapdb';
 
 class App {
   public app: express.Application;
@@ -35,70 +35,12 @@ class App {
   public listen() {
     AppDataSource.initialize()
       .then(async () => {
-        const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
-        const usersRepo = AppDataSource.getRepository(UserEntity);
-        try {
-          //create roles
-          const roles = [
-            { name: 'default', description: 'default role. every new user will start with this role.' },
-            { name: 'admin', description: 'master admin role.' },
-          ];
-
-          for (const role of roles) {
-            let urole = await rolesRepo.findOne({ where: { name: role.name } });
-            if (!urole) {
-              urole = new UserRoleEntity();
-              urole.name = role.name;
-              urole.description = role.description;
-              try {
-                await urole.save();
-                logger.info(`${role.name} userrole created.`);
-              } catch (ex) {
-                if (ex.code === '23505') {
-                  // if duplicate
-                  logger.warn(`duplicate ${role.name}. userrole not created.`, ex);
-                } else {
-                  logger.error(ex);
-                }
-              }
-            }
-          }
-        } catch (ex) {
-          logger.error('Unable to create default data', ex);
-        }
-
-        const adminEmail = process.env.ADMINUSEREMAIL;
-        try {
-          const adminUser = await usersRepo.findOne({
-            where: {
-              email: adminEmail,
-            },
-            relations: {
-              roles: true,
-            },
-          });
-          if (!adminUser) {
-            logger.warn(`No user with email ${adminEmail} found. Create one by requesting access`);
-          } else {
-            if (adminUser.roles.findIndex(r => r.name === 'admin') === -1) {
-              const adminRole = await rolesRepo.findOne({ where: { name: 'admin' } });
-              adminUser.roles = [...adminUser.roles, adminRole];
-              logger.info(`Setting admin role to ${adminEmail}`);
-              await adminUser.save();
-            }
-          }
-        } catch (ex) {
-          if (ex.code === '23505') {
-            // if duplicate
-            logger.warn(`Unable to set admin role to ${adminEmail}.`, ex);
-          }
-        }
-
+        await bootstrapDB();
         this.app.listen(this.port, () => {
-          logger.info(`=================================`);
-          logger.info(`======= ENV: ${this.env} =======`);
-          logger.info(`🚀 App listening on the port ${this.port}`);
-          logger.info(`=================================`);
+          logger.info(`==================================`);
+          logger.info(`======= ENV: ${this.env} =========`);
+          logger.info(`🚀 PSNI listening on the port ${this.port}`);
+          logger.info(`==================================`);
         });
       })
       .catch(error => {
@@ -132,17 +74,21 @@ class App {
       currentUserChecker: async (action: Action) => {
         return action.request.user as UserEntity;
       },
-      authorizationChecker: async (action: Action, roles?: string[]) => {
-        // perform queries based on token from request headers
-        const user = action.request.user as UserEntity;
-        if (roles) {
-          let hasRole = false;
-          user.roles.forEach(r => {
-            if (roles.includes(r.name)) hasRole = true;
-          });
-          return hasRole;
+      authorizationChecker: async (action: Action, permissions?: string[]) => {
+        try {
+          // perform queries based on token from request headers
+          const user = action.request.user as UserEntity;
+          if (permissions) {
+            for (const p of action.request.permissions) {
+              if (permissions.findIndex(r => p.startsWith(r)) !== -1) return true;
+            }
+            logger.warning(`Not found roles:[${permissions.join(',')}]`);
+            return false;
+          }
+          return user ? true : false;
+        } catch (ex) {
+          logger.error(ex);
         }
-        return user ? true : false;
       },
       defaultErrorHandler: false,
     });
@@ -169,8 +115,9 @@ class App {
           },
         },
       },
+      security: [{ bearerAuth: [] }],
       info: {
-        description: 'API endpoints for psnext.info',
+        description: 'API endpoints for PSnext.info',
         title: 'PSNext API',
         version: '0.2.0',
       },

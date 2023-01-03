@@ -14,7 +14,7 @@ import { In } from 'typeorm';
 export class PermissionsController {
   @Get('/')
   @OpenAPI({ summary: 'Return permissions matched by the query`' })
-  @Authorized(['admin'])
+  @Authorized(['permissions.read.all'])
   async listPermissions(@CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -28,7 +28,7 @@ export class PermissionsController {
 
   @Post('/')
   @OpenAPI({ summary: 'Create a new permission`' })
-  @Authorized(['admin'])
+  @Authorized(['permission.write.all'])
   async upsertPermission(@Body() data: IPermission) {
     const result = new APIResponse<IPermission>();
     let permission: PermissionEntity;
@@ -54,8 +54,8 @@ export class PermissionsController {
   }
 
   @Delete('/')
-  @Authorized(['admin'])
-  @OpenAPI({ summary: 'Delete a set of permissions permission' })
+  @Authorized(['permissions.write.all'])
+  @OpenAPI({ summary: 'Delete a set of permissions' })
   async deletePermission(@QueryParam('ids') ids: string) {
     const permsRepo = AppDataSource.getRepository(PermissionEntity);
 

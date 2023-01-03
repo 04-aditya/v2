@@ -4,7 +4,7 @@ import { logger } from './logger';
 
 export default class AsyncTask<T> {
   public readonly id = randomUUID();
-  constructor(task: Promise<T>, userId: string) {
+  constructor(task: Promise<T>, userId: string | number) {
     const request: any = { id: this.id, status: 'pending', userId, results: undefined };
     cache.set('qr-' + this.id, JSON.stringify(request));
     task

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IUser } from '@/../../shared/types/src';
-import { Box, Button, Chip, IconButton, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import styles from './admin.users.module.scss';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 import 'ag-grid-enterprise';
@@ -19,7 +19,7 @@ import { notificationDispatch, NotificationInfo } from '@/hooks/useNotificationS
 import { appstateDispatch } from '@/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { RolesRenderer } from '@/components/RolesRenderer';
 
 // create Plotly renderers via dependency injection
 const PlotlyRenderers = createPlotlyRenderers(Plot);
@@ -38,17 +38,6 @@ const headerCheckboxSelection = function (params:any) {
   // we put checkbox on the name if we are not doing grouping
   return params.columnApi.getRowGroupColumns().length === 0;
 };
-
-const RolesRenderer = (params:any) => {
-  return (
-      <>
-          {params.value.map((r:any)=><Chip size='small'  label={r.name} color={r.name==='admin'?'error':'default'}/> )}
-          <IconButton aria-label='add role' color='primary' >
-            <AddCircleIcon/>
-          </IconButton>
-      </>
-  );
-}
 
 export function AdminUsers(props: AdminUsersProps) {
   const location = useLocation();
