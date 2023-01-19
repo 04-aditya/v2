@@ -16,6 +16,7 @@ import {
   Tree,
   TreeChildren,
   TreeParent,
+  SaveOptions,
 } from 'typeorm';
 import { UserRoleEntity } from './userrole.entity';
 import { hash, compare, compareSync } from 'bcrypt';
@@ -27,6 +28,7 @@ import { AppDataSource } from '@/databases';
 import { UserPATEntity } from './userpat.entity';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config';
+import { BaseRequestPolicy } from '@azure/storage-blob';
 
 const pdaclient = axios.create({
   baseURL: PDAAPI,
@@ -62,6 +64,11 @@ export class UserEntity extends BaseEntity implements IUser {
   @Unique(['email'])
   email: string;
 
+  @Column({ nullable: true })
+  oid?: number;
+  @Column({ nullable: true })
+  csid?: number;
+
   @Column('jsonb', { nullable: false, default: {} })
   pdadata: string;
 
@@ -70,28 +77,37 @@ export class UserEntity extends BaseEntity implements IUser {
   // @Column({ nullable: true })
   // business_title?: string;
 
-  // @Column({ nullable: true })
-  // first_name?: string;
+  @Column({ nullable: true })
+  gender?: string;
+
+  @Column({ nullable: true })
+  first_name?: string;
+  @Column({ nullable: true })
+  middle_name?: string;
+  @Column({ nullable: true })
+  last_name?: string;
+
   // @Column({ nullable: true })
   // preferred_first_name?: string;
   // @Column({ nullable: true })
-  // middle_name?: string;
-  // @Column({ nullable: true })
-  // last_name?: string;
-  // @Column({ nullable: true })
   // preferred_last_name?: string;
+  @Column({ default: 'Fulltime' })
+  employment_type: string;
 
-  // @Column({ default: 'Fulltime' })
-  // employment_type: string;
+  @Column({ nullable: true })
+  career_stage: string;
+
+  @Column({ nullable: true })
+  business_title: string;
 
   // @Column()
   // termination_date: Date;
 
-  // @Column()
-  // most_recent_hire_date: Date;
+  @Column({ nullable: true })
+  most_recent_hire_date: Date;
 
-  // @Column()
-  // last_promotion_date: Date;
+  @Column({ nullable: true })
+  last_promotion_date: Date;
 
   // @Column()
   // probationary_period_end_date: Date;
@@ -119,7 +135,7 @@ export class UserEntity extends BaseEntity implements IUser {
 
   @AfterUpdate()
   public handleAfterUpdate() {
-    console.log(`Updated User : ${this.id}`);
+    // console.log(`Updated User : ${this.id}`);
     AppDataSource.queryResultCache.remove([`user_${this.id}`]);
   }
 
@@ -130,12 +146,33 @@ export class UserEntity extends BaseEntity implements IUser {
     this.verificationCode = await hash(code, 10);
   }
 
-  toJSON(): IUser {
-    return {
+  private fieldMap = {
+    basic: ['first_name', 'last_name', 'middle_name', 'business_title', 'career_stage'],
+    get manager() {
+      return [...this.basic, 'gender', 'most_recent_hire_date'];
+    },
+    get all() {
+      return [...this.basic, this.manager];
+    },
+  };
+
+  toJSON(fieldSet = 'basic'): IUser {
+    const result: any = {
       id: this.id,
       email: this.email,
       roles: this.roles?.map(r => r.toJSON()),
     };
+    let fields = this.fieldMap[fieldSet];
+    if (!fields) {
+      fields = fieldSet.split(',');
+      if (fields.length === 0) {
+        fields = this.fieldMap['basic'];
+      }
+    }
+    fields.forEach(field => {
+      result[field] = this[field];
+    });
+    return result;
   }
 
   createRefeshToken(expiresIn = '1d') {
@@ -237,14 +274,13 @@ export class UserEntity extends BaseEntity implements IUser {
     const usersRepo = AppDataSource.getRepository(UserEntity);
     const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
     let user = await usersRepo.findOne({ where: { email: email.toLocaleLowerCase() } });
-    if (user) {
-      throw new Error('Duplicate email: Cannot create another user with the same email');
+    if (!user) {
+      user = new UserEntity();
+      user.email = email.toLocaleLowerCase();
+      const defaultRole = await rolesRepo.findOne({ where: { name: 'default' } });
+      user.roles = [defaultRole];
+      await user.save();
     }
-    user = new UserEntity();
-    user.email = email.toLocaleLowerCase();
-    const defaultRole = await rolesRepo.findOne({ where: { name: 'default' } });
-    user.roles = [defaultRole];
-    await user.save();
     if (getpdadata) {
       user.refresh().catch(ex => {
         logger.error(ex);

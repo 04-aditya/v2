@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import winston from 'winston';
 import winstonDaily from 'winston-daily-rotate-file';
-import { LOG_DIR } from '@config';
+import { LOG_DIR, LOG_LEVEL } from '@config';
 
 // logs dir
 const logDir: string = join(__dirname, LOG_DIR || './logs');
@@ -64,6 +64,7 @@ const alignColorsAndTime = winston.format.combine(
 );
 logger.add(
   new winston.transports.Console({
+    level: LOG_LEVEL,
     format: winston.format.combine(winston.format.splat(), winston.format.colorize(), alignColorsAndTime),
   }),
 );

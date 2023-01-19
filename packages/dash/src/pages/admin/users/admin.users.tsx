@@ -20,6 +20,8 @@ import { appstateDispatch } from '@/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { RolesRenderer } from '@/components/RolesRenderer';
+import { Row } from '@/components/Row';
+import { FileUploadButton } from '@/components/FileUploadDialog';
 
 // create Plotly renderers via dependency injection
 const PlotlyRenderers = createPlotlyRenderers(Plot);
@@ -130,11 +132,30 @@ export function AdminUsers(props: AdminUsersProps) {
       })
   };
 
+  const onPDAUpload = async (files:File[])=>{
+    console.log(files);
+    const formData = new FormData();
+    formData.append("file", files[0]);
+
+    try {
+      const res = await axios.post(`/api/users/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    } catch (ex) {
+      console.error(ex);
+    }
+  }
+
   return (
     <Box sx={{p:1}}>
       <Typography variant='h4'>Users</Typography>
       <hr/>
-      <Button variant='outlined' disabled={selectedUsers.length===0} onClick={refreshSelectedUsers}>Refresh Data</Button>
+      <Row>
+        <Button variant='outlined' disabled={selectedUsers.length===0} onClick={refreshSelectedUsers}>Refresh Data</Button>
+        <FileUploadButton title='Upload PDA excel' onUpload={onPDAUpload} variant='outlined' />
+      </Row>
       <Box className="ag-theme-alpine" sx={{height: '75vh', width: '100%'}}>
         <AgGridReact ref={r => gridRef}
             rowData={users}

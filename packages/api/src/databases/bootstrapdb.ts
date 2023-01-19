@@ -38,10 +38,16 @@ const defaultRoles = [
     permissions: ['user.read.self.basic', 'permissions.read.self'],
   },
   {
+    name: 'user.admin',
+    includedRoleNames: ['default'],
+    description: 'admin role to read and write all user data',
+    permissions: ['user.read.all.all', 'user.write.all.all'],
+  },
+  {
     name: 'admin',
     description: 'master admin role.',
-    includedRoleNames: ['default'],
-    permissions: ['user.read.all.all', 'user.write.all.all', 'roles.read.all', 'roles.write.all', 'permissions.read.all', 'permissions.write.all'],
+    includedRoleNames: ['default', 'user.admin'],
+    permissions: ['roles.read.all', 'roles.write.all', 'permissions.read.all', 'permissions.write.all'],
   },
 ];
 
@@ -50,14 +56,15 @@ export async function bootstrapPermissions() {
   try {
     //create permissions
     for await (const data of defaultPermissions) {
-      let perm = await permsRepo.findOne({ where: { name: data.name } });
-      if (perm) continue;
-      perm = new PermissionEntity();
-      perm.name = data.name;
-      perm.description = data.description;
       try {
+        let perm = await permsRepo.findOne({ where: { name: data.name } });
+        if (!perm) {
+          logger.info(`${data.name} permission created.`);
+          perm = new PermissionEntity();
+          perm.name = data.name;
+        }
+        perm.description = data.description;
         await perm.save();
-        logger.info(`${data.name} permission created.`);
       } catch (ex) {
         if (ex.code === '23505') {
           // if duplicate
@@ -78,25 +85,26 @@ export async function bootstrapRoles() {
   try {
     //create roles
     for await (const role of defaultRoles) {
-      let urole = await rolesRepo.findOne({ where: { name: role.name } });
-      if (urole) continue;
-      urole = new UserRoleEntity();
-      urole.name = role.name;
-      urole.description = role.description;
-
-      if (role.includedRoleNames) {
-        urole.includedRoleNames = role.includedRoleNames;
-      } else {
-        urole.includedRoleNames = [];
-      }
       try {
+        let urole = await rolesRepo.findOne({ where: { name: role.name } });
+        if (!urole) {
+          logger.debug(`${role.name} userrole created.`);
+          urole = new UserRoleEntity();
+          urole.name = role.name;
+        }
+        urole.description = role.description;
+
+        if (role.includedRoleNames) {
+          urole.includedRoleNames = role.includedRoleNames;
+        } else {
+          urole.includedRoleNames = [];
+        }
         if (role.permissions) {
           urole.permissions = await permsRepo.find({
             where: { name: In(role.permissions) },
           });
         }
         await urole.save();
-        logger.info(`${role.name} userrole created.`);
       } catch (ex) {
         if (ex.code === '23505') {
           // if duplicate

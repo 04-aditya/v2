@@ -37,7 +37,7 @@ export class AdminController {
     const result = new APIResponse<IUser[]>();
     const matchedUsers = await AppDataSource.getRepository(UserEntity).find({ relations: { roles: true } });
     console.log(`fetched ${matchedUsers.length} users.`);
-    result.data = matchedUsers.map(u => u.toJSON());
+    result.data = matchedUsers.map(u => u.toJSON('all'));
 
     return result;
   }
