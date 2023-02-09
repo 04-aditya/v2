@@ -15,114 +15,22 @@ import {
   Alert,
 } from '@mui/material';
 import FileUpload from "react-mui-fileuploader";
+import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
+import dayjs, { Dayjs } from 'dayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 interface FileUploadDialogProps {
   open: boolean;
   onClose: () => void;
-  onUpload: (file: File) => void;
+  onUpload: (file: File, otherFields?: any) => void;
   fileTypes: string[];
 }
-
-export const FileUploadDialog: React.FC<FileUploadDialogProps> = (props) => {
-  const { open, onClose, onUpload, fileTypes } = props;
-  const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState('');
-  const [error, setError] = useState('');
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (!selectedFile) {
-      setError('Please select a file to upload');
-      return;
-    }
-    console.log(selectedFile.type);
-    // if (!fileTypes.includes(selectedFile.type)) {
-    //   setError(`Invalid file type. Allowed types: ${fileTypes.join(', ')}`);
-    //   return;
-    // }
-    setFile(selectedFile);
-    setFileName(selectedFile.name);
-    setError('');
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const selectedFile = event.dataTransfer.files?.[0];
-    if (!selectedFile) {
-      setError('Please drag a file onto the dialog to upload');
-      return;
-    }
-    console.log(selectedFile.type);
-    // if (!fileTypes.includes(selectedFile.type)) {
-    //   setError(`Invalid file type. Allowed types: ${fileTypes.join(', ')}`);
-    //   return;
-    // }
-    setFile(selectedFile);
-    setFileName(selectedFile.name);
-    setError('');
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-  };
-
-  const handleUpload = () => {
-    if (!file) {
-      setError('Please select or drag a file to upload');
-      return;
-    }
-    onUpload(file);
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-    >
-      <DialogTitle>Upload File</DialogTitle>
-      <DialogContent>
-        <DialogContentText>
-          To upload a file, select a file from your computer or drag a file onto
-          the dialog and click "Upload".
-        </DialogContentText>
-        <form>
-          <FormControl>
-          <InputLabel htmlFor="file-upload">File</InputLabel>
-            <Input
-              id="file-upload"
-              type="file"
-              onChange={handleFileChange}
-              error={Boolean(error)}
-            />
-            <FormHelperText>{error}</FormHelperText>
-          </FormControl>
-          <TextField
-            label="File Name"
-            value={fileName}
-            InputProps={{ readOnly: true }}
-            margin="normal"
-            fullWidth
-          />
-        </form>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="primary">
-          Cancel
-        </Button>
-        <Button onClick={handleUpload} color="primary">
-          Upload
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
 
 
 interface FileUploadButtonProps extends ButtonProps {
   title: string;
-  onUpload: (file: File[]) => void;
+  onUpload: (file: File[], otherFields?: any) => void;
   fileExts?: string[];
   acceptedType?: string;
 }
@@ -131,6 +39,13 @@ export const FileUploadButton: React.FC<FileUploadButtonProps> = (props) => {
   const [open, setOpen] = React.useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string|undefined>();
+  const [dateValue, setDateValue] = React.useState<Dayjs | null>(
+    dayjs(new Date()),
+  );
+
+  const handleDateChange = (newValue: Dayjs | null) => {
+    setDateValue(newValue);
+  };
 
   const onClose = () => setOpen(false);
 
@@ -149,7 +64,7 @@ export const FileUploadButton: React.FC<FileUploadButtonProps> = (props) => {
       setError('Please select or drag a file to upload');
       return;
     }
-    onUpload(files);
+    onUpload(files, {date: dateValue?.toDate()});
     setOpen(false);
   };
   return <>
@@ -191,7 +106,18 @@ export const FileUploadButton: React.FC<FileUploadButtonProps> = (props) => {
             lg: { width: 256, height: 256 }
           }}
         />
+        <hr/>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <MobileDatePicker
+            label="Date"
+            inputFormat="YYYY/MM/DD"
+            value={dateValue}
+            onChange={handleDateChange}
+            renderInput={(params) => <TextField {...params} size='small' fullWidth />}
+          />
+        </LocalizationProvider>
         {error?<Alert severity='error'>{error}</Alert>:null}
+
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} >

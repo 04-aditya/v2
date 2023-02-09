@@ -16,6 +16,9 @@ const PageLoadingPlaceholder = ()=>(
   </div>
 )
 
+const Home = React.lazy(() =>import('../pages/Home/home'));
+const HomePage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Home/></React.Suspense>
+
 const Dashboard = React.lazy(() =>import('../pages/Dashboard/dashboard'));
 const DashboardPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Dashboard/></React.Suspense>
 
@@ -66,9 +69,10 @@ const routeMap:RouteMap ={
     {
       roles:['default'],
       routes:[
-        {index:true, path:'/', element:<DashboardPage/>},
+        {index:true, path:'/', element:<HomePage/>},
+        {path: '/dashboard/:userId', element:<DashboardPage/>},
         {path:'/profile/:userId', element:<ProfilePage/>},
-        {path:'/teams', element:<TeamsPage/>},
+        {path:'/teams/:userId', element:<TeamsPage/>},
         {path:'/developer', element:<DevSettingsPage/>},
       ]
     },

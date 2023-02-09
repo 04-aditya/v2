@@ -40,7 +40,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
       userPAT.lastUsedAt = new Date();
       userPAT.save();
     } else {
-      logger.info(`Token[userId]: ${userId}`);
+      // logger.info(`Token[userId]: ${userId}`);
       matchedUser = await AppDataSource.getRepository(UserEntity).findOne({
         where: {
           id: userId,

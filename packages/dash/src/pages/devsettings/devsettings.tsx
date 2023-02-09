@@ -21,40 +21,8 @@ import { ClipCopyButton } from '@/components/ClipCopyButton';
 import GppMaybeIcon from '@mui/icons-material/GppMaybe';
 import { Row } from '@/components/Row';
 import { addDays } from 'date-fns';
+import { TabPanel, a11yProps } from '@/components/TabPanel';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-  idprefix?: string;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, idprefix, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`${idprefix}-tabpanel-${index}`}
-      aria-labelledby={`${idprefix}-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 1 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
-
-function a11yProps(prefix:string, index: number) {
-  return {
-    id: `${prefix}-tab-${index}`,
-    'aria-controls': `${prefix}-tabpanel-${index}`,
-  };
-}
 
 type PATFormSchema = {
   name: string;

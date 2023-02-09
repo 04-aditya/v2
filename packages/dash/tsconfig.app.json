@@ -17,7 +17,8 @@
     "src/app/theme.tsx",
     "src/components/RolesRenderer.tsx",
     "src/components/checkboxSelection.tsx",
-    "src/components/MenuProps.tsx"
+    "src/components/MenuProps.tsx",
+    "src/components/TabPanel.tsx"
   ],
   "exclude": [
     "jest.config.ts",

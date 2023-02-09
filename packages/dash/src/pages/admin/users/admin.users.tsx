@@ -22,6 +22,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { RolesRenderer } from '@/components/RolesRenderer';
 import { Row } from '@/components/Row';
 import { FileUploadButton } from '@/components/FileUploadDialog';
+import { Axios, AxiosResponse } from 'axios';
 
 // create Plotly renderers via dependency injection
 const PlotlyRenderers = createPlotlyRenderers(Plot);
@@ -55,7 +56,13 @@ export function AdminUsers(props: AdminUsersProps) {
         checkboxSelection: checkboxSelection,
         headerCheckboxSelection: headerCheckboxSelection,
       },
-      { field: 'email', flex:1},
+      { field: 'email'},
+      { field: 'business_title'},
+      { field: 'career_stage'},
+      { field: 'capability'},
+      { field: 'craft'},
+      { field: 'team'},
+      { field: 'account'},
       { field: 'roles', cellRenderer: RolesRenderer}
   ]);
 
@@ -92,57 +99,70 @@ export function AdminUsers(props: AdminUsersProps) {
       })
   }, []);
 
+  const displayNotification = (ar:AxiosResponse, title:string, description:string)=>{
+    const notification = new NotificationInfo(title, description, 'pending', true);
+    notificationDispatch({type:'add', notification});
+    //poll for completion
+    const pollid = setInterval(()=>{
+      axios.get(`/api/q/${ar.data.qid}`)
+        .then(res=>{
+          if (res.status===200) {
+            if (res.data.status==='done') {
+              clearInterval(pollid);
+              notification.busy = false;
+              notification.status = 'done';
+              notification.description = `${description}\n${res.data.results.message}`;
+              notificationDispatch({type:'update', notification})
+            }
+            else if (res.data.status==='error') {
+              clearInterval(pollid);
+              notification.busy = false;
+              notification.status = 'error';
+              notification.description = `error:${res.data.results.error}\n` + notification.description;
+              notificationDispatch({type:'update', notification})
+            } else {
+              notification.status = res.data.status;
+              notification.description = `${description}\n${res.data.results.message}`;
+              notificationDispatch({type:'update', notification})
+            }
+          }
+        })
+        .catch(ex=>{
+          console.error(ex);
+          clearInterval(pollid);
+          notification.busy=false;
+          notification.status='error';
+          notification.description='error:\n' + notification.description;
+          notificationDispatch({type:'update', notification})
+        })
+    }, 1000);
+  }
   const refreshSelectedUsers = ()=>{
     axios.post(`${ADMINAPI}/refreshuser/pda`,{
         email: selectedUsers[0].email,
-      }).then (ar => {
-        const notification = new NotificationInfo('User Refresh', `Refreshing PDA data for user ${selectedUsers[0].email}...`, 'pending', true);
-        notificationDispatch({type:'add', notification});
-        //poll for completion
-        const pollid = setInterval(()=>{
-          axios.get(`/api/q/${ar.data.data}`)
-            .then(res=>{
-              if (res.status===200) {
-                console.log(res.data);
-                if (res.data.status==='done') {
-                  clearInterval(pollid);
-                  notification.busy = false;
-                  notification.status = 'done';
-                  notification.description = `Refreshed PDA data for user ${selectedUsers[0].email} with snapshot date: ${res.data.results.snapshot_date}`;
-                  notificationDispatch({type:'update', notification})
-                } else if (res.data.status==='error') {
-                  clearInterval(pollid);
-                  notification.busy = false;
-                  notification.status = 'error';
-                  notification.description = `error:${res.data.results.error}\n` + notification.description;
-                  notificationDispatch({type:'update', notification})
-                }
-              }
-            })
-            .catch(ex=>{
-              clearInterval(pollid);
-              notification.busy=false;
-              notification.status='error';
-              notification.description='error:\n' + notification.description;
-              notificationDispatch({type:'update', notification})
-            })
-        }, 1000)
-      }).catch (ex => {
+      })
+      .then (ar => displayNotification(ar, 'User Refresh',`Refreshing PDA data for user ${selectedUsers[0].email}.`))
+      .catch (ex => {
         console.error(ex);
       })
   };
 
-  const onPDAUpload = async (files:File[])=>{
+  const onPDAUpload = async (files:File[], otherFields:{date:Date})=>{
     console.log(files);
     const formData = new FormData();
     formData.append("file", files[0]);
+    formData.append("snapshot_date", otherFields.date.toISOString().slice(0,10));
 
     try {
-      const res = await axios.post(`/api/users/upload`, formData, {
+      await axios.post(`${ADMINAPI}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
-      });
+      })
+      .then (ar => displayNotification(ar, 'User data upload',`Updating data for users from file ${files[0].name}.`))
+      .catch (ex => {
+        console.error(ex);
+      })
     } catch (ex) {
       console.error(ex);
     }

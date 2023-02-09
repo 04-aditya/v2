@@ -17,6 +17,8 @@ import {
   TreeChildren,
   TreeParent,
   SaveOptions,
+  Index,
+  In,
 } from 'typeorm';
 import { UserRoleEntity } from './userrole.entity';
 import { hash, compare, compareSync } from 'bcrypt';
@@ -48,25 +50,27 @@ axiosRetry(pdaclient, {
 });
 
 @Entity({ name: 'psuser' })
-@Tree('closure-table')
 export class UserEntity extends BaseEntity implements IUser {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @TreeChildren()
-  teams: UserEntity[];
+  @Column({ nullable: true })
+  supervisor_id: number;
 
-  @TreeParent()
-  manager: UserEntity;
+  @Column({ nullable: true })
+  supervisor_name: string;
 
   @Column()
   @IsNotEmpty()
   @Unique(['email'])
+  @Index({ unique: true })
   email: string;
 
   @Column({ nullable: true })
+  @Index({ unique: true })
   oid?: number;
   @Column({ nullable: true })
+  @Index({ unique: true })
   csid?: number;
 
   @Column('jsonb', { nullable: false, default: {} })
@@ -100,6 +104,23 @@ export class UserEntity extends BaseEntity implements IUser {
   @Column({ nullable: true })
   business_title: string;
 
+  @Column({ nullable: true })
+  capability: string;
+
+  @Column({ nullable: true })
+  craft: string;
+
+  @Column({ nullable: true })
+  account?: string;
+
+  @Column({ nullable: true })
+  team?: string;
+
+  @Column({ nullable: true })
+  current_region?: string;
+
+  @Column({ nullable: true })
+  home_region?: string;
   // @Column()
   // termination_date: Date;
 
@@ -109,6 +130,8 @@ export class UserEntity extends BaseEntity implements IUser {
   @Column({ nullable: true })
   last_promotion_date: Date;
 
+  @Column({ nullable: true })
+  snapshot_date: Date;
   // @Column()
   // probationary_period_end_date: Date;
 
@@ -146,19 +169,83 @@ export class UserEntity extends BaseEntity implements IUser {
     this.verificationCode = await hash(code, 10);
   }
 
+  async loadDirects() {
+    const directs = await AppDataSource.getRepository(UserEntity).find({
+      where: {
+        supervisor_id: In([this.oid, this.csid]),
+      },
+      cache: 60000,
+    });
+    return directs;
+  }
+
+  org?: UserEntity[];
+  async loadOrg() {
+    if (this.org) return this.org;
+    const users = await AppDataSource.getRepository(UserEntity).query(
+      `
+      WITH RECURSIVE cte AS (
+        SELECT * FROM psuser WHERE supervisor_id = $1 or supervisor_id = $2
+        UNION ALL
+        SELECT p.* FROM psuser p INNER JOIN cte c ON c.oid = p.supervisor_id or c.csid = p.supervisor_id
+      ) SELECT * FROM cte;
+      `,
+      [this.oid, this.csid],
+    );
+
+    // WITH RECURSIVE cte AS ( SELECT * FROM psuser WHERE oid = 36990 or csid = 36990 UNION ALL SELECT p.* FROM psuser p INNER JOIN cte c ON c.oid = p.supervisor_id or c.oid = p.supervisor_id ) SELECT * FROM cte;
+    this.org = users.map(u => {
+      const newuser = new UserEntity();
+      AppDataSource.manager.merge(UserEntity, newuser, u);
+      return newuser;
+    });
+    return this.org;
+  }
+
+  static canRead(currentUser: UserEntity, matchedUser: UserEntity, orgUsers: UserEntity[], permissions: string[]): boolean {
+    if (matchedUser.id === currentUser.id) return true;
+    if (permissions.findIndex(p => p.startsWith('user.read.all')) !== -1) return true;
+    if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.read.client')) !== -1) return true;
+    if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.read.team')) !== -1) return true;
+    if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.read.capability')) !== -1) return true;
+    if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.read.craft')) !== -1) return true;
+    if (permissions.findIndex(p => p.startsWith('user.read.org')) !== -1) {
+      if (orgUsers.findIndex(u => u.id === matchedUser.id) !== -1) return true;
+    }
+    return false;
+  }
+
   private fieldMap = {
-    basic: ['first_name', 'last_name', 'middle_name', 'business_title', 'career_stage'],
-    get manager() {
+    basic: [
+      'oid',
+      'csid',
+      'first_name',
+      'last_name',
+      'middle_name',
+      'business_title',
+      'career_stage',
+      'capability',
+      'craft',
+      'account',
+      'team',
+      'supervisor_id',
+      'supervisor_name',
+      'employment_type',
+      'current_region',
+    ],
+    get org() {
       return [...this.basic, 'gender', 'most_recent_hire_date'];
     },
     get all() {
-      return [...this.basic, this.manager];
+      return [...this.basic, this.org];
     },
   };
 
   toJSON(fieldSet = 'basic'): IUser {
     const result: any = {
       id: this.id,
+      oid: this.oid,
+      csid: this.csid,
       email: this.email,
       roles: this.roles?.map(r => r.toJSON()),
     };
@@ -260,24 +347,34 @@ export class UserEntity extends BaseEntity implements IUser {
     }
     this.pdadata = JSON.stringify(pdadata);
     await this.save();
-    return { snapshot_date: pdadata.snapshot_date };
+    return { snapshot_date: pdadata.snapshot_date, message: `Updated PDA record for user: ${this.email}` };
   }
 
   static async getUserById(userId: number | string) {
-    return await AppDataSource.getRepository(UserEntity).findOne({
-      where: {
-        id: parseInt(userId + ''),
-      },
-    });
+    const value = userId + '';
+    if (value.indexOf('@') > -1) {
+      return await AppDataSource.getRepository(UserEntity).findOne({
+        where: {
+          email: value,
+        },
+      });
+    } else {
+      return await AppDataSource.getRepository(UserEntity).findOne({
+        where: {
+          id: parseInt(value),
+        },
+      });
+    }
   }
+
   static async CreateUser(email: string, getpdadata = false) {
     const usersRepo = AppDataSource.getRepository(UserEntity);
     const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
-    let user = await usersRepo.findOne({ where: { email: email.toLocaleLowerCase() } });
+    let user = await usersRepo.findOne({ where: { email: email.trim().toLocaleLowerCase() } });
     if (!user) {
       user = new UserEntity();
-      user.email = email.toLocaleLowerCase();
-      const defaultRole = await rolesRepo.findOne({ where: { name: 'default' } });
+      user.email = email.trim().toLocaleLowerCase();
+      const defaultRole = await rolesRepo.findOne({ where: { name: 'default' }, cache: 600000 });
       user.roles = [defaultRole];
       await user.save();
     }

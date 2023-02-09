@@ -46,7 +46,41 @@ export const useUser = (id = 'me') => {
 }
 
 
-export const useUserPATs = (id = 'me') => {
+export const useUserTeam = (id: number|string = 'me') => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, id, 'team'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/${id}/team`);
+    return res.data.data as IUser[];
+  },{
+    enabled: !!axios,
+    staleTime:  5 * 60 * 1000 // 5 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
+export const useUserStats = (id: number|string = 'me', stats = ['all']) => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, id, 'stats'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/${id}/stats?include=${stats.join(',')}`);
+    return res.data.data as {name:string, value:any, all?:any, industry?:any, capability?:any, account?:any}[];
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 60 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
+export const useUserPATs = (id: number|string = 'me') => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
   const keys = [CACHEKEY, id, 'pat'];

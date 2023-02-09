@@ -14,6 +14,7 @@ import List from '@mui/material/List';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import HomeIcon from '@mui/icons-material/Home';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PersonIcon from '@mui/icons-material/Person';
 import ExtensionIcon from '@mui/icons-material/Extension';
@@ -31,8 +32,6 @@ import { CircularProgress, ListItem, ListItemAvatar, Menu, MenuItem, useTheme } 
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import { useUser } from '@/api/users';
-import { IUser } from '@/../../shared/types/src';
 import useAuth from '@/hooks/useAuth';
 
 interface AppBarProps extends MuiAppBarProps {
@@ -235,8 +234,8 @@ function NotificationIcon() {
       {notifications.map(n=>{
         return <ListItem key={n.id} dense>
           <ListItemAvatar>
-            {n.status==='pending'?<QueryBuilderIcon color='info'/>:(
-              n.status==='done'?<TaskAltIcon color='success'/>:<ErrorOutlineIcon color='error'/>
+            {n.status==='error'?<ErrorOutlineIcon color='error'/>:(
+              n.status==='done'?<TaskAltIcon color='success'/>:<QueryBuilderIcon color='info'/>
             )}
           </ListItemAvatar>
           <ListItemText primary={n.title} secondary={n.description}/>
@@ -251,9 +250,10 @@ function NotificationIcon() {
 
 function DrawerMenu(props:any) {
   return <List component="nav">
-  <MenuEntry path="/" text="Dashboard" icon={<DashboardIcon />}/>
+  <MenuEntry path="/" text="Home" icon={<HomeIcon />}/>
+  <MenuEntry path="/dashboard/me" text="Dashboard" icon={<DashboardIcon />}/>
   <MenuEntry path="/profile/me" text="Profile" icon={<PersonIcon />}/>
-  <MenuEntry path="/teams" text="Teams" icon={<GroupsIcon/>}/>
+  <MenuEntry path="/teams/me" text="Teams" icon={<GroupsIcon/>}/>
   <MenuEntry path="/developer" text="Developer Settings" icon={<ExtensionIcon />}/>
   <Divider/>
   {props.isAdmin?<MenuEntry path="/admin" text="Admin" icon={<AdminPanelSettingsIcon/>}/>:null}
