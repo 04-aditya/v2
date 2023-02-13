@@ -88,17 +88,29 @@ export class UsersController {
     return result;
   }
 
-
   @Get('/:id/stats')
   @OpenAPI({ summary: 'Return stats of the user matched by the `id`' })
   @Authorized(['user.read'])
-  async getUserStatsById(@Param('id') userId: string, @Req() req: RequestWithUser, @CurrentUser() currentUser?: UserEntity) {
+  async getUserStatsById(
+    @Param('id') userId: string,
+    @Req() req: RequestWithUser,
+    @QueryParam('snapshot_date') snapshot_date?: Date,
+    @CurrentUser() currentUser?: UserEntity,
+  ) {
     const result = new APIResponse<{ name: string; value: any; all?: any; capability?: any; industry?: any; account?: any }[]>();
     if (userId === '-1') return [];
     const matchedUser = await this.getUser(userId, currentUser);
+    const dates = UserEntity.getSnapshots();
+    const reqdate = snapshot_date || dates[0];
     const orgUsers = await matchedUser.loadOrg();
     if (!UserEntity.canRead(currentUser, matchedUser, orgUsers, req.permissions)) throw new HttpError(403);
-    const allUsers = await AppDataSource.getRepository(UserEntity).find({ cache: 60000 }); //10 seconds cache
+
+    const allUsers = await AppDataSource.getRepository(UserEntity).find({
+      where: {
+        snapshot_date: reqdate,
+      },
+      cache: 60000,
+    }); //10 seconds cache
     const allCaUsers = allUsers.filter(u => u.capability === matchedUser.capability);
     const allIndustryUsers = allUsers.filter(u => u.team === matchedUser.team);
     const allAccountUsers = allUsers.filter(u => u.account === matchedUser.account);
@@ -241,7 +253,7 @@ export class UsersController {
       } else {
         matchedUser = currentUser;
       }
-      (await matchedUser.getPermissions()).forEach(p => {
+      (await matchedUser.getAllPermissions()).forEach(p => {
         perms.push(p);
       });
       result.data = perms;

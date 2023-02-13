@@ -31,6 +31,7 @@ import { UserPATEntity } from './userpat.entity';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config';
 import { BaseRequestPolicy } from '@azure/storage-blob';
+import cache from '@/utils/cache';
 
 const pdaclient = axios.create({
   baseURL: PDAAPI,
@@ -179,6 +180,14 @@ export class UserEntity extends BaseEntity implements IUser {
     return directs;
   }
 
+  static async getSnapshots() {
+    const snapshots = await cache.get(`snapshots`);
+    if (snapshots) return snapshots;
+    const ss = await AppDataSource.query(`select distinct snapshot_date from psuser order by snapshot_date desc`);
+    cache.set(`snapshots`, ss, 60000);
+    return ss;
+  }
+
   org?: UserEntity[];
   async loadOrg() {
     if (this.org) return this.org;
@@ -210,6 +219,19 @@ export class UserEntity extends BaseEntity implements IUser {
     if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.read.capability')) !== -1) return true;
     if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.read.craft')) !== -1) return true;
     if (permissions.findIndex(p => p.startsWith('user.read.org')) !== -1) {
+      if (orgUsers.findIndex(u => u.id === matchedUser.id) !== -1) return true;
+    }
+    return false;
+  }
+
+  static canWrite(currentUser: UserEntity, matchedUser: UserEntity, orgUsers: UserEntity[], permissions: string[]): boolean {
+    if (matchedUser.id === currentUser.id) return true;
+    if (permissions.findIndex(p => p.startsWith('user.write.all')) !== -1) return true;
+    if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.write.client')) !== -1) return true;
+    if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.write.team')) !== -1) return true;
+    if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.write.capability')) !== -1) return true;
+    if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.write.craft')) !== -1) return true;
+    if (permissions.findIndex(p => p.startsWith('user.write.org')) !== -1) {
       if (orgUsers.findIndex(u => u.id === matchedUser.id) !== -1) return true;
     }
     return false;
@@ -284,7 +306,7 @@ export class UserEntity extends BaseEntity implements IUser {
     for (const role of this.roles) {
       if (perms.includes(role.name)) return true;
     }
-    const userPermissions = (await this.getPermissions()).values();
+    const userPermissions = (await this.getAllPermissions()).values();
     for (const p of userPermissions) {
       for (const reqpermission of perms) {
         if (p.name.startsWith(reqpermission)) return true;
@@ -299,7 +321,9 @@ export class UserEntity extends BaseEntity implements IUser {
     const allroles = new Map<string, UserRoleEntity>();
     for await (const role of this.roles) {
       allroles.set(role.name, role);
-      for await (const crole of await role.loadChildren()) {
+      console.log(`Loading role ${role.name}`);
+      for await (const crole of await role.getAllRoles()) {
+        console.log(`Loading child role ${crole.name}`);
         allroles.set(crole.name, crole);
       }
     }
@@ -308,12 +332,13 @@ export class UserEntity extends BaseEntity implements IUser {
   }
 
   private _permissions: Map<string, IPermission>;
-  async getPermissions(ignoreCache = false) {
+  async getAllPermissions(ignoreCache = false) {
     if (this._permissions && !ignoreCache) return this._permissions;
 
     const perms = new Map<string, IPermission>();
 
     for await (const role of (await this.getAllRoles()).values()) {
+      console.log(`Loading permissions for role ${role.name}`);
       await role.loadPermissions();
       role.permissions?.forEach(p => perms.set(p.name, p));
     }
