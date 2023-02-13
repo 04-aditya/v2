@@ -20,23 +20,30 @@ export class UserRoleEntity extends BaseEntity implements IUserRole {
   children?: UserRoleEntity[];
   async loadChildren() {
     if (this.children) return this.children;
-    const roles = await AppDataSource.getRepository(UserRoleEntity).query(
-      `
-        WITH RECURSIVE roles AS (
-          SELECT * FROM psuserrole WHERE name IN ($1)
-          UNION ALL
-          SELECT r.* FROM psuserrole r
-          INNER JOIN psuserrole p ON p.name = r.name
-        ) SELECT * FROM roles;
-      `,
-      [this.includedRoleNames],
-    );
-    this.children = roles.map(r => {
-      const newrole = new UserRoleEntity();
-      AppDataSource.manager.merge(UserRoleEntity, newrole, r);
-      return newrole;
+    if (this.includedRoleNames.length === 0) {
+      this.children = [];
+      return this.children;
+    }
+
+    console.log(`fetching includedRoles for ${this.includedRoleNames} for role: ${this.name}`);
+    this.children = await AppDataSource.getRepository(UserRoleEntity).find({
+      where: {
+        name: In(this.includedRoleNames),
+      },
+      cache: 60000,
     });
     return this.children;
+  }
+
+  allRoles?: UserRoleEntity[];
+  async getAllRoles() {
+    if (this.allRoles) return this.allRoles;
+    this.allRoles = [];
+    for await (const role of await this.loadChildren()) {
+      this.allRoles.push(role);
+      this.allRoles.push(...(await role.getAllRoles()));
+    }
+    return this.allRoles;
   }
 
   @ManyToMany(() => PermissionEntity)
@@ -52,9 +59,9 @@ export class UserRoleEntity extends BaseEntity implements IUserRole {
     const perms = new Map<string, PermissionEntity>();
     await this.loadPermissions();
     this.permissions?.forEach(p => perms.set(p.name, p));
-    for await (const role of await this.loadChildren()) {
-      await role.loadPermissions();
-      role.permissions?.forEach(p => perms.set(p.name, p));
+    for await (const role of await this.getAllRoles()) {
+      const cperms = await role.getAllPermissions();
+      cperms.forEach(p => perms.set(p.name, p));
     }
     return perms;
   }
