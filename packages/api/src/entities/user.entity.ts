@@ -21,7 +21,7 @@ import {
   In,
 } from 'typeorm';
 import { UserRoleEntity } from './userrole.entity';
-import { hash, compare, compareSync } from 'bcrypt';
+import { hash, compare } from 'bcrypt';
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import { CLID, CLIS, TID, PDAAPI } from '@/config';
@@ -30,7 +30,6 @@ import { AppDataSource } from '@/databases';
 import { UserPATEntity } from './userpat.entity';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config';
-import { BaseRequestPolicy } from '@azure/storage-blob';
 import cache from '@/utils/cache';
 
 const pdaclient = axios.create({

@@ -64,7 +64,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
       req.permissions = [...(await matchedUser.getAllPermissions()).keys()];
     }
 
-    req.permissions.forEach(p => console.log(p));
+    // req.permissions.forEach(p => console.log(p));
 
     next();
   } catch (error) {
