@@ -24,8 +24,6 @@ export class UserRoleEntity extends BaseEntity implements IUserRole {
       this.children = [];
       return this.children;
     }
-
-    console.log(`fetching includedRoles for ${this.includedRoleNames} for role: ${this.name}`);
     this.children = await AppDataSource.getRepository(UserRoleEntity).find({
       where: {
         name: In(this.includedRoleNames),

@@ -63,6 +63,23 @@ export const useUserTeam = (id: number|string = 'me') => {
   return {...query, invalidateCache};
 }
 
+export const useUserSnapshotDates = () => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, 'snapshotdates'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/snapshotdates`);
+    return res.data.data as string[];
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 60 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
 export const useUserStats = (id: number|string = 'me', stats = ['all']) => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();

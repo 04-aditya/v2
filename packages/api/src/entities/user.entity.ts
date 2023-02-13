@@ -182,7 +182,7 @@ export class UserEntity extends BaseEntity implements IUser {
   static async getSnapshots() {
     const snapshots = await cache.get(`snapshots`);
     if (snapshots) return snapshots;
-    const ss = await AppDataSource.query(`select distinct snapshot_date from psuser order by snapshot_date desc`);
+    const ss = (await AppDataSource.query(`select distinct snapshot_date from psuser order by snapshot_date desc`)).map((s:any) => s.snapshot_date);
     cache.set(`snapshots`, ss, 60000);
     return ss;
   }
@@ -320,9 +320,7 @@ export class UserEntity extends BaseEntity implements IUser {
     const allroles = new Map<string, UserRoleEntity>();
     for await (const role of this.roles) {
       allroles.set(role.name, role);
-      console.log(`Loading role ${role.name}`);
       for await (const crole of await role.getAllRoles()) {
-        console.log(`Loading child role ${crole.name}`);
         allroles.set(crole.name, crole);
       }
     }
@@ -337,7 +335,6 @@ export class UserEntity extends BaseEntity implements IUser {
     const perms = new Map<string, IPermission>();
 
     for await (const role of (await this.getAllRoles()).values()) {
-      console.log(`Loading permissions for role ${role.name}`);
       await role.loadPermissions();
       role.permissions?.forEach(p => perms.set(p.name, p));
     }

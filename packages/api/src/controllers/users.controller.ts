@@ -39,6 +39,16 @@ export class UsersController {
     return UserEntity.getUserById(id);
   }
 
+  @Get('/snapshotdates')
+  @OpenAPI({ summary: 'Return unique snapshot dates of the main user data' })
+  @Authorized(['user.read'])
+  async getUserSnapshotDates() {
+    const result = new APIResponse<Date[]>();
+    const dates = await UserEntity.getSnapshots();
+    result.data = dates;
+    return result;
+  }
+
   @Get('/:id')
   @OpenAPI({ summary: 'Return user matched by the `id`' })
   @Authorized(['user.read'])
@@ -88,6 +98,7 @@ export class UsersController {
     return result;
   }
 
+
   @Get('/:id/stats')
   @OpenAPI({ summary: 'Return stats of the user matched by the `id`' })
   @Authorized(['user.read'])
@@ -100,7 +111,7 @@ export class UsersController {
     const result = new APIResponse<{ name: string; value: any; all?: any; capability?: any; industry?: any; account?: any }[]>();
     if (userId === '-1') return [];
     const matchedUser = await this.getUser(userId, currentUser);
-    const dates = UserEntity.getSnapshots();
+    const dates = await UserEntity.getSnapshots();
     const reqdate = snapshot_date || dates[0];
     const orgUsers = await matchedUser.loadOrg();
     if (!UserEntity.canRead(currentUser, matchedUser, orgUsers, req.permissions)) throw new HttpError(403);

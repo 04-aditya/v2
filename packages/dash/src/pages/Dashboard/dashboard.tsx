@@ -1,13 +1,14 @@
-import { Box, Tab, Tabs, Typography } from '@mui/material';
+import { Box, FormControl, FormHelperText, InputLabel, MenuItem, Select, SelectChangeEvent, Tab, Tabs, Typography } from '@mui/material';
 import { Route, Link, Outlet, useParams,useSearchParams } from 'react-router-dom';
 import { appstateDispatch } from '@/hooks/useAppState';
 import styles from './dashboard.module.scss';
 import React, { useEffect } from 'react';
-import { useUser } from '@/api/users';
+import { useUser, useUserSnapshotDates } from '@/api/users';
 import { NumberStatWidget, PercentStatWidget, PieStatWidget, StatWidget } from '@/components/StatWidget';
 import { useUserStats } from '@/api/users';
 import { Row } from '@/components/Row';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
+import { format, parse as parseDate } from 'date-fns';
 
 /* eslint-disable-next-line */
 export interface DashboardProps {
@@ -16,7 +17,9 @@ export interface DashboardProps {
 export function Dashboard(props: DashboardProps) {
   const { userId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [snapshot_date, setSnapshotDate] = React.useState<string>('');
   // const {data:user} = useUser(userId)
+  const {data: snapshot_dates} = useUserSnapshotDates();
   const {data:stats} = useUserStats(userId);
   const [tabValue, setTabValue] = React.useState(0);
   const [statDetails, setStatDetails] = React.useState<React.ReactNode>(null);
@@ -28,6 +31,11 @@ export function Dashboard(props: DashboardProps) {
   const fteStat = stats?.find(s=>s.name==='FTE %');
   const psexpStat = stats?.find(s=>s.name==='PS Exp');
   const titexpStat = stats?.find(s=>s.name==='TiT Exp');
+
+  const handleSnapshotDateChange = (event: SelectChangeEvent) => {
+    setSnapshotDate(event.target.value);
+  };
+
   useEffect(() => {
     appstateDispatch({type:'title', data:'Dashboard - PSNext'});
   }, []);
@@ -39,6 +47,24 @@ export function Dashboard(props: DashboardProps) {
   return (
     <div className={styles['container']}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Row spacing={1}>
+          <FormControl sx={{ m: 1, minWidth: 150 }} size='small'>
+            <InputLabel id="snapshotdate-selector-label">Snapshot Date</InputLabel>
+            <Select
+              labelId="snapshotdate-selector-label"
+              id="snapshotdate-selector"
+              value={snapshot_date}
+              label="Snapshot Date"
+              onChange={handleSnapshotDateChange}
+            >
+              <MenuItem value="">
+                <em>Last</em>
+              </MenuItem>
+              {snapshot_dates?.map(d=><MenuItem key={d} value={d}>{d}</MenuItem>)}
+            </Select>
+            <FormHelperText>select date</FormHelperText>
+          </FormControl>
+        </Row>
         <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs">
           <Tab label="People" {...a11yProps('People', 0)} />
           <Tab label="Learning" {...a11yProps('Learning', 1)} />
