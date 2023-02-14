@@ -10,18 +10,10 @@ import { Row } from '@/components/Row';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { format, parse as parseDate } from 'date-fns';
 
-/* eslint-disable-next-line */
-export interface DashboardProps {
-}
 
-export function Dashboard(props: DashboardProps) {
+function PeopleStats({snapshot_date}:{snapshot_date:string}) {
   const { userId } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [snapshot_date, setSnapshotDate] = React.useState<string>('');
-  // const {data:user} = useUser(userId)
-  const {data: snapshot_dates} = useUserSnapshotDates();
-  const {data:stats} = useUserStats(userId);
-  const [tabValue, setTabValue] = React.useState(0);
+  const {data:stats} = useUserStats(userId,['Total Count', 'Directs', 'Leverage', 'Diversity %', 'FTE %', 'PS Exp','TiT Exp'], snapshot_date);
   const [statDetails, setStatDetails] = React.useState<React.ReactNode>(null);
 
   const totalStat = stats?.find(s=>s.name==='Total Count');
@@ -31,6 +23,64 @@ export function Dashboard(props: DashboardProps) {
   const fteStat = stats?.find(s=>s.name==='FTE %');
   const psexpStat = stats?.find(s=>s.name==='PS Exp');
   const titexpStat = stats?.find(s=>s.name==='TiT Exp');
+  return <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+  {totalStat?<NumberStatWidget
+    valueTopLeft={totalStat.industry} valueTopRight={totalStat.account}
+    value={totalStat.value}
+    valueBottomLeft={totalStat.all} valueBottomRight={totalStat.capability}
+    title='Total Count'
+    sx={{m:0.5}}/>:null}
+  {directsStat?<NumberStatWidget
+    valueTopLeft={Math.trunc(directsStat.industry*10)/10} valueTopRight={Math.trunc(directsStat.account*10)/10}
+    value={directsStat.value}
+    valueBottomLeft={Math.trunc(directsStat.all*10)/10} valueBottomRight={Math.trunc(directsStat.capability*10)/10}
+    title='Directs'
+    sx={{m:0.5}}/>:null}
+  {fteStat?<PercentStatWidget
+    valueTopLeft={Math.trunc(fteStat.industry*1000)/10} valueTopRight={Math.trunc(fteStat.account*1000)/10}
+    value={Math.trunc(fteStat.value*1000)/10}
+    valueBottomLeft={Math.trunc(fteStat.all*1000)/10} valueBottomRight={Math.trunc(fteStat.capability*1000)/10}
+    title='FTE %' sx={{m:0.5}}/>:null}
+  {deiStat?<PercentStatWidget
+    valueTopLeft={Math.trunc(deiStat.industry*1000)/10} valueTopRight={Math.trunc(deiStat.account*1000)/10}
+    value={Math.trunc(deiStat.value*1000)/10}
+    valueBottomLeft={Math.trunc(deiStat.all*1000)/10} valueBottomRight={Math.trunc(deiStat.capability*1000)/10}
+    title='Diversity %'
+    sx={{m:0.5}}/>:null}
+  <PieStatWidget
+    valueTopLeft={[{name:'JA', value:11},{name:'A', value:35},{name:'SA', value:35},{name:'Mgr', value:10.5},{name:'SM', value:2},{name:'D', value:1},{name:'VP', value:0.5}]}
+    valueTopRight={[{name:'JA', value:5},{name:'A', value:30},{name:'SA', value:45},{name:'Mgr', value:13.5},{name:'SM', value:4},{name:'D', value:2},{name:'VP', value:0.5}]}
+    value={leverageStat?.value||[]}
+    title='Leverage' sx={{m:0.5}}/>
+  {psexpStat?<NumberStatWidget
+    valueTopLeft={Math.trunc(psexpStat.industry*100)/100} valueTopRight={Math.trunc(psexpStat.account*100)/100}
+    value={Math.trunc(psexpStat.value*100)/100}
+    valueBottomLeft={Math.trunc(psexpStat.all*100)/100} valueBottomRight={Math.trunc(psexpStat.capability*100)/100}
+    title='Avg PS Experience'
+    sx={{m:0.5}}/>:null}
+    {titexpStat?<NumberStatWidget
+      valueTopLeft={Math.trunc(titexpStat.industry*100)/100} valueTopRight={Math.trunc(titexpStat.account*100)/100}
+      value={Math.trunc(titexpStat.value*100)/100}
+      valueBottomLeft={Math.trunc(titexpStat.all*100)/100} valueBottomRight={Math.trunc(titexpStat.capability*100)/100}
+      title='Avg Time in Title'
+      sx={{m:0.5}}/>:null}
+  {/* <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}>{'N/A'}</StatWidget>
+  <StatWidget title='KPI' leftNode={'VL'} sx={{m:0.5}}/>
+  <StatWidget title='KPI' rightNode={'VR'} sx={{m:0.5}}/>
+  <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}/> */}
+</Row>
+}
+
+/* eslint-disable-next-line */
+export interface DashboardProps {
+}
+
+export function Dashboard(props: DashboardProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [snapshot_date, setSnapshotDate] = React.useState<string>('');
+  // const {data:user} = useUser(userId)
+  const {data: snapshot_dates} = useUserSnapshotDates();
+  const [tabValue, setTabValue] = React.useState(0);
 
   const handleSnapshotDateChange = (event: SelectChangeEvent) => {
     setSnapshotDate(event.target.value);
@@ -74,52 +124,7 @@ export function Dashboard(props: DashboardProps) {
         </Tabs>
       </Box>
       <TabPanel value={tabValue} index={0} idprefix={'People'}>
-          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-            {totalStat?<NumberStatWidget
-              valueTopLeft={totalStat.industry} valueTopRight={totalStat.account}
-              value={totalStat.value}
-              valueBottomLeft={totalStat.all} valueBottomRight={totalStat.capability}
-              title='Total Count'
-              sx={{m:0.5}}/>:null}
-            {directsStat?<NumberStatWidget
-              valueTopLeft={Math.trunc(directsStat.industry*10)/10} valueTopRight={Math.trunc(directsStat.account*10)/10}
-              value={directsStat.value}
-              valueBottomLeft={Math.trunc(directsStat.all*10)/10} valueBottomRight={Math.trunc(directsStat.capability*10)/10}
-              title='Directs'
-              sx={{m:0.5}}/>:null}
-            {fteStat?<PercentStatWidget
-              valueTopLeft={Math.trunc(fteStat.industry*1000)/10} valueTopRight={Math.trunc(fteStat.account*1000)/10}
-              value={Math.trunc(fteStat.value*1000)/10}
-              valueBottomLeft={Math.trunc(fteStat.all*1000)/10} valueBottomRight={Math.trunc(fteStat.capability*1000)/10}
-              title='FTE %' sx={{m:0.5}}/>:null}
-            {deiStat?<PercentStatWidget
-              valueTopLeft={Math.trunc(deiStat.industry*1000)/10} valueTopRight={Math.trunc(deiStat.account*1000)/10}
-              value={Math.trunc(deiStat.value*1000)/10}
-              valueBottomLeft={Math.trunc(deiStat.all*1000)/10} valueBottomRight={Math.trunc(deiStat.capability*1000)/10}
-              title='Diversity %'
-              sx={{m:0.5}}/>:null}
-            <PieStatWidget
-              valueTopLeft={[{name:'JA', value:11},{name:'A', value:35},{name:'SA', value:35},{name:'Mgr', value:10.5},{name:'SM', value:2},{name:'D', value:1},{name:'VP', value:0.5}]}
-              valueTopRight={[{name:'JA', value:5},{name:'A', value:30},{name:'SA', value:45},{name:'Mgr', value:13.5},{name:'SM', value:4},{name:'D', value:2},{name:'VP', value:0.5}]}
-              value={leverageStat?.value||[]}
-              title='Leverage' sx={{m:0.5}}/>
-            {psexpStat?<NumberStatWidget
-              valueTopLeft={Math.trunc(psexpStat.industry*100)/100} valueTopRight={Math.trunc(psexpStat.account*100)/100}
-              value={Math.trunc(psexpStat.value*100)/100}
-              valueBottomLeft={Math.trunc(psexpStat.all*100)/100} valueBottomRight={Math.trunc(psexpStat.capability*100)/100}
-              title='Avg PS Experience'
-              sx={{m:0.5}}/>:null}
-              {titexpStat?<NumberStatWidget
-                valueTopLeft={Math.trunc(titexpStat.industry*100)/100} valueTopRight={Math.trunc(titexpStat.account*100)/100}
-                value={Math.trunc(titexpStat.value*100)/100}
-                valueBottomLeft={Math.trunc(titexpStat.all*100)/100} valueBottomRight={Math.trunc(titexpStat.capability*100)/100}
-                title='Avg Time in Title'
-                sx={{m:0.5}}/>:null}
-            {/* <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}>{'N/A'}</StatWidget>
-            <StatWidget title='KPI' leftNode={'VL'} sx={{m:0.5}}/>
-            <StatWidget title='KPI' rightNode={'VR'} sx={{m:0.5}}/>
-            <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}/> */}
-          </Row>
+        <PeopleStats snapshot_date={snapshot_date} />
       </TabPanel>
       {/* <fieldset style={{borderRadius:4, borderColor: '#00000020', fontSize: '0.75em', padding: '0.5em'}}> */}
       <TabPanel value={tabValue} index={1} idprefix={'Learning'}>
@@ -152,7 +157,6 @@ export function Dashboard(props: DashboardProps) {
           </Row>
       </TabPanel>
       <Box sx={{p:1}}>
-        {statDetails}
       </Box>
       {/* <Outlet/>
       <hr/>

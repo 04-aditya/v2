@@ -80,12 +80,12 @@ export const useUserSnapshotDates = () => {
   return {...query, invalidateCache};
 }
 
-export const useUserStats = (id: number|string = 'me', stats = ['all']) => {
+export const useUserStats = (id: number|string = 'me', stats = ['all'], snapshot_date?: string|Date) => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY, id, 'stats'];
+  const keys = [CACHEKEY, id, 'stats', stats.join(','), snapshot_date||'Last'];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${USERAPI}/${id}/stats?include=${stats.join(',')}`);
+    const res = await axios.get(`${USERAPI}/${id}/stats?include=${stats.join(',')}&snapshot_date=${snapshot_date||'Last'}`);
     return res.data.data as {name:string, value:any, all?:any, industry?:any, capability?:any, account?:any}[];
   },{
     enabled: !!axios,

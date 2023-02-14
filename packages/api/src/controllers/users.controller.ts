@@ -27,9 +27,9 @@ import { IUser, APIResponse, IPermission, IUserPAT } from 'sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserPATEntity } from '@/entities/userpat.entity';
-import { format, parse as parseDate, intervalToDuration } from 'date-fns';
+import { format, parse as parseDate, parseJSON, intervalToDuration } from 'date-fns';
 import { logger } from '@/utils/logger';
-import { Not } from 'typeorm';
+import { LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
 
 @JsonController('/api/users')
 @UseBefore(authMiddleware)
@@ -105,20 +105,32 @@ export class UsersController {
   async getUserStatsById(
     @Param('id') userId: string,
     @Req() req: RequestWithUser,
-    @QueryParam('snapshot_date') snapshot_date?: Date,
+    @QueryParam('snapshot_date') snapshot_date?: string,
     @CurrentUser() currentUser?: UserEntity,
   ) {
     const result = new APIResponse<{ name: string; value: any; all?: any; capability?: any; industry?: any; account?: any }[]>();
     if (userId === '-1') return [];
     const matchedUser = await this.getUser(userId, currentUser);
     const dates = await UserEntity.getSnapshots();
-    const reqdate = snapshot_date || dates[0];
+    let reqdate: Date = dates[0];
+    console.log(typeof reqdate);
+    try {
+      if (snapshot_date) {
+        if (snapshot_date.toLowerCase() !== 'last') {
+          reqdate = parseJSON(snapshot_date);
+        }
+      }
+    } catch (ex) {
+      logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
+      throw new HttpError(400, `Bad snapshot_date`);
+    }
     const orgUsers = await matchedUser.loadOrg();
     if (!UserEntity.canRead(currentUser, matchedUser, orgUsers, req.permissions)) throw new HttpError(403);
 
     const allUsers = await AppDataSource.getRepository(UserEntity).find({
       where: {
-        snapshot_date: reqdate,
+        snapshot_date: MoreThanOrEqual(reqdate),
+        most_recent_hire_date: LessThanOrEqual(reqdate),
       },
       cache: 60000,
     }); //10 seconds cache
