@@ -31,6 +31,7 @@ import { UserPATEntity } from './userpat.entity';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config';
 import cache from '@/utils/cache';
+import { parseISO } from 'date-fns';
 
 const pdaclient = axios.create({
   baseURL: PDAAPI,
@@ -182,13 +183,14 @@ export class UserEntity extends BaseEntity implements IUser {
   static async getSnapshots() {
     const snapshots = await cache.get(`snapshots`);
     if (snapshots) return snapshots;
-    const ss = (await AppDataSource.query(`select distinct snapshot_date from psuser order by snapshot_date desc`)).map((s:any) => s.snapshot_date);
+    const ss = (await AppDataSource.query(`select distinct snapshot_date from psuser order by snapshot_date desc`)).map((s: any) => s.snapshot_date);
     cache.set(`snapshots`, ss, 60000);
     return ss;
   }
 
   org?: UserEntity[];
   async loadOrg() {
+    // select userid from psuserdata where key='supervisor_id' and CAST(value as INTEGER)=36990 and timestamp<='2023-01-09' group by userid;
     if (this.org) return this.org;
     const users = await AppDataSource.getRepository(UserEntity).query(
       `
