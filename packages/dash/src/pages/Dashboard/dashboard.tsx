@@ -9,6 +9,7 @@ import { useUserStats } from '@/api/users';
 import { Row } from '@/components/Row';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { format, parse as parseDate } from 'date-fns';
+import BasicUserCard from '@/components/BasicUserCard';
 
 
 function PeopleStats({snapshot_date}:{snapshot_date:string}) {
@@ -76,9 +77,10 @@ export interface DashboardProps {
 }
 
 export function Dashboard(props: DashboardProps) {
+  const { userId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [snapshot_date, setSnapshotDate] = React.useState<string>('');
-  // const {data:user} = useUser(userId)
+  const {data:user} = useUser(userId)
   const {data: snapshot_dates} = useUserSnapshotDates();
   const [tabValue, setTabValue] = React.useState(0);
 
@@ -87,77 +89,84 @@ export function Dashboard(props: DashboardProps) {
   };
 
   useEffect(() => {
-    appstateDispatch({type:'title', data:'Dashboard - PSNext'});
-  }, []);
+    if (user) {
+      appstateDispatch({type:'title', data:`Dashboard for ${user.first_name+' '+user.last_name}`});
+    } else {
+      appstateDispatch({type:'title', data:`Dashboard - Loading...`});
+    }
+  }, [user]);
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
   return (
-    <div className={styles['container']}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Row spacing={1}>
-          <FormControl sx={{ m: 1, minWidth: 150 }} size='small'>
-            <InputLabel id="snapshotdate-selector-label">Snapshot Date</InputLabel>
-            <Select
-              labelId="snapshotdate-selector-label"
-              id="snapshotdate-selector"
-              value={snapshot_date}
-              label="Snapshot Date"
-              onChange={handleSnapshotDateChange}
-            >
-              <MenuItem value="">
-                <em>Last</em>
-              </MenuItem>
-              {snapshot_dates?.map(d=><MenuItem key={d} value={d}>{d}</MenuItem>)}
-            </Select>
-            <FormHelperText>select date</FormHelperText>
-          </FormControl>
-        </Row>
-        <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs">
-          <Tab label="People" {...a11yProps('People', 0)} />
-          <Tab label="Learning" {...a11yProps('Learning', 1)} />
-          <Tab label="Hiring" {...a11yProps('Hiring', 2)} />
-          <Tab label="Delivery" {...a11yProps('Delivery', 3)} />
-          <Tab label="Finance" {...a11yProps('Finance', 4)} />
-        </Tabs>
-      </Box>
-      <TabPanel value={tabValue} index={0} idprefix={'People'}>
-        <PeopleStats snapshot_date={snapshot_date} />
-      </TabPanel>
-      {/* <fieldset style={{borderRadius:4, borderColor: '#00000020', fontSize: '0.75em', padding: '0.5em'}}> */}
-      <TabPanel value={tabValue} index={1} idprefix={'Learning'}>
-          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-            <StatWidget title='Learning Hours' baseline={'baseline'} sx={{m:0.5}}>{'2.5 / 5'}</StatWidget>
-            <StatWidget title='Certifications' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            <StatWidget title='KPI1' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            <StatWidget title='KPI2' sx={{m:0.5}}>{'N/A'}</StatWidget>
+    <Box sx={{displar:'flex'}}>
+      <div>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <BasicUserCard user={user} sx={{m:1}}/>
+          <Row spacing={1}>
+            <FormControl sx={{ m: 1, minWidth: 150 }} size='small'>
+              <InputLabel id="snapshotdate-selector-label">Snapshot Date</InputLabel>
+              <Select
+                labelId="snapshotdate-selector-label"
+                id="snapshotdate-selector"
+                value={snapshot_date}
+                label="Snapshot Date"
+                onChange={handleSnapshotDateChange}
+              >
+                <MenuItem value="">
+                  <em>Last</em>
+                </MenuItem>
+                {snapshot_dates?.map(d=><MenuItem key={d} value={d}>{d}</MenuItem>)}
+              </Select>
+              <FormHelperText>select date</FormHelperText>
+            </FormControl>
           </Row>
-      </TabPanel>
-      <TabPanel value={tabValue} index={2} idprefix={'Hiring'}>
-          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-            <StatWidget title='Hiring Hours' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            <StatWidget title='Interview Slots' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            <StatWidget title='Certifications' sx={{m:0.5}}>{'N/A'}</StatWidget>
-          </Row>
-      </TabPanel>
-      <TabPanel value={tabValue} index={3} idprefix={'Delivery'}>
-          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-            <StatWidget title='Speed' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            <StatWidget title='Value' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            <StatWidget title='Quality' sx={{m:0.5}}>{'N/A'}</StatWidget>
-          </Row>
-      </TabPanel>
-      <TabPanel value={tabValue} index={4} idprefix={'Finance'}>
-          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-            <StatWidget title='Billability' sx={{m:0.5}} >{'N/A'}</StatWidget>
-            <StatWidget title='Yeild' sx={{m:0.5}} >{'N/A'}</StatWidget>
-            <StatWidget title='Sales Time' sx={{m:0.5}} >{'N/A'}</StatWidget>
-          </Row>
-      </TabPanel>
-      <Box sx={{p:1}}>
-      </Box>
+          <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs" sx={{mx:1}}>
+            <Tab label="People" {...a11yProps('People', 0)} />
+            <Tab label="Learning" {...a11yProps('Learning', 1)} />
+            <Tab label="Hiring" {...a11yProps('Hiring', 2)} />
+            <Tab label="Delivery" {...a11yProps('Delivery', 3)} />
+            <Tab label="Finance" {...a11yProps('Finance', 4)} />
+          </Tabs>
+        </Box>
+        <TabPanel value={tabValue} index={0} idprefix={'People'}>
+          <PeopleStats snapshot_date={snapshot_date} />
+        </TabPanel>
+        {/* <fieldset style={{borderRadius:4, borderColor: '#00000020', fontSize: '0.75em', padding: '0.5em'}}> */}
+        <TabPanel value={tabValue} index={1} idprefix={'Learning'}>
+            <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+              <StatWidget title='Learning Hours' baseline={'baseline'} sx={{m:0.5}}>{'2.5 / 5'}</StatWidget>
+              <StatWidget title='Certifications' sx={{m:0.5}}>{'N/A'}</StatWidget>
+              <StatWidget title='KPI1' sx={{m:0.5}}>{'N/A'}</StatWidget>
+              <StatWidget title='KPI2' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            </Row>
+        </TabPanel>
+        <TabPanel value={tabValue} index={2} idprefix={'Hiring'}>
+            <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+              <StatWidget title='Hiring Hours' sx={{m:0.5}}>{'N/A'}</StatWidget>
+              <StatWidget title='Interview Slots' sx={{m:0.5}}>{'N/A'}</StatWidget>
+              <StatWidget title='Certifications' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            </Row>
+        </TabPanel>
+        <TabPanel value={tabValue} index={3} idprefix={'Delivery'}>
+            <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+              <StatWidget title='Speed' sx={{m:0.5}}>{'N/A'}</StatWidget>
+              <StatWidget title='Value' sx={{m:0.5}}>{'N/A'}</StatWidget>
+              <StatWidget title='Quality' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            </Row>
+        </TabPanel>
+        <TabPanel value={tabValue} index={4} idprefix={'Finance'}>
+            <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+              <StatWidget title='Billability' sx={{m:0.5}} >{'N/A'}</StatWidget>
+              <StatWidget title='Yeild' sx={{m:0.5}} >{'N/A'}</StatWidget>
+              <StatWidget title='Sales Time' sx={{m:0.5}} >{'N/A'}</StatWidget>
+            </Row>
+        </TabPanel>
+        <Box sx={{p:1}}>
+        </Box>
+      </div>
       {/* <Outlet/>
       <hr/>
       <h1>Welcome to Dashboard!</h1>
@@ -216,7 +225,7 @@ export function Dashboard(props: DashboardProps) {
           overline text
         </Typography>
       </Box> */}
-    </div>
+    </Box>
   );
 }
 

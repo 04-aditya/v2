@@ -28,10 +28,9 @@ import { UserRoleEntity } from '@/entities/userrole.entity';
 import { logger } from '@/utils/logger';
 import { BlobServiceClient } from '@azure/storage-blob';
 import Excel from 'exceljs';
-import { format, parse as parseDate, intervalToDuration,addYears } from 'date-fns';
+import { format, parse as parseDate, intervalToDuration, addYears } from 'date-fns';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import { RequestWithUser } from '@/interfaces/auth.interface';
-
 
 @JsonController('/api/admin')
 @UseBefore(authMiddleware)
@@ -67,7 +66,6 @@ export class AdminController {
       logger.error('Azure Storage Connection string not found');
     }
 
-    console.log(snapshotdate);
     // Create the BlobServiceClient object with connection string
     const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
     const containerClient = blobServiceClient.getContainerClient(process.env.AZUPLOADCONTAINER);
@@ -146,11 +144,18 @@ export class AdminController {
           details.client = row.getCell(headers.client_name).value;
         }
 
+        if (headers.home_office && headers.home_office !== -1) {
+          details.home_office = row.getCell(headers.home_office).value;
+        }
+
         if (headers.home_region && headers.home_region !== -1) {
           details.home_region = row.getCell(headers.home_region).value;
         }
         if (headers.current_region && headers.current_region !== -1) {
           details.current_region = row.getCell(headers.current_region).value;
+        }
+        if (headers.current_office && headers.current_office !== -1) {
+          details.current_office = row.getCell(headers.current_office).value;
         }
         if (headers.supervisor && headers.supervisor !== -1) {
           let sparts = row.getCell(headers.supervisor).value;
@@ -192,7 +197,7 @@ export class AdminController {
             const val = row.getCell(headers.time_since_last_promotion).value;
             if (val) {
               const tlp = parseFloat(val + '');
-              details.lastpromodate = format(addYears(new Date(), -1*tlp), 'yyyy-MM-dd');
+              details.lastpromodate = format(addYears(new Date(), -1 * tlp), 'yyyy-MM-dd');
             }
           } catch (err) {
             logger.error(err);
@@ -210,7 +215,7 @@ export class AdminController {
     }
   }
 
-  async processFileData(updater: stringFn, buffer: Buffer, snapshot_date: Date, permissions: string[], user: UserEntity) {
+  async processFileData(updater: stringFn, buffer: Buffer, defaultsnapshot_date: Date, permissions: string[], user: UserEntity) {
     try {
       // load from buffer
       const workbook: any = new Excel.Workbook();
@@ -219,7 +224,6 @@ export class AdminController {
       // access by `worksheets` array:
       //get the first worksheet from workbook
       const worksheet = workbook.worksheets[0];
-      //const worksheet: any = workbook.getWorksheet('Base Data'); // workbook.worksheets[0]; //the first one;
 
       const headerRow: any = worksheet.getRow(1);
       const columns = headerRow.values.map(h => h.trim().toUpperCase().replace(/ /g, '_'));
@@ -253,7 +257,9 @@ export class AdminController {
         team_name: columns.indexOf('TEAM_NAME'),
         project_name: columns.indexOf('PROJECT_NAME'),
 
+        home_office: columns.indexOf('HOME_OFF'),
         home_region: columns.indexOf('HOME_REGION'),
+        current_office: columns.indexOf('CURRENT_OFF'),
         current_region: columns.indexOf('CURRENT_REGION'),
         snapshot_date: columns.indexOf('SNAPSHOT_DATE'),
       };
@@ -264,10 +270,10 @@ export class AdminController {
       // const oidmap = new Map<string, any>();
       for await (const values of this.getUserValues(worksheet, headers)) {
         try {
-          const snapshotdate = values.snapshot_date ? parseDate(values.snapshot_date, 'yyyy-MM-dd', new Date()) : snapshot_date;
+          const snapshot_date = values.snapshot_date ? parseDate(values.snapshot_date, 'yyyy-MM-dd', new Date()) : defaultsnapshot_date;
           //logger.info(values.email);
           const user = await UserEntity.CreateUser(values.email);
-          const isNewData = user.snapshot_date ? snapshotdate.getTime() >= user.snapshot_date.getTime() : true;
+          const isNewData = user.snapshot_date ? snapshot_date.getTime() >= user.snapshot_date.getTime() : true;
           if (values.oid && isNewData) {
             user.oid = values.oid;
           }
@@ -289,20 +295,31 @@ export class AdminController {
           if (values.title && isNewData) {
             user.business_title = values.title;
           }
+          if (values.startdate) {
+            if (isNewData) {
+              user.most_recent_hire_date = values.startdate;
+            }
+          }
+          if (values.lastpromodate) {
+            if (isNewData) {
+              user.last_promotion_date = values.lastpromodate;
+            }
+          }
+
           if (values.career_stage) {
-            UserDataEntity.Add(user.id, 'career_stage', values.career_stage, snapshotdate);
+            UserDataEntity.Add(user.id, 'career_stage', values.career_stage, snapshot_date);
             if (isNewData) {
               user.career_stage = values.career_stage;
             }
           }
           if (values.craft) {
-            UserDataEntity.Add(user.id, 'craft', values.craft, snapshotdate);
+            UserDataEntity.Add(user.id, 'craft', values.craft, snapshot_date);
             if (isNewData) {
               user.craft = values.craft;
             }
           }
           if (values.capability) {
-            UserDataEntity.Add(user.id, 'capability', values.capability, snapshotdate);
+            UserDataEntity.Add(user.id, 'capability', values.capability, snapshot_date);
             if (isNewData) {
               user.capability = values.capability;
             }
@@ -311,51 +328,47 @@ export class AdminController {
             if (isNewData) {
               user.team = values.team;
             }
-            UserDataEntity.Add(user.id, 'team', values.team, snapshotdate);
+            UserDataEntity.Add(user.id, 'team', values.team, snapshot_date);
           }
           if (values.client) {
             if (isNewData) {
               user.account = values.client;
             }
-            UserDataEntity.Add(user.id, 'client', values.client, snapshotdate);
+            UserDataEntity.Add(user.id, 'client', values.client, snapshot_date);
           }
           if (values.current_region) {
             if (isNewData) {
               user.current_region = values.current_region;
             }
-            UserDataEntity.Add(user.id, 'current_region', values.current_region, snapshotdate);
+            UserDataEntity.Add(user.id, 'current_region', values.current_region, snapshot_date);
           }
+          if (values.current_office) {
+            if (isNewData) {
+              user.current_office = values.current_office;
+            }
+            UserDataEntity.Add(user.id, 'current_office', values.current_office, snapshot_date);
+          }
+
+          if (values.home_office) {
+            if (isNewData) {
+              user.home_office = values.home_office;
+            }
+            UserDataEntity.Add(user.id, 'home_office', values.home_office, snapshot_date);
+          }
+
           if (values.home_region) {
             if (isNewData) {
               user.home_region = values.home_region;
             }
-            UserDataEntity.Add(user.id, 'home_region', values.home_region, snapshotdate);
+            UserDataEntity.Add(user.id, 'home_region', values.home_region, snapshot_date);
           }
 
           if (values.contractor) {
             user.employment_type = 'Contractor';
-            UserDataEntity.Add(user.id, 'employment_type', 'Contractor', snapshotdate);
+            UserDataEntity.Add(user.id, 'employment_type', 'Contractor', snapshot_date);
           } else {
             user.employment_type = 'Fulltime';
-            UserDataEntity.Add(user.id, 'employment_type', 'Fulltime', snapshotdate);
-          }
-          if (values.startdate) {
-            if (isNewData) {
-              user.most_recent_hire_date = values.startdate;
-            }
-            if (updatedCount === 2) {
-              logger.debug(JSON.stringify(user.most_recent_hire_date, null, 2));
-              logger.debug(values.startdate);
-            }
-          }
-          if (values.lastpromodate) {
-            if (isNewData) {
-              user.last_promotion_date = values.lastpromodate;
-            }
-            if (updatedCount === 2) {
-              logger.debug(JSON.stringify(user.last_promotion_date, null, 2));
-              logger.debug(values.lastpromodate);
-            }
+            UserDataEntity.Add(user.id, 'employment_type', 'Fulltime', snapshot_date);
           }
           if (values.supervisor_id) {
             if (user.supervisor_id !== values.supervisor_id) {
@@ -366,15 +379,23 @@ export class AdminController {
                   user.supervisor_name = values.supervisor_name;
                 }
               }
-              UserDataEntity.Add(user.id, 'supervisor_id', values.supervisor_id, snapshotdate);
             }
+            UserDataEntity.create({
+              userid: user.id,
+              key: 'supervisor_id',
+              value: { supervisor_id: values.supervisor_id, oid: user.oid, csid: user.csid },
+              timestamp: snapshot_date,
+            })
+              .save()
+              .catch(ex => {
+                logger.error(ex);
+              });
           }
           if (isNewData) {
-            user.snapshot_date = snapshotdate;
+            user.snapshot_date = snapshot_date;
           }
           await user.save();
 
-          // oidmap.set(values.oid + '', { user, values });
           updatedCount++;
           if (updatedCount === 2) {
             logger.debug(JSON.stringify(values, null, 2));

@@ -118,7 +118,13 @@ export class UserEntity extends BaseEntity implements IUser {
   team?: string;
 
   @Column({ nullable: true })
+  current_office?: string;
+
+  @Column({ nullable: true })
   current_region?: string;
+
+  @Column({ nullable: true })
+  home_office?: string;
 
   @Column({ nullable: true })
   home_region?: string;
@@ -180,62 +186,56 @@ export class UserEntity extends BaseEntity implements IUser {
     return directs;
   }
 
-  static async getSnapshots() {
-    const snapshots = await cache.get(`snapshots`);
-    if (snapshots) return snapshots;
-    const ss = (await AppDataSource.query(`select distinct snapshot_date from psuser order by snapshot_date desc`)).map((s: any) => s.snapshot_date);
-    cache.set(`snapshots`, ss, 60000);
-    return ss;
+  async loadOrgUserIds(snapshot_date: Date): Promise<Array<{ userid: number; oid: number; supervisor_id: number }>> {
+    const CACHEKEY = `org_${this.id}_${snapshot_date}`;
+    let userids: Array<{ userid: number; oid: number; supervisor_id: number }> = await cache.get(CACHEKEY);
+    if (!userids) {
+      userids = await AppDataSource.getRepository(UserEntity).query(
+        `
+        WITH RECURSIVE cte AS (
+          select userid, CAST(value::jsonb->'oid' as integer) as oid, CAST(value::jsonb->'supervisor_id' as integer) as supervisor_id from psuserdata where key='supervisor_id' AND (CAST(value::jsonb->'supervisor_id' as INTEGER)=$1) AND timestamp::date = $2
+          UNION ALL
+          SELECT p.userid,CAST(p.value::jsonb->'oid' as INTEGER) as oid, CAST(p.value::jsonb->'supervisor_id' as INTEGER) as supervisor_id FROM psuserdata p
+          INNER JOIN cte c ON c.oid = CAST(p.value::jsonb->'supervisor_id' as INTEGER)
+          WHERE p.key='supervisor_id' and p.timestamp::date = $2
+        ) SELECT * FROM cte;
+        `,
+        [this.oid, snapshot_date],
+      );
+      cache.set(CACHEKEY, userids, 60000);
+    }
+    return userids;
   }
 
-  org?: UserEntity[];
-  async loadOrg() {
+  async loadOrg(snapshot_date: Date) {
     // select userid from psuserdata where key='supervisor_id' and CAST(value as INTEGER)=36990 and timestamp<='2023-01-09' group by userid;
-    if (this.org) return this.org;
-    const users = await AppDataSource.getRepository(UserEntity).query(
-      `
-      WITH RECURSIVE cte AS (
-        SELECT * FROM psuser WHERE supervisor_id = $1 or supervisor_id = $2
-        UNION ALL
-        SELECT p.* FROM psuser p INNER JOIN cte c ON c.oid = p.supervisor_id or c.csid = p.supervisor_id
-      ) SELECT * FROM cte;
-      `,
-      [this.oid, this.csid],
-    );
+    // if (this.org) return this.org;
+    const userids = await this.loadOrgUserIds(snapshot_date);
+    const users = await AppDataSource.getRepository(UserEntity).find({
+      where: {
+        id: In(userids.map(u => u.userid)),
+      },
+    });
+    return users;
+    // const users = await AppDataSource.getRepository(UserEntity).query(
+    //   `
+    //   WITH RECURSIVE cte AS (
+    //     SELECT *, ARRAY[supervisor_id, oid] as org FROM psuser WHERE supervisor_id = $1 or supervisor_id = $2
+    //     UNION ALL
+    //     SELECT p.*, array_append(c.org, p.oid) as org FROM psuser p INNER JOIN cte c ON c.oid = p.supervisor_id or c.csid = p.supervisor_id
+    //   ) SELECT * FROM cte;
+    //   `,
+    //   [this.oid, this.csid],
+    // );
 
     // WITH RECURSIVE cte AS ( SELECT * FROM psuser WHERE oid = 36990 or csid = 36990 UNION ALL SELECT p.* FROM psuser p INNER JOIN cte c ON c.oid = p.supervisor_id or c.oid = p.supervisor_id ) SELECT * FROM cte;
-    this.org = users.map(u => {
-      const newuser = new UserEntity();
-      AppDataSource.manager.merge(UserEntity, newuser, u);
-      return newuser;
-    });
-    return this.org;
-  }
-
-  static canRead(currentUser: UserEntity, matchedUser: UserEntity, orgUsers: UserEntity[], permissions: string[]): boolean {
-    if (matchedUser.id === currentUser.id) return true;
-    if (permissions.findIndex(p => p.startsWith('user.read.all')) !== -1) return true;
-    if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.read.client')) !== -1) return true;
-    if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.read.team')) !== -1) return true;
-    if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.read.capability')) !== -1) return true;
-    if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.read.craft')) !== -1) return true;
-    if (permissions.findIndex(p => p.startsWith('user.read.org')) !== -1) {
-      if (orgUsers.findIndex(u => u.id === matchedUser.id) !== -1) return true;
-    }
-    return false;
-  }
-
-  static canWrite(currentUser: UserEntity, matchedUser: UserEntity, orgUsers: UserEntity[], permissions: string[]): boolean {
-    if (matchedUser.id === currentUser.id) return true;
-    if (permissions.findIndex(p => p.startsWith('user.write.all')) !== -1) return true;
-    if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.write.client')) !== -1) return true;
-    if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.write.team')) !== -1) return true;
-    if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.write.capability')) !== -1) return true;
-    if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.write.craft')) !== -1) return true;
-    if (permissions.findIndex(p => p.startsWith('user.write.org')) !== -1) {
-      if (orgUsers.findIndex(u => u.id === matchedUser.id) !== -1) return true;
-    }
-    return false;
+    // this.org = users.map(u => {
+    //   const newuser = new UserEntity();
+    //   AppDataSource.manager.merge(UserEntity, newuser, u);
+    //   newuser.orgHierarchy = u.org;
+    //   return newuser;
+    // });
+    // return this.org;
   }
 
   private fieldMap = {
@@ -254,13 +254,15 @@ export class UserEntity extends BaseEntity implements IUser {
       'supervisor_id',
       'supervisor_name',
       'employment_type',
+      'current_office',
       'current_region',
+      'orgHierarchy',
     ],
     get org() {
-      return [...this.basic, 'gender', 'most_recent_hire_date'];
+      return [...this.basic, 'most_recent_hire_date'];
     },
     get all() {
-      return [...this.basic, this.org];
+      return [...this.org];
     },
   };
 
@@ -371,6 +373,69 @@ export class UserEntity extends BaseEntity implements IUser {
     this.pdadata = JSON.stringify(pdadata);
     await this.save();
     return { snapshot_date: pdadata.snapshot_date, message: `Updated PDA record for user: ${this.email}` };
+  }
+
+  static async getUserData(
+    id: number,
+    timestamp: Date,
+    keys: string[] = [
+      'client',
+      'employment_type',
+      'capability',
+      'home_region',
+      'supervisor_id',
+      'career_stage',
+      'home_office',
+      'craft',
+      'team',
+      'current_region',
+    ],
+  ) {
+    const query = keys
+      .map(k => `(SELECT * FROM psuserdata WHERE key='${k}' AND userid=$1 AND timestamp<=$2 ORDER BY timestamp DESC LIMIT 1)`)
+      .join(' UNION ALL ');
+    const data = await AppDataSource.query(query, [id, timestamp]);
+    const result: any = {};
+    data.forEach(d => {
+      result[d.key] = d.value;
+    });
+    return result;
+  }
+
+  static async getSnapshots() {
+    const snapshots = await cache.get(`snapshots`);
+    if (snapshots) return snapshots;
+    const ss = (await AppDataSource.query(`select distinct timestamp from psuserdata where key='supervisor_id' order by timestamp desc`)).map(
+      (s: any) => s.timestamp,
+    );
+    cache.set(`snapshots`, ss, 60000);
+    return ss;
+  }
+
+  static canRead(currentUser: UserEntity, matchedUser: UserEntity, orgUsers: UserEntity[], permissions: string[]): boolean {
+    if (matchedUser.id === currentUser.id) return true;
+    if (permissions.findIndex(p => p.startsWith('user.read.all')) !== -1) return true;
+    if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.read.client')) !== -1) return true;
+    if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.read.team')) !== -1) return true;
+    if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.read.capability')) !== -1) return true;
+    if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.read.craft')) !== -1) return true;
+    if (permissions.findIndex(p => p.startsWith('user.read.org')) !== -1) {
+      if (orgUsers.findIndex(u => u.id === matchedUser.id) !== -1) return true;
+    }
+    return false;
+  }
+
+  static canWrite(currentUser: UserEntity, matchedUser: UserEntity, orgUsers: UserEntity[], permissions: string[]): boolean {
+    if (matchedUser.id === currentUser.id) return true;
+    if (permissions.findIndex(p => p.startsWith('user.write.all')) !== -1) return true;
+    if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.write.client')) !== -1) return true;
+    if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.write.team')) !== -1) return true;
+    if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.write.capability')) !== -1) return true;
+    if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.write.craft')) !== -1) return true;
+    if (permissions.findIndex(p => p.startsWith('user.write.org')) !== -1) {
+      if (orgUsers.findIndex(u => u.id === matchedUser.id) !== -1) return true;
+    }
+    return false;
   }
 
   static async getUserById(userId: number | string) {

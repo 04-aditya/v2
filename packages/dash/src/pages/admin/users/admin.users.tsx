@@ -23,6 +23,7 @@ import { RolesRenderer } from '@/components/RolesRenderer';
 import { Row } from '@/components/Row';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import { Axios, AxiosResponse } from 'axios';
+import { BasicUserCardTooltip } from '@/components/BasicUserCard';
 
 // create Plotly renderers via dependency injection
 const PlotlyRenderers = createPlotlyRenderers(Plot);
@@ -52,34 +53,50 @@ export function AdminUsers(props: AdminUsersProps) {
   const gridRef = useRef<AgGridReact<IUser>>();
   const [columnDefs] = useState<Array<AgGridColumnProps>>([
       {
-        field: 'id', floatingFilter: false, flex:0,
+        field: 'oid', floatingFilter: false, flex:0,
         checkboxSelection: checkboxSelection,
         headerCheckboxSelection: headerCheckboxSelection,
       },
-      { field: 'email'},
-      { field: 'business_title'},
-      { field: 'career_stage'},
-      { field: 'capability'},
-      { field: 'craft'},
-      { field: 'team'},
-      { field: 'account'},
+      { field: 'csid', enableRowGroup: false, tooltipField: 'csid',},
+      { field: 'email', enableRowGroup: false, tooltipField: 'email', },
+      { field: 'name', valueGetter: 'data.first_name + " " + data.last_name', enableRowGroup: false, colId: 'name', tooltipField: 'first_name', },
+      { field: 'title', valueGetter:'data.business_title', enableRowGroup: true, colId: 'title', tooltipField: 'business_title', },
+      { field: 'Career Stage', valueGetter:'data.career_stage', enableRowGroup: true, colId: 'career_stage', tooltipField: 'career_stage', },
+      { field: 'Supervisor', valueGetter:'data.supervisor_name', enableRowGroup: true, colId: 'supervisor_name', tooltipField: 'supervisor_name', },
+      { field: 'Current Region', valueGetter:'data.current_region', enableRowGroup: true, colId: 'current_region', tooltipField: 'current_region', },
+      { field: 'account', enableRowGroup: true, tooltipField: 'account', },
+      { field: 'capability', enableRowGroup: true, tooltipField: 'capability', },
+      { field: 'craft', enableRowGroup: true, tooltipField: 'craft', },
+      { field: 'team', enableRowGroup: true, tooltipField: 'team', },
       { field: 'roles', cellRenderer: RolesRenderer}
   ]);
+  const autoGroupColumnDef = useMemo(() => {
+    return {
+      minWidth: 200,
+    };
+  }, []);
+  // DefaultColDef sets props common to all Columns
+  const defaultColDef = useMemo(() => {
+    return {
+      sortable: true,
+      // make every column use 'text' filter by default
+      filter: 'agTextColumnFilter',
+      // enable floating filters by default
+      floatingFilter: true,
+      // make columns resizable
+      resizable: true,
+      tooltipComponent: BasicUserCardTooltip,
+    };
+  }, []);
+
+  // possible options: 'never', 'always', 'onlyWhenGrouping'
+  const rowGroupPanelShow = 'always';
+  // display each row grouping in a separate group column
+  const groupDisplayType = 'groupRows';
 
   useEffect(() => {
     appstateDispatch({type:'title', data:'Users (Admin) - PSNext'});
   }, []);
-
-  // DefaultColDef sets props common to all Columns
-  const defaultColDef = {
-    sortable: true,
-    // make every column use 'text' filter by default
-    filter: 'agTextColumnFilter',
-    // enable floating filters by default
-    floatingFilter: true,
-    // make columns resizable
-    resizable: true,
-  };
 
   useEffect(()=>{
     axios.get(`${ADMINAPI}/users`)
@@ -151,7 +168,7 @@ export function AdminUsers(props: AdminUsersProps) {
     console.log(files);
     const formData = new FormData();
     formData.append("file", files[0]);
-    formData.append("snapshot_date", otherFields.date.toISOString().slice(0,10));
+    formData.append("snapshot_date", otherFields.date.toISOString().substring(0,10)+'T00:00:00.000Z');
 
     try {
       await axios.post(`${ADMINAPI}/upload`, formData, {
@@ -181,10 +198,15 @@ export function AdminUsers(props: AdminUsersProps) {
             rowData={users}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
-            groupSelectsChildren={true}
+            autoGroupColumnDef={autoGroupColumnDef}
             rowSelection={'multiple'}
-            pagination={true}
-            paginationAutoPageSize={true}
+            rowGroupPanelShow={rowGroupPanelShow}
+            groupSelectsChildren={true}
+            groupDisplayType={groupDisplayType}
+            // pagination={true}
+            // paginationAutoPageSize={true}
+            tooltipShowDelay={0}
+            tooltipHideDelay={2000}
             onSelectionChanged={(e:SelectionChangedEvent<IUser>)=>setSelectedUsers(e.api.getSelectedRows())}
         >
         </AgGridReact>

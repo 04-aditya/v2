@@ -14,7 +14,7 @@ export class UserDataEntity extends BaseEntity implements IUserData {
   @Column({ type: 'jsonb', nullable: false })
   value: string | number | boolean | Record<string, unknown>;
 
-  @Column({ type: 'timestamptz' })
+  @Column({ nullable: false })
   @Index()
   timestamp: Date;
 

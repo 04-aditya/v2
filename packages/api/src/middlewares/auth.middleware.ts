@@ -69,10 +69,10 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
     next();
   } catch (error) {
     if (isInstance(error, TokenExpiredError)) {
-      return res.status(403).send('Token Expired');
+      return res.status(401).send('Token Expired');
     }
     console.log(error);
-    return res.status(403).send('Invalid token');
+    return res.status(401).send('Invalid token');
   }
 };
 

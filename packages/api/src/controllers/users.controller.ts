@@ -27,7 +27,7 @@ import { IUser, APIResponse, IPermission, IUserPAT } from 'sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserPATEntity } from '@/entities/userpat.entity';
-import { format, parse as parseDate, parseJSON, intervalToDuration } from 'date-fns';
+import { format, parse as parseDate, parseJSON, intervalToDuration, parseISO } from 'date-fns';
 import { logger } from '@/utils/logger';
 import { LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
 
@@ -64,19 +64,30 @@ export class UsersController {
   }
 
   @Get('/:id/team')
-  @OpenAPI({ summary: 'Return teams of the user matched by the `id` depth specified by `depth`' })
+  @OpenAPI({ summary: 'Return teams of the user matched by the `id` on give snapshot_date`' })
   @Authorized(['user.read.org'])
   async getUserTeamById(
     @Param('id') userId: string,
     @Req() req: RequestWithUser,
-    @QueryParam('depth') depth?: string,
+    @QueryParam('snapshot_date') snapshot_date?: string,
     @CurrentUser() currentUser?: UserEntity,
   ) {
     const result = new APIResponse<IUser[]>();
     if (userId === '-1') return result;
     const matchedUser = await this.getUser(userId, currentUser);
-
-    let teamMembers = await matchedUser.loadOrg();
+    const dates = await UserEntity.getSnapshots();
+    let reqdate: Date = dates[0];
+    try {
+      if (snapshot_date) {
+        if (snapshot_date.toLowerCase() !== 'last') {
+          reqdate = parseJSON(snapshot_date);
+        }
+      }
+    } catch (ex) {
+      logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
+      throw new HttpError(400, `Bad snapshot_date`);
+    }
+    const teamMembers = await matchedUser.loadOrg(reqdate);
     // if (depth === 'all') {
     //   teamMembers = await AppDataSource.getTreeRepository(UserEntity).findDescendants(matchedUser);
     // } else {
@@ -98,7 +109,6 @@ export class UsersController {
     return result;
   }
 
-
   @Get('/:id/stats')
   @OpenAPI({ summary: 'Return stats of the user matched by the `id`' })
   @Authorized(['user.read'])
@@ -113,7 +123,6 @@ export class UsersController {
     const matchedUser = await this.getUser(userId, currentUser);
     const dates = await UserEntity.getSnapshots();
     let reqdate: Date = dates[0];
-    console.log(typeof reqdate);
     try {
       if (snapshot_date) {
         if (snapshot_date.toLowerCase() !== 'last') {
@@ -124,7 +133,7 @@ export class UsersController {
       logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
       throw new HttpError(400, `Bad snapshot_date`);
     }
-    const orgUsers = await matchedUser.loadOrg();
+    const orgUsers = await matchedUser.loadOrg(reqdate);
     if (!UserEntity.canRead(currentUser, matchedUser, orgUsers, req.permissions)) throw new HttpError(403);
 
     const allUsers = await AppDataSource.getRepository(UserEntity).find({
@@ -134,6 +143,10 @@ export class UsersController {
       },
       cache: 60000,
     }); //10 seconds cache
+    console.log(await UserEntity.getUserData(allUsers[1].id, reqdate));
+    console.log(orgUsers.length);
+    console.log(allUsers.length);
+    console.log(allUsers[1].toJSON('all'));
     const allCaUsers = allUsers.filter(u => u.capability === matchedUser.capability);
     const allIndustryUsers = allUsers.filter(u => u.team === matchedUser.team);
     const allAccountUsers = allUsers.filter(u => u.account === matchedUser.account);
@@ -181,17 +194,28 @@ export class UsersController {
         if (u.gender !== 'Male') {
           dCount++;
         }
-        const expDuration = intervalToDuration({
-          start: u.most_recent_hire_date,
-          end: new Date(),
-        });
-        totalExp += expDuration.years + expDuration.months / 12;
+        try {
+          const expDuration = intervalToDuration({
+            start: u.most_recent_hire_date,
+            end: new Date(),
+          });
+          totalExp += expDuration.years + expDuration.months / 12;
+        } catch (ex) {
+          console.log(typeof u.most_recent_hire_date);
+          console.log(u.most_recent_hire_date);
+          console.log(ex);
+        }
 
-        const titDuration = intervalToDuration({
-          start: u.last_promotion_date || u.most_recent_hire_date,
-          end: new Date(),
-        });
-        titleExp += titDuration.years + titDuration.months / 12;
+        try {
+          const titDuration = intervalToDuration({
+            start: u.last_promotion_date || u.most_recent_hire_date,
+            end: new Date(),
+          });
+          titleExp += titDuration.years + titDuration.months / 12;
+        } catch (ex) {
+          // console.log(typeof u.last_promotion_date);
+          // console.log(u.last_promotion_date);
+        }
       });
       return { cs_map, supervisor_map, avgDirectsCount, fteCount, totalExp, titleExp, dCount };
     }

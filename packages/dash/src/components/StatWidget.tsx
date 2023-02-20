@@ -85,7 +85,7 @@ export const StatWidget: React.FC<StatWidgetProps> = (props) => {
       onMouseOut={()=>setMouseOver(false)}>
     <div
       style={{display:'flex', flexDirection:'column', justifyContent:'space-between', height:'100%'}}
-      onMouseEnter={handleOpenPopover}
+      onClick={handleOpenPopover}
     >
       {size!=='small'?<Row justifyContent="space-between" sx={{p:1}}>
         <Tooltip title='Industry'>
