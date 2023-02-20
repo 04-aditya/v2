@@ -262,7 +262,7 @@ export class UserEntity extends BaseEntity implements IUser {
       return [...this.basic, 'most_recent_hire_date'];
     },
     get all() {
-      return [...this.org];
+      return [...this.org, 'home_office', 'home_region'];
     },
   };
 
