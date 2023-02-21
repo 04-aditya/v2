@@ -13,12 +13,10 @@ import {
   AfterInsert,
   AfterUpdate,
   OneToMany,
-  Tree,
-  TreeChildren,
-  TreeParent,
-  SaveOptions,
   Index,
   In,
+  LessThanOrEqual,
+  MoreThanOrEqual,
 } from 'typeorm';
 import { UserRoleEntity } from './userrole.entity';
 import { hash, compare } from 'bcrypt';
@@ -31,7 +29,9 @@ import { UserPATEntity } from './userpat.entity';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config';
 import cache from '@/utils/cache';
-import { parseISO } from 'date-fns';
+import { intervalToDuration, parseISO } from 'date-fns';
+import { groupBy } from '@/utils/util';
+import { UserDataEntity } from './userdata.entity';
 
 const pdaclient = axios.create({
   baseURL: PDAAPI,
@@ -137,7 +137,7 @@ export class UserEntity extends BaseEntity implements IUser {
   @Column({ nullable: true })
   last_promotion_date: Date;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'timestamptz' })
   snapshot_date: Date;
   // @Column()
   // probationary_period_end_date: Date;
@@ -187,21 +187,23 @@ export class UserEntity extends BaseEntity implements IUser {
   }
 
   async loadOrgUserIds(snapshot_date: Date): Promise<Array<{ userid: number; oid: number; supervisor_id: number }>> {
-    const CACHEKEY = `org_${this.id}_${snapshot_date}`;
+    const CACHEKEY = `org_${this.id}_${snapshot_date.toISOString()}`;
     let userids: Array<{ userid: number; oid: number; supervisor_id: number }> = await cache.get(CACHEKEY);
     if (!userids) {
+      logger.debug(`get org userids for ${this.oid} on date ${snapshot_date.toISOString()}`);
       userids = await AppDataSource.getRepository(UserEntity).query(
         `
         WITH RECURSIVE cte AS (
-          select userid, CAST(value::jsonb->'oid' as integer) as oid, CAST(value::jsonb->'supervisor_id' as integer) as supervisor_id from psuserdata where key='supervisor_id' AND (CAST(value::jsonb->'supervisor_id' as INTEGER)=$1) AND timestamp::date = $2
+          select userid, CAST(value::jsonb->'oid' as integer) as oid, CAST(value::jsonb->'supervisor_id' as integer) as supervisor_id from psuserdata where key='supervisor_id' AND (CAST(value::jsonb->'supervisor_id' as INTEGER)=$1) AND timestamp = $2
           UNION ALL
           SELECT p.userid,CAST(p.value::jsonb->'oid' as INTEGER) as oid, CAST(p.value::jsonb->'supervisor_id' as INTEGER) as supervisor_id FROM psuserdata p
           INNER JOIN cte c ON c.oid = CAST(p.value::jsonb->'supervisor_id' as INTEGER)
-          WHERE p.key='supervisor_id' and p.timestamp::date = $2
+          WHERE p.key='supervisor_id' and p.timestamp = $2
         ) SELECT * FROM cte;
         `,
-        [this.oid, snapshot_date],
+        [this.oid, snapshot_date.toISOString()],
       );
+      logger.debug(userids.length);
       cache.set(CACHEKEY, userids, 60000);
     }
     return userids;
@@ -397,7 +399,11 @@ export class UserEntity extends BaseEntity implements IUser {
     const data = await AppDataSource.query(query, [id, timestamp]);
     const result: any = {};
     data.forEach(d => {
-      result[d.key] = d.value;
+      if (d.key === 'supervisor_id') {
+        result[d.key] = d.value.supervisor_id;
+      } else {
+        result[d.key] = d.value;
+      }
     });
     return result;
   }
@@ -410,6 +416,141 @@ export class UserEntity extends BaseEntity implements IUser {
     );
     cache.set(`snapshots`, ss, 60000);
     return ss;
+  }
+
+  static calculatePDAStats(list: UserEntity[]) {
+    let avgDirectsCount = 0;
+    let fteCount = 0;
+    let totalExp = 0;
+    let titleExp = 0;
+    let diversityCount = 0;
+
+    const cs_map = new Map<string, UserEntity[]>();
+    const supervisor_map = new Map<string, UserEntity[]>();
+
+    list.forEach(u => {
+      if (!cs_map.has(u.career_stage)) {
+        cs_map.set(u.career_stage, []);
+      }
+      cs_map.get(u.career_stage).push(u);
+      if (!supervisor_map.has(u.supervisor_id + '')) {
+        supervisor_map.set(u.supervisor_id + '', []);
+      }
+      supervisor_map.get(u.supervisor_id + '').push(u);
+
+      if (u.employment_type === 'Fulltime') {
+        fteCount++;
+      }
+      if (u.gender !== 'Male') {
+        diversityCount++;
+      }
+      try {
+        const expDuration = intervalToDuration({
+          start: u.most_recent_hire_date,
+          end: new Date(),
+        });
+        totalExp += expDuration.years + expDuration.months / 12;
+      } catch (ex) {
+        logger.error(JSON.stringify(ex));
+      }
+
+      try {
+        const titDuration = intervalToDuration({
+          start: u.last_promotion_date || u.most_recent_hire_date,
+          end: new Date(),
+        });
+        titleExp += titDuration.years + titDuration.months / 12;
+      } catch (ex) {
+        logger.error(JSON.stringify(ex));
+      }
+    });
+
+    let mpcount = 0;
+    for (const [key, value] of supervisor_map) {
+      avgDirectsCount += value.length;
+      mpcount++;
+    }
+
+    avgDirectsCount = avgDirectsCount / mpcount;
+    return {
+      totalCount: list.length,
+      cs_map: Array.from(cs_map.entries()).map(([key, value]) => ({ name: key, value: value.length })),
+      avgDirectsCount,
+      fteCount,
+      totalExp,
+      titleExp,
+      diversityCount,
+    };
+  }
+
+  static async getPDAStats(snapshot_date: Date): Promise<any> {
+    const stats_data = await AppDataSource.getRepository(UserDataEntity).findOne({
+      where: {
+        userid: 0,
+        key: 'pdastats',
+        timestamp: snapshot_date,
+      },
+      cache: 60000,
+    });
+    if (stats_data) {
+      logger.debug(`getting PDAStats from db`);
+      return stats_data.value;
+    }
+
+    const updated_stats = UserEntity.updatePDAStats(snapshot_date);
+    return updated_stats;
+  }
+
+  static async updatePDAStats(snapshot_date: Date): Promise<any> {
+    logger.info(`Updating PDAstats for ${snapshot_date}`);
+    const users = await AppDataSource.getRepository(UserEntity).find({
+      where: {
+        snapshot_date: MoreThanOrEqual(snapshot_date),
+        most_recent_hire_date: LessThanOrEqual(snapshot_date),
+      },
+      cache: 60000,
+    });
+    logger.info(`Found ${users.length} users for ${snapshot_date}`);
+
+    const account_map = groupBy(users, u => u.account || 'N/A');
+    const capability_map = groupBy(users, u => u.capability || 'N/A');
+    const craft_map = groupBy(users, u => u.craft || 'N/A');
+    const team_map = groupBy(users, u => u.team || 'N/A');
+
+    const pdastatsdata = {
+      all: UserEntity.calculatePDAStats(users),
+      account: {},
+      capability: {},
+      craft: {},
+      team: {},
+    };
+    team_map.forEach((v, k) => {
+      pdastatsdata.team[k] = UserEntity.calculatePDAStats(v);
+    });
+    account_map.forEach((v, k) => {
+      pdastatsdata.account[k] = UserEntity.calculatePDAStats(v);
+    });
+    capability_map.forEach((v, k) => {
+      pdastatsdata.capability[k] = UserEntity.calculatePDAStats(v);
+    });
+    craft_map.forEach((v, k) => {
+      pdastatsdata.craft[k] = UserEntity.calculatePDAStats(v);
+    });
+    const udata = await AppDataSource.getRepository(UserDataEntity).findOne({
+      where: {
+        userid: 0,
+        key: 'pdastats',
+        timestamp: snapshot_date,
+      },
+    });
+
+    if (udata) {
+      udata.value = pdastatsdata;
+      udata.save();
+    } else {
+      UserDataEntity.Add(0, 'pdastats', pdastatsdata, snapshot_date);
+    }
+    return pdastatsdata;
   }
 
   static canRead(currentUser: UserEntity, matchedUser: UserEntity, orgUsers: UserEntity[], permissions: string[]): boolean {

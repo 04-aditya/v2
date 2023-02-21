@@ -3,7 +3,7 @@ import { IUserData } from 'sharedtypes';
 import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan } from 'typeorm';
 
 @Entity({ name: 'psuserdata' })
-@Index(['userid', 'key'])
+@Index(['userid', 'key', 'timestamp'])
 export class UserDataEntity extends BaseEntity implements IUserData {
   @PrimaryColumn()
   userid: number;
@@ -11,12 +11,11 @@ export class UserDataEntity extends BaseEntity implements IUserData {
   @PrimaryColumn()
   key: string;
 
+  @PrimaryColumn({ type: 'timestamptz' })
+  timestamp: Date;
+
   @Column({ type: 'jsonb', nullable: false })
   value: string | number | boolean | Record<string, unknown>;
-
-  @Column({ nullable: false })
-  @Index()
-  timestamp: Date;
 
   static async Add(userid: number, key: string, value: string | number | boolean | Record<string, unknown>, timestamp: Date) {
     const repo = AppDataSource.getRepository(UserDataEntity);

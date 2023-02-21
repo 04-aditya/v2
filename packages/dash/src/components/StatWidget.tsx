@@ -180,9 +180,25 @@ export const NumberStatWidget: React.FC<NumberStatWidgetProps> = (props) => {
 function CircularProgressWithLabel(
   props: CircularProgressProps & { value: number },
 ) {
+  const {value, ...otherProps} = props;
+  const [progress, setProgress] = React.useState<number>(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress((prevProgress) => {
+        if (prevProgress < value) {
+          return prevProgress + value/10 ;
+        }
+        clearInterval(timer);
+        return value;
+      });
+    }, 100);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [value]);
   return (
     <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-      <CircularProgress variant="determinate" {...props} />
+      <CircularProgress variant="determinate" value={progress} {...otherProps} />
       <Box
         sx={{
           top: 0,

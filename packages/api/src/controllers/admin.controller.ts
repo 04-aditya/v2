@@ -82,6 +82,7 @@ export class AdminController {
     // Upload data to the blob
     const uploadBlobResponse = await blockBlobClient.uploadData(file.buffer);
     logger.debug(`Blob was uploaded successfully. requestId: ${uploadBlobResponse.requestId}`);
+    logger.debug(`Starting processing PDA data for date: ${snapshotdate}`);
     const qt = new AsyncTask(updater => this.processFileData(updater, file.buffer, snapshotdate, req.permissions, req.user), req.user.id);
     return { qid: qt.id, message: 'created' };
   }
@@ -267,7 +268,6 @@ export class AdminController {
 
       logger.debug(JSON.stringify(headers, null, 2));
       let updatedCount = 0;
-      // const oidmap = new Map<string, any>();
       for await (const values of this.getUserValues(worksheet, headers)) {
         try {
           const snapshot_date = values.snapshot_date ? parseDate(values.snapshot_date, 'yyyy-MM-dd', new Date()) : defaultsnapshot_date;
@@ -409,36 +409,8 @@ export class AdminController {
           logger.debug(JSON.stringify(values, null, 2));
         }
       }
-      // let updatedMgrCount = 0;
-      // logger.debug(`updating users data`);
-      // for await (const data of oidmap.values()) {
-      //   try {
-      //     const snapshotdate = data.values.snapshot_date ? parseDate(data.values.snapshot_date, 'yyyy-MM-dd', new Date()) : snapshot_date;
-      //     const user = data.user as UserEntity;
-      //     const isNewData = snapshotdate.getTime() > user.snapshot_date.getTime();
-      //     const manager = oidmap.get(data.values.supervisor_id + '')?.user as UserEntity;
-      //     if (manager) {
-      //       const udata = await UserDataEntity.Get(user.id, 'manager');
-      //       if (udata && udata.value === manager.id && isNewData) continue;
-      //       if (isNewData) {
-      //         user.manager = manager;
-      //       }
-      //       UserDataEntity.Add(user.id, 'manager', manager.id, snapshotdate);
-      //       if (isNewData) {
-      //         user.snapshot_date = snapshotdate;
-      //       }
-      //       await user.save();
-      //       updatedMgrCount++;
-      //     }
-      //     if (updatedCount % 1000 === 0) {
-      //       logger.debug(`Processed: ${updatedCount} rows, Updated ${updatedMgrCount} mgrs`);
-      //       updater(`Processed: ${updatedCount} rows, Updated ${updatedMgrCount} mgrs`);
-      //     }
-      //   } catch (ex) {
-      //     logger.error(JSON.stringify(ex));
-      //     logger.debug(JSON.stringify(data.values, null, 2));
-      //   }
-      // }
+
+      UserEntity.updatePDAStats(defaultsnapshot_date);
       logger.info(`Finished processing ${updatedCount} rows`);
       return { count: updatedCount, message: `Finished processing ${updatedCount} rows.` };
     } catch (error) {

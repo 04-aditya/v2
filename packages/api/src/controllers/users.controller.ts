@@ -30,6 +30,9 @@ import { UserPATEntity } from '@/entities/userpat.entity';
 import { format, parse as parseDate, parseJSON, intervalToDuration, parseISO } from 'date-fns';
 import { logger } from '@/utils/logger';
 import { LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
+import { groupBy } from '@/utils/util';
+import { UserDataEntity } from '@/entities/userdata.entity';
+import { resolve } from 'path';
 
 @JsonController('/api/users')
 @UseBefore(authMiddleware)
@@ -118,15 +121,16 @@ export class UsersController {
     @QueryParam('snapshot_date') snapshot_date?: string,
     @CurrentUser() currentUser?: UserEntity,
   ) {
-    const result = new APIResponse<{ name: string; value: any; all?: any; capability?: any; industry?: any; account?: any }[]>();
+    const result = new APIResponse<{ name: string; value: any; all?: any; capability?: any; industry?: any; account?: any; craft?: any }[]>();
     if (userId === '-1') return [];
     const matchedUser = await this.getUser(userId, currentUser);
     const dates = await UserEntity.getSnapshots();
+    if (dates.length === 0) return result;
     let reqdate: Date = dates[0];
     try {
       if (snapshot_date) {
         if (snapshot_date.toLowerCase() !== 'last') {
-          reqdate = parseJSON(snapshot_date);
+          reqdate = new Date(snapshot_date);
         }
       }
     } catch (ex) {
@@ -136,154 +140,94 @@ export class UsersController {
     const orgUsers = await matchedUser.loadOrg(reqdate);
     if (!UserEntity.canRead(currentUser, matchedUser, orgUsers, req.permissions)) throw new HttpError(403);
 
-    const allUsers = await AppDataSource.getRepository(UserEntity).find({
-      where: {
-        snapshot_date: MoreThanOrEqual(reqdate),
-        most_recent_hire_date: LessThanOrEqual(reqdate),
-      },
-      cache: 60000,
-    }); //10 seconds cache
-    console.log(await UserEntity.getUserData(allUsers[1].id, reqdate));
-    console.log(orgUsers.length);
-    console.log(allUsers.length);
-    console.log(allUsers[1].toJSON('all'));
-    const allCaUsers = allUsers.filter(u => u.capability === matchedUser.capability);
-    const allIndustryUsers = allUsers.filter(u => u.team === matchedUser.team);
-    const allAccountUsers = allUsers.filter(u => u.account === matchedUser.account);
+    try {
+      const dataworkers = orgUsers.map(u => {
+        return new Promise(resolve => {
+          if (u.snapshot_date.getTime() === reqdate.getTime()) return resolve(u);
 
-    // console.log(matchedUser.reportees.length);
-    // const users: Array<UserEntity> = [];
-
-    function groupBy(list: UserEntity[], keyGetter: (u: UserEntity) => string) {
-      const map = new Map();
-      list.forEach(item => {
-        const key = keyGetter(item);
-        const collection = map.get(key);
-        if (!collection) {
-          map.set(key, [item]);
-        } else {
-          collection.push(item);
-        }
-      });
-      return map;
-    }
-
-    function calculate(list: UserEntity[]) {
-      let avgDirectsCount = 0;
-      let fteCount = 0;
-      let totalExp = 0;
-      let titleExp = 0;
-      let dCount = 0;
-      const cs_map = groupBy(list, u => u.career_stage);
-      const supervisor_map = groupBy(list, u => (u.supervisor_id ? u.supervisor_id + '' : ''));
-
-      let mpcount = 0;
-      for (const [key, value] of supervisor_map) {
-        if (key !== 'null') {
-          avgDirectsCount += value.length;
-          mpcount++;
-        }
-      }
-
-      avgDirectsCount = avgDirectsCount / mpcount;
-
-      list.forEach(u => {
-        if (u.employment_type === 'Fulltime') {
-          fteCount++;
-        }
-        if (u.gender !== 'Male') {
-          dCount++;
-        }
-        try {
-          const expDuration = intervalToDuration({
-            start: u.most_recent_hire_date,
-            end: new Date(),
+          UserEntity.getUserData(u.id, reqdate).then(data => {
+            UserEntity.merge(u, data);
+            resolve(u);
           });
-          totalExp += expDuration.years + expDuration.months / 12;
-        } catch (ex) {
-          console.log(typeof u.most_recent_hire_date);
-          console.log(u.most_recent_hire_date);
-          console.log(ex);
-        }
-
-        try {
-          const titDuration = intervalToDuration({
-            start: u.last_promotion_date || u.most_recent_hire_date,
-            end: new Date(),
-          });
-          titleExp += titDuration.years + titDuration.months / 12;
-        } catch (ex) {
-          // console.log(typeof u.last_promotion_date);
-          // console.log(u.last_promotion_date);
-        }
+        });
       });
-      return { cs_map, supervisor_map, avgDirectsCount, fteCount, totalExp, titleExp, dCount };
+      await Promise.all(dataworkers);
+      const pdastats = await UserEntity.getPDAStats(reqdate);
+      const orgStats = UserEntity.calculatePDAStats(orgUsers);
+      const cpStats = pdastats.capability[matchedUser.capability || 'N/A'] || {};
+      const cfStats = pdastats.craft[matchedUser.craft || 'N/A'] || {};
+      const accountStats = pdastats.account[matchedUser.account || 'N/A'] || {};
+      const teamStats = pdastats.team[matchedUser.team || 'N/A'] || {};
+      result.data = [];
+
+      result.data.push({
+        name: 'Directs',
+        value: orgUsers.filter(u => u.supervisor_id === matchedUser.oid).length,
+        all: pdastats.all.totalCount,
+        capability: cpStats.totalCount,
+        industry: teamStats.totalCount,
+        account: accountStats.totalCount,
+        craft: cfStats.totalCount,
+      });
+      result.data.push({
+        name: 'Leverage',
+        value: orgStats.cs_map,
+        all: pdastats.all.cs_map,
+        capability: cpStats.cs_map,
+        industry: teamStats.cs_map,
+        account: accountStats.cs_map,
+        craft: cfStats.cs_map,
+      });
+      result.data.push({
+        name: 'Total Count',
+        value: orgStats.totalCount,
+        all: pdastats.all.totalCount,
+        capability: cpStats.totalCount,
+        industry: teamStats.totalCount,
+        account: accountStats.totalCount,
+        craft: cfStats.totalCount,
+      });
+      result.data.push({
+        name: 'FTE %',
+        value: orgStats.fteCount / orgUsers.length,
+        all: pdastats.all.fteCount / pdastats.all.totalCount,
+        capability: cpStats.fteCount / cpStats.totalCount,
+        industry: teamStats.fteCount / teamStats.totalCount,
+        account: accountStats.fteCount / accountStats.totalCount,
+        craft: cfStats.fteCount / cfStats.totalCount,
+      });
+      result.data.push({
+        name: 'Diversity %',
+        value: orgStats.diversityCount / orgUsers.length,
+        all: pdastats.all.diversityCount / pdastats.all.totalCount,
+        capability: cpStats.diversityCount / cpStats.totalCount,
+        industry: teamStats.diversityCount / teamStats.totalCount,
+        account: accountStats.diversityCount / accountStats.totalCount,
+        craft: cfStats.diversityCount / cfStats.totalCount,
+      });
+      result.data.push({
+        name: 'PS Exp',
+        value: orgStats.totalExp / orgUsers.length,
+        all: pdastats.all.totalExp / pdastats.all.totalCount,
+        capability: cpStats.totalExp / cpStats.totalCount,
+        industry: teamStats.totalExp / teamStats.totalCount,
+        account: accountStats.totalExp / accountStats.totalCount,
+        craft: cfStats.totalExp / cfStats.totalCount,
+      });
+      result.data.push({
+        name: 'TiT Exp',
+        value: orgStats.titleExp / orgUsers.length,
+        all: pdastats.all.titleExp / pdastats.all.totalCount,
+        capability: cpStats.titleExp / cpStats.totalCount,
+        industry: teamStats.titleExp / teamStats.totalCount,
+        account: accountStats.titleExp / accountStats.totalCount,
+        craft: cfStats.titleExp / cfStats.totalCount,
+      });
+      return result;
+    } catch (ex) {
+      console.error(ex);
+      throw ex;
     }
-    const myCounts = calculate(orgUsers);
-    const industryCounts = calculate(allIndustryUsers);
-    const accountCounts = calculate(allAccountUsers);
-    const allCounts = calculate(allUsers);
-    const caCounts = calculate(allCaUsers);
-
-    result.data = [];
-
-    result.data.push({
-      name: 'Directs',
-      value: orgUsers.filter(u => u.supervisor_id === matchedUser.oid).length,
-      industry: industryCounts.avgDirectsCount,
-      account: accountCounts.avgDirectsCount,
-      all: allCounts.avgDirectsCount,
-      capability: caCounts.avgDirectsCount,
-    });
-    result.data.push({
-      name: 'Leverage',
-      value: Array.from(myCounts.cs_map.entries()).map(([key, value]) => ({ name: key, value: value.length })),
-      industry: industryCounts.avgDirectsCount,
-      account: accountCounts.avgDirectsCount,
-      all: allCounts.avgDirectsCount,
-      capability: caCounts.avgDirectsCount,
-    });
-    result.data.push({
-      name: 'Total Count',
-      value: orgUsers.length,
-      industry: allIndustryUsers.length,
-      account: allAccountUsers.length,
-      all: allUsers.length,
-      capability: allCaUsers.length,
-    });
-    result.data.push({
-      name: 'FTE %',
-      value: myCounts.fteCount / orgUsers.length,
-      industry: industryCounts.fteCount / allIndustryUsers.length,
-      account: accountCounts.fteCount / allAccountUsers.length,
-      all: allCounts.fteCount / allUsers.length,
-      capability: caCounts.fteCount / allCaUsers.length,
-    });
-    result.data.push({
-      name: 'Diversity %',
-      value: myCounts.dCount / orgUsers.length,
-      industry: industryCounts.dCount / allIndustryUsers.length,
-      account: accountCounts.dCount / allAccountUsers.length,
-      all: allCounts.dCount / allUsers.length,
-      capability: caCounts.dCount / allCaUsers.length,
-    });
-    result.data.push({
-      name: 'PS Exp',
-      value: myCounts.totalExp / orgUsers.length,
-      industry: industryCounts.totalExp / allIndustryUsers.length,
-      account: accountCounts.totalExp / allAccountUsers.length,
-      all: allCounts.totalExp / allUsers.length,
-      capability: caCounts.totalExp / allCaUsers.length,
-    });
-    result.data.push({
-      name: 'TiT Exp',
-      value: myCounts.titleExp / orgUsers.length,
-      industry: industryCounts.titleExp / allIndustryUsers.length,
-      account: accountCounts.titleExp / allAccountUsers.length,
-      all: allCounts.titleExp / allUsers.length,
-      capability: caCounts.titleExp / allCaUsers.length,
-    });
-    return result;
   }
 
   @Get('/:id/permissions')
