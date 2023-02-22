@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { Button, Card, CardActions, CardContent, CardMedia, Dialog, InputAdornment, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardActions, CardContent, CardMedia, CircularProgress, Dialog, InputAdornment, TextField, Typography } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
@@ -19,6 +19,8 @@ export function Login(props: LoginProps) {
   const [email, setEmail] = useState<string>('');
   const [code, setCode] = useState<string>('');
   const [codeEntry, showCodeEntry] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,6 +44,7 @@ export function Login(props: LoginProps) {
 
   const onGenerateCode = async ()=>{
     try {
+      setBusy(true);
       await axios.post(
         LOGIN_URL,
         JSON.stringify({email}),
@@ -50,6 +53,7 @@ export function Login(props: LoginProps) {
           withCredentials: true,
         }
       );
+      setBusy(false);
       showCodeEntry(true);
     } catch(ex) {
       console.error(ex);
@@ -58,6 +62,8 @@ export function Login(props: LoginProps) {
 
   const onVerifyCode = async ()=>{
     try {
+      setBusy(true);
+      setError('')
       const response = await axios.post(
         VERIFY_URL,
         JSON.stringify({email, code}),
@@ -66,6 +72,7 @@ export function Login(props: LoginProps) {
           withCredentials: true,
         }
       );
+      setBusy(false);
       if (response.status!==200) return;
       const data = await response.data;
       const accessToken = data?.accessToken;
@@ -91,7 +98,7 @@ export function Login(props: LoginProps) {
       />
       <CardContent>
         {codeEntry? (
-          <TextField fullWidth
+          <TextField fullWidth focused
           id="code"
           label="Code"
           type='number'
@@ -100,6 +107,8 @@ export function Login(props: LoginProps) {
           error={code===''}
           helperText="Please enter the code sent to the email"
           InputProps={{
+            ref: inputRef,
+            onKeyUp: e => { e.key==='Enter' && onVerifyCode() },
             startAdornment: (
               <InputAdornment position="start">
                 <AppRegistrationIcon />
@@ -109,7 +118,7 @@ export function Login(props: LoginProps) {
           variant="standard"
         />
 
-        ):<TextField fullWidth
+        ):<TextField fullWidth focused
           id="email"
           label="Email"
           type='email'
@@ -119,6 +128,7 @@ export function Login(props: LoginProps) {
           helperText={`Please use your @${process.env['NX_EMAILDOMAINS']} email`}
           InputProps={{
             ref: inputRef,
+            onKeyUp: e => {e.key==='Enter' && onGenerateCode()},
             startAdornment: (
               <InputAdornment position="start">
                 <AccountCircle />
@@ -127,13 +137,28 @@ export function Login(props: LoginProps) {
           }}
           variant="standard"
         />}
+        {error !== '' ? <Alert severity="error">{error}</Alert> : null}
       </CardContent>
       <CardActions >
-      {codeEntry? (
-        <Button size="small" onClick={onVerifyCode}>Verify</Button>
-      ):(
-        <Button size="small" onClick={onGenerateCode}>Generate Code</Button>
-      )}
+        <Box sx={{position: 'relative' }}>
+          {codeEntry? (
+            <Button size="small" onClick={onVerifyCode} disabled={busy}>Verify</Button>
+          ):(
+            <Button size="small" onClick={onGenerateCode} disabled={busy}>Generate Code</Button>
+          )}
+          {busy && (
+            <CircularProgress
+              size={24}
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                marginTop: '-12px',
+                marginLeft: '-12px',
+              }}
+            />
+          )}
+        </Box>
       </CardActions>
       </Card>
       <GenericDialog title='PSNext.info' open={true}>

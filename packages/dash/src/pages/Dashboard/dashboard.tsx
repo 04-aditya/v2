@@ -1,19 +1,21 @@
-import { Box, FormControl, FormHelperText, InputLabel, MenuItem, Select, SelectChangeEvent, Tab, Tabs, Typography } from '@mui/material';
+import { Box, FormControl, FormHelperText, Grid, IconButton, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, Tab, Tabs, Typography } from '@mui/material';
 import { Route, Link, Outlet, useParams,useSearchParams } from 'react-router-dom';
 import { appstateDispatch } from '@/hooks/useAppState';
 import styles from './dashboard.module.scss';
-import React, { useEffect } from 'react';
-import { useUser, useUserSnapshotDates } from '@/api/users';
+import React, { useEffect, useMemo } from 'react';
+import { useUser, useUserSnapshotDates, useUserTeam, useUserStats } from '@/api/users';
 import { NumberStatWidget, PercentStatWidget, PieStatWidget, StatWidget } from '@/components/StatWidget';
-import { useUserStats } from '@/api/users';
 import { Row } from '@/components/Row';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { format, parse as parseDate } from 'date-fns';
 import BasicUserCard from '@/components/BasicUserCard';
+import WeekSlider from '@/components/WeekSlider';
+import { Stack } from '@mui/system';
+import Skeleton from '@mui/material/Skeleton';
+import EmailIcon from '@mui/icons-material/Email';
 
 
-function PeopleStats({snapshot_date}:{snapshot_date:string}) {
-  const { userId } = useParams();
+function PeopleStats({snapshot_date, userId, size}:{snapshot_date:string, userId?:string|number, size:'small'|'medium'|'large'}) {
   const {data:stats} = useUserStats(userId,['Total Count', 'Directs', 'Leverage', 'Diversity %', 'FTE %', 'PS Exp','TiT Exp'], snapshot_date);
   const [statDetails, setStatDetails] = React.useState<React.ReactNode>(null);
 
@@ -25,41 +27,41 @@ function PeopleStats({snapshot_date}:{snapshot_date:string}) {
   const psexpStat = stats?.find(s=>s.name==='PS Exp');
   const titexpStat = stats?.find(s=>s.name==='TiT Exp');
   return <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-  {totalStat?<NumberStatWidget
+  {totalStat?<NumberStatWidget size={size}
     valueTopLeft={totalStat.industry} valueTopRight={totalStat.account}
     value={totalStat.value}
     valueBottomLeft={totalStat.all} valueBottomRight={totalStat.capability}
     title='Total Count'
     sx={{m:0.5}}/>:null}
-  {directsStat?<NumberStatWidget
+  {directsStat?<NumberStatWidget size={size}
     valueTopLeft={Math.trunc(directsStat.industry*10)/10} valueTopRight={Math.trunc(directsStat.account*10)/10}
     value={directsStat.value}
     valueBottomLeft={Math.trunc(directsStat.all*10)/10} valueBottomRight={Math.trunc(directsStat.capability*10)/10}
     title='Directs'
     sx={{m:0.5}}/>:null}
-  {fteStat?<PercentStatWidget
+  {fteStat?<PercentStatWidget size={size}
     valueTopLeft={Math.trunc(fteStat.industry*1000)/10} valueTopRight={Math.trunc(fteStat.account*1000)/10}
     value={Math.trunc(fteStat.value*1000)/10}
     valueBottomLeft={Math.trunc(fteStat.all*1000)/10} valueBottomRight={Math.trunc(fteStat.capability*1000)/10}
     title='FTE %' sx={{m:0.5}}/>:null}
-  {deiStat?<PercentStatWidget
+  {deiStat?<PercentStatWidget size={size}
     valueTopLeft={Math.trunc(deiStat.industry*1000)/10} valueTopRight={Math.trunc(deiStat.account*1000)/10}
     value={Math.trunc(deiStat.value*1000)/10}
     valueBottomLeft={Math.trunc(deiStat.all*1000)/10} valueBottomRight={Math.trunc(deiStat.capability*1000)/10}
     title='Diversity %'
     sx={{m:0.5}}/>:null}
-  <PieStatWidget
+  <PieStatWidget size={size}
     valueTopLeft={[{name:'JA', value:11},{name:'A', value:35},{name:'SA', value:35},{name:'Mgr', value:10.5},{name:'SM', value:2},{name:'D', value:1},{name:'VP', value:0.5}]}
     valueTopRight={[{name:'JA', value:5},{name:'A', value:30},{name:'SA', value:45},{name:'Mgr', value:13.5},{name:'SM', value:4},{name:'D', value:2},{name:'VP', value:0.5}]}
     value={leverageStat?.value||[]}
     title='Leverage' sx={{m:0.5}}/>
-  {psexpStat?<NumberStatWidget
+  {psexpStat?<NumberStatWidget size={size}
     valueTopLeft={Math.trunc(psexpStat.industry*100)/100} valueTopRight={Math.trunc(psexpStat.account*100)/100}
     value={Math.trunc(psexpStat.value*100)/100}
     valueBottomLeft={Math.trunc(psexpStat.all*100)/100} valueBottomRight={Math.trunc(psexpStat.capability*100)/100}
     title='Avg PS Experience'
     sx={{m:0.5}}/>:null}
-    {titexpStat?<NumberStatWidget
+    {titexpStat?<NumberStatWidget size={size}
       valueTopLeft={Math.trunc(titexpStat.industry*100)/100} valueTopRight={Math.trunc(titexpStat.account*100)/100}
       value={Math.trunc(titexpStat.value*100)/100}
       valueBottomLeft={Math.trunc(titexpStat.all*100)/100} valueBottomRight={Math.trunc(titexpStat.capability*100)/100}
@@ -78,9 +80,11 @@ export interface DashboardProps {
 
 export function Dashboard(props: DashboardProps) {
   const { userId } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [snapshot_date, setSnapshotDate] = React.useState<string>('');
   const {data:user} = useUser(userId)
+  const {data:teamMembers} = useUserTeam(userId);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [snapshot_date, setSnapshotDate] = React.useState<string>('Last');
   const {data: snapshot_dates} = useUserSnapshotDates();
   const [tabValue, setTabValue] = React.useState(0);
 
@@ -95,6 +99,16 @@ export function Dashboard(props: DashboardProps) {
       appstateDispatch({type:'title', data:`Dashboard - Loading...`});
     }
   }, [user]);
+
+  const directs = useMemo(()=>{
+    if (user && teamMembers) {
+      return teamMembers
+        .filter(u => u.supervisor_id===user.oid || u.supervisor_id===user.csid)
+        .sort((a,b)=>(a.first_name||'').localeCompare(b.first_name||''));
+    } else {
+      return [];
+    }
+  }, [user, teamMembers])
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -115,10 +129,10 @@ export function Dashboard(props: DashboardProps) {
                 label="Snapshot Date"
                 onChange={handleSnapshotDateChange}
               >
-                <MenuItem value="">
+                <MenuItem value="Last">
                   <em>Last</em>
                 </MenuItem>
-                {snapshot_dates?.map(d=><MenuItem key={d} value={d}>{d}</MenuItem>)}
+                {snapshot_dates?.map(d=>d?<MenuItem key={d.toString()} value={d.toISOString()}>{format(d,'MMM dd')}</MenuItem>:null)}
               </Select>
               <FormHelperText>select date</FormHelperText>
             </FormControl>
@@ -132,7 +146,22 @@ export function Dashboard(props: DashboardProps) {
           </Tabs>
         </Box>
         <TabPanel value={tabValue} index={0} idprefix={'People'}>
-          <PeopleStats snapshot_date={snapshot_date} />
+          <PeopleStats snapshot_date={snapshot_date} size='large' userId={userId}/>
+          {directs.map(u=><Box sx={{mx:1, my:2, width:'100%', borderColor:'#ccc', borderTopStyle:'solid', borderTopWidth:1}}>
+              <Grid container spacing={1} sx={{p:1}}>
+                <Grid item xs={12} md={3} lg={2}>
+                  <Stack spacing={1} direction='column' justifyContent='center' sx={{height:'100%'}}>
+                    <Typography variant='body1'>
+                      <Link to={`/dashboard/${u.email}`}>{u.first_name+' '+u.last_name}</Link>
+                      <IconButton size="small" aria-label='email' LinkComponent='a' href={`mailto:${u.email}`} ><EmailIcon fontSize='small' /></IconButton></Typography>
+                    <Typography variant='body2'>{u.business_title}</Typography>
+                  </Stack>
+                </Grid>
+                <Grid item xs={12} md={9} lg={10}>
+                  <PeopleStats snapshot_date={snapshot_date} size='small' userId={u.id}/>
+                </Grid>
+              </Grid>
+            </Box>)}
         </TabPanel>
         {/* <fieldset style={{borderRadius:4, borderColor: '#00000020', fontSize: '0.75em', padding: '0.5em'}}> */}
         <TabPanel value={tabValue} index={1} idprefix={'Learning'}>

@@ -1,6 +1,6 @@
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IPermission, IUser, IUserPAT } from "sharedtypes";
+import { APIResponse, IPermission, IUser, IUserPAT } from "sharedtypes";
 
 
 const USERAPI = '/api/users';
@@ -69,7 +69,8 @@ export const useUserSnapshotDates = () => {
   const keys = [CACHEKEY, 'snapshotdates'];
   const query = useQuery(keys, async ()=>{
     const res = await axios.get(`${USERAPI}/snapshotdates`);
-    return res.data.data as string[];
+    const result = res.data as APIResponse<Date[]>;
+    return result.data?.map(d=>new Date(d));
   },{
     enabled: !!axios,
     staleTime:  60 * 60 * 1000 // 60 minute
@@ -86,7 +87,8 @@ export const useUserStats = (id: number|string = 'me', stats = ['all'], snapshot
   const keys = [CACHEKEY, id, 'stats', stats.join(','), snapshot_date||'Last'];
   const query = useQuery(keys, async ()=>{
     const res = await axios.get(`${USERAPI}/${id}/stats?include=${stats.join(',')}&snapshot_date=${snapshot_date||'Last'}`);
-    return res.data.data as {name:string, value:any, all?:any, industry?:any, capability?:any, account?:any}[];
+    const result = res.data as APIResponse<{name:string, value:any, all?:any, industry?:any, capability?:any, account?:any}[]>;
+    return result.data;
   },{
     enabled: !!axios,
     staleTime:  60 * 60 * 1000 // 60 minute

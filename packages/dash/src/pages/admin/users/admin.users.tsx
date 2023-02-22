@@ -165,7 +165,6 @@ export function AdminUsers(props: AdminUsersProps) {
   };
 
   const onPDAUpload = async (files:File[], otherFields:{date:Date})=>{
-    console.log(files);
     const formData = new FormData();
     formData.append("file", files[0]);
     formData.append("snapshot_date", otherFields.date.toISOString().substring(0,10)+'T00:00:00.000Z');

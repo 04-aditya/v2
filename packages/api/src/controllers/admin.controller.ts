@@ -53,7 +53,9 @@ export class AdminController {
   @OpenAPI({ summary: 'Refresh users data from pda' })
   @Authorized(['user.write.all.all'])
   async refreshUsers(@BodyParam('email') email: string, @CurrentUser() currentUser: UserEntity) {
-    const qt = new AsyncTask(updater => currentUser.refresh(), currentUser.id);
+    const user = await UserEntity.getUserById(email);
+    if (!user) throw new HttpException(404, 'User not found');
+    const qt = new AsyncTask(updater => user.refresh(), currentUser.id);
     return { qid: qt.id, message: 'created' };
   }
 
@@ -401,12 +403,12 @@ export class AdminController {
             logger.debug(JSON.stringify(values, null, 2));
           }
           if (updatedCount % 100 === 0) {
-            logger.debug(`Processed ${updatedCount} rows`);
+            logger.info(`Processed ${updatedCount} rows`);
             updater(`Processed: ${updatedCount} rows`);
           }
         } catch (ex) {
           logger.error(JSON.stringify(ex));
-          logger.debug(JSON.stringify(values, null, 2));
+          logger.error(JSON.stringify(values, null, 2));
         }
       }
 

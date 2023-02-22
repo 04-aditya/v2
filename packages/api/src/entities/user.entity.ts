@@ -29,7 +29,7 @@ import { UserPATEntity } from './userpat.entity';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } from '@config';
 import cache from '@/utils/cache';
-import { intervalToDuration, parseISO } from 'date-fns';
+import { intervalToDuration, parse, parseISO } from 'date-fns';
 import { groupBy } from '@/utils/util';
 import { UserDataEntity } from './userdata.entity';
 
@@ -349,32 +349,64 @@ export class UserEntity extends BaseEntity implements IUser {
   }
 
   async refresh() {
-    const ar = await pdaclient.post('/getPerson/bySupervisor', {
-      supervisorEmail: this.email,
-    });
-
-    if (ar.status !== 200) {
-      logger.error(ar.data);
-      throw new Error('Unable to find the record in PDA data');
-    }
-
-    let pdadata: any;
-    if (ar.data) {
-      (ar.data || []).forEach((emp: any) => {
-        if (emp.email_address === this.email) {
-          pdadata = emp;
-          console.log(pdadata);
-        }
+    try {
+      logger.debug(`fetching PDA data for ${this.email}`);
+      const ar = await pdaclient.post('/getPerson/bySupervisor', {
+        supervisorEmail: this.email,
       });
-    }
 
-    if (!pdadata) {
-      logger.error(ar.data);
-      throw new Error('Unable to find the record in PDA data');
+      if (ar.status !== 200) {
+        logger.error(ar.data);
+        throw new Error('Unable to find the record in PDA data');
+      }
+
+      let pdadata: any;
+      if (ar.data) {
+        (ar.data || []).forEach((emp: any) => {
+          if (emp.email_address === this.email) {
+            pdadata = emp;
+          }
+        });
+      }
+
+      if (!pdadata) {
+        logger.error(ar.data);
+        throw new Error('Unable to find the record in PDA data');
+      }
+      this.pdadata = JSON.stringify(pdadata);
+
+      console.log(pdadata);
+      let hasUpdates = false;
+      const supervisor = await UserEntity.findOne({ where: { email: pdadata.supervisor_email } });
+      this.first_name = pdadata.first_name;
+      this.last_name = pdadata.last_name;
+      this.capability = pdadata.hrms_2;
+      this.craft = pdadata.hrms_3;
+      this.most_recent_hire_date = parse(pdadata.most_recent_hire_date, 'MM/dd/yyyy', new Date());
+      this.employment_type = pdadata.fte === '1' ? 'FullTime' : 'Contractor';
+      this.csid = parseInt(pdadata.career_settings_id);
+      // this.oid = parseInt(pdadata.career_settings_id.substring(1), 10);
+      if (this.supervisor_id !== supervisor.oid) {
+        this.supervisor_name = supervisor.first_name + ', ' + supervisor.last_name;
+        this.supervisor_id = supervisor.oid;
+        UserDataEntity.create({
+          userid: this.id,
+          key: 'supervisor_id',
+          value: { supervisor_id: supervisor.id, oid: this.oid, csid: this.csid },
+          timestamp: supervisor.snapshot_date,
+        })
+          .save()
+          .catch(ex => {
+            logger.error(ex);
+          });
+      }
+      this.snapshot_date = supervisor.snapshot_date;
+      await this.save();
+      return { snapshot_date: pdadata.snapshot_date, message: `Updated PDA record for user: ${this.email}` };
+    } catch (ex) {
+      logger.error(JSON.stringify(ex));
+      throw new Error('Network error in fetching PDA data');
     }
-    this.pdadata = JSON.stringify(pdadata);
-    await this.save();
-    return { snapshot_date: pdadata.snapshot_date, message: `Updated PDA record for user: ${this.email}` };
   }
 
   static async getUserData(

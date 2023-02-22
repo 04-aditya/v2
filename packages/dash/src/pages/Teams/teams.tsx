@@ -19,7 +19,7 @@ import { AgGridColumnGroupProps, AgGridColumnProps, AgGridReact } from 'ag-grid-
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { ColDef, GetContextMenuItemsParams, MenuItemDef, RowNode } from 'ag-grid-enterprise';
+import { ColDef, GetContextMenuItemsParams, MenuItemDef, RowNode, SideBarDef } from 'ag-grid-enterprise';
 
 const createFlagImg = (flag:string) => {
   return <img width="15" height="10" src={`https://flagcdn.com/h20/${flag}.png`}/>;
@@ -102,11 +102,40 @@ export function Teams(props: TeamsProps) {
   const statusBar = {
     statusPanels: [
         {
-            statusPanel: 'agTotalAndFilteredRowCountComponent',
-            align: 'left',
+          statusPanel: 'agTotalAndFilteredRowCountComponent',
+          align: 'left',
+        },
+        {
+          statusPanel: 'agAggregationComponent',
+          align: 'right',
         }
     ]
   };
+  const sideBar: SideBarDef = {
+    toolPanels: [
+        {
+            id: 'columns',
+            labelDefault: 'Columns',
+            labelKey: 'columns',
+            iconKey: 'columns',
+            toolPanel: 'agColumnsToolPanel',
+            minWidth: 225,
+            maxWidth: 225,
+            width: 225,
+        },
+        {
+            id: 'filters',
+            labelDefault: 'Filters',
+            labelKey: 'filters',
+            iconKey: 'filter',
+            toolPanel: 'agFiltersToolPanel',
+            minWidth: 180,
+            maxWidth: 400,
+            width: 250,
+        }
+    ],
+    position: 'right',
+};
 
   const getContextMenuItems = useCallback((params:GetContextMenuItemsParams<IUser>) => {
     let menuItems : (string | MenuItemDef)[] = [
@@ -252,7 +281,7 @@ export function Teams(props: TeamsProps) {
 
               tooltipShowDelay={0}
               tooltipHideDelay={2000}
-              sideBar={'filters'}
+              sideBar={sideBar}
 
               enableRangeSelection={true}
               allowContextMenuWithControlKey={true}
