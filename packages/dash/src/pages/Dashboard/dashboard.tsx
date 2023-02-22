@@ -1,5 +1,5 @@
 import { Box, FormControl, FormHelperText, Grid, IconButton, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, Tab, Tabs, Typography } from '@mui/material';
-import { Route, Link, Outlet, useParams,useSearchParams } from 'react-router-dom';
+import { Route, Link, Outlet, useParams,useSearchParams, useNavigate } from 'react-router-dom';
 import { appstateDispatch } from '@/hooks/useAppState';
 import styles from './dashboard.module.scss';
 import React, { useEffect, useMemo } from 'react';
@@ -13,6 +13,7 @@ import WeekSlider from '@/components/WeekSlider';
 import { Stack } from '@mui/system';
 import Skeleton from '@mui/material/Skeleton';
 import EmailIcon from '@mui/icons-material/Email';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 
 
 function PeopleStats({snapshot_date, userId, size}:{snapshot_date:string, userId?:string|number, size:'small'|'medium'|'large'}) {
@@ -83,6 +84,7 @@ export function Dashboard(props: DashboardProps) {
   const {data:user} = useUser(userId)
   const {data:teamMembers} = useUserTeam(userId);
 
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [snapshot_date, setSnapshotDate] = React.useState<string>('Last');
   const {data: snapshot_dates} = useUserSnapshotDates();
@@ -149,15 +151,17 @@ export function Dashboard(props: DashboardProps) {
           <PeopleStats snapshot_date={snapshot_date} size='large' userId={userId}/>
           {directs.map(u=><Box sx={{mx:1, my:2, width:'100%', borderColor:'#ccc', borderTopStyle:'solid', borderTopWidth:1}}>
               <Grid container spacing={1} sx={{p:1}}>
-                <Grid item xs={12} md={3} lg={2}>
+                <Grid item xs={12} md={4} lg={3}>
                   <Stack spacing={1} direction='column' justifyContent='center' sx={{height:'100%'}}>
-                    <Typography variant='body1'>
-                      <Link to={`/dashboard/${u.email}`}>{u.first_name+' '+u.last_name}</Link>
-                      <IconButton size="small" aria-label='email' LinkComponent='a' href={`mailto:${u.email}`} ><EmailIcon fontSize='small' /></IconButton></Typography>
-                    <Typography variant='body2'>{u.business_title}</Typography>
+                    <Typography variant='caption'>
+                      <strong>{u.first_name+' '+u.last_name}</strong>
+                      <IconButton size="small" aria-label='email' LinkComponent='a' href={`mailto:${u.email}`} ><EmailIcon fontSize='small' /></IconButton>
+                      <IconButton size="small" aria-label='dashboard' onClick={e=>navigate(`/dashboard/${u.email}`)} ><DashboardIcon fontSize='small' /></IconButton>
+                    </Typography>
+                    <Typography variant='caption'>{u.business_title}</Typography>
                   </Stack>
                 </Grid>
-                <Grid item xs={12} md={9} lg={10}>
+                <Grid item xs={12} md={8} lg={9}>
                   <PeopleStats snapshot_date={snapshot_date} size='small' userId={u.id}/>
                 </Grid>
               </Grid>
