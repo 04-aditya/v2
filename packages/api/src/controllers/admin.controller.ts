@@ -73,7 +73,7 @@ export class AdminController {
     const containerClient = blobServiceClient.getContainerClient(process.env.AZUPLOADCONTAINER);
 
     // Create a unique name for the blob
-    const blobName = `${req.user.id}/${file.originalname}`;
+    const blobName = `${req.user.id}/pda/${file.originalname}`;
 
     // Get a block blob client
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);

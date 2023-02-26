@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IUser } from '@/../../shared/types/src';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, TextField, Typography } from '@mui/material';
 import styles from './admin.users.module.scss';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 import 'ag-grid-enterprise';
@@ -15,15 +15,19 @@ import TableRenderers from 'react-pivottable/TableRenderers';
 import Plot from 'react-plotly.js';
 import createPlotlyRenderers from 'react-pivottable/PlotlyRenderers';
 import { SelectionChangedEvent } from 'ag-grid-community';
-import { notificationDispatch, NotificationInfo } from '@/hooks/useNotificationState';
+import { displayNotification } from '@/hooks/useNotificationState';
 import { appstateDispatch } from '@/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { RolesRenderer } from '@/components/RolesRenderer';
 import { Row } from '@/components/Row';
 import { FileUploadButton } from '@/components/FileUploadDialog';
-import { Axios, AxiosResponse } from 'axios';
 import { BasicUserCardTooltip } from '@/components/BasicUserCard';
+
+import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
+import dayjs, { Dayjs } from 'dayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 // create Plotly renderers via dependency injection
 const PlotlyRenderers = createPlotlyRenderers(Plot);
@@ -47,6 +51,11 @@ export function AdminUsers(props: AdminUsersProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const axios = useAxiosPrivate();
+
+  const [uploadDateValue, setUploadDateValue] = useState<Dayjs | null>(
+    dayjs(new Date()),
+  );
+
   const [users, setUsers] = useState<Array<IUser>>([]);
   const [selectedUsers, setSelectedUsers] = useState<IUser[]>([]);
   const [pstate, setPState] = useState<any>({});
@@ -116,49 +125,16 @@ export function AdminUsers(props: AdminUsersProps) {
       })
   }, []);
 
-  const displayNotification = (ar:AxiosResponse, title:string, description:string)=>{
-    const notification = new NotificationInfo(title, description, 'pending', true);
-    notificationDispatch({type:'add', notification});
-    //poll for completion
-    const pollid = setInterval(()=>{
-      axios.get(`/api/q/${ar.data.qid}`)
-        .then(res=>{
-          if (res.status===200) {
-            if (res.data.status==='done') {
-              clearInterval(pollid);
-              notification.busy = false;
-              notification.status = 'done';
-              notification.description = `${description}\n${res.data.results.message}`;
-              notificationDispatch({type:'update', notification})
-            }
-            else if (res.data.status==='error') {
-              clearInterval(pollid);
-              notification.busy = false;
-              notification.status = 'error';
-              notification.description = `error:${res.data.results.error}\n` + notification.description;
-              notificationDispatch({type:'update', notification})
-            } else {
-              notification.status = res.data.status;
-              notification.description = `${description}\n${res.data.results.message}`;
-              notificationDispatch({type:'update', notification})
-            }
-          }
-        })
-        .catch(ex=>{
-          console.error(ex);
-          clearInterval(pollid);
-          notification.busy=false;
-          notification.status='error';
-          notification.description='error:\n' + notification.description;
-          notificationDispatch({type:'update', notification})
-        })
-    }, 1000);
-  }
+
+  const handleUploadDateChange = (newValue: Dayjs | null) => {
+    setUploadDateValue(newValue);
+  };
+
   const refreshSelectedUsers = ()=>{
     axios.post(`${ADMINAPI}/refreshuser/pda`,{
         email: selectedUsers[0].email,
       })
-      .then (ar => displayNotification(ar, 'User Refresh',`Refreshing PDA data for user ${selectedUsers[0].email}.`))
+      .then (ar => displayNotification('User Refresh',`Refreshing PDA data for user ${selectedUsers[0].email}.`,'pending', {axios, ar}))
       .catch (ex => {
         console.error(ex);
       })
@@ -167,7 +143,7 @@ export function AdminUsers(props: AdminUsersProps) {
   const onPDAUpload = async (files:File[], otherFields:{date:Date})=>{
     const formData = new FormData();
     formData.append("file", files[0]);
-    formData.append("snapshot_date", otherFields.date.toISOString().substring(0,10)+'T00:00:00.000Z');
+    formData.append("snapshot_date", uploadDateValue?.toISOString().substring(0,10)+'T00:00:00.000Z');
 
     try {
       await axios.post(`${ADMINAPI}/upload`, formData, {
@@ -175,7 +151,7 @@ export function AdminUsers(props: AdminUsersProps) {
           'Content-Type': 'multipart/form-data'
         }
       })
-      .then (ar => displayNotification(ar, 'User data upload',`Updating data for users from file ${files[0].name}.`))
+      .then (ar => displayNotification('User data upload',`Updating user data from file ${files[0].name}.`, 'pending', {axios, ar}))
       .catch (ex => {
         console.error(ex);
       })
@@ -190,7 +166,17 @@ export function AdminUsers(props: AdminUsersProps) {
       <hr/>
       <Row>
         <Button variant='outlined' disabled={selectedUsers.length===0} onClick={refreshSelectedUsers}>Refresh Data</Button>
-        <FileUploadButton title='Upload PDA excel' onUpload={onPDAUpload} variant='outlined' />
+        <FileUploadButton title='Upload PDA excel' onUpload={onPDAUpload} variant='outlined'>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <MobileDatePicker
+              label="Date"
+              inputFormat="YYYY/MM/DD"
+              value={uploadDateValue}
+              onChange={handleUploadDateChange}
+              renderInput={(params) => <TextField {...params} size='small' fullWidth />}
+            />
+          </LocalizationProvider>
+        </FileUploadButton>
       </Row>
       <Box className="ag-theme-alpine" sx={{height: '75vh', width: '100%'}}>
         <AgGridReact ref={r => gridRef}

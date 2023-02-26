@@ -24,9 +24,15 @@ export interface IUser {
   team?:string;
 
   current_region?: string;
+  current_office?: string;
   home_region?: string;
+  home_office?: string;
+
+  most_recent_hire_date?: Date;
+  snapshot_date?: Date;
 
   roles: IUserRole[];
+  permissions?: string[];
 
   pats?: IUserPAT[];
 }

@@ -15,37 +15,21 @@ import {
   Alert,
 } from '@mui/material';
 import FileUpload from "react-mui-fileuploader";
-import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
-import dayjs, { Dayjs } from 'dayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-
-interface FileUploadDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onUpload: (file: File, otherFields?: any) => void;
-  fileTypes: string[];
-}
-
 
 interface FileUploadButtonProps extends ButtonProps {
   title: string;
   onUpload: (file: File[], otherFields?: any) => void;
   fileExts?: string[];
   acceptedType?: string;
+  children?: React.ReactNode;
+  buttonContent?: React.ReactNode;
 }
 export const FileUploadButton: React.FC<FileUploadButtonProps> = (props) => {
-  const {title, onUpload, fileExts, acceptedType, ...rest} = props;
+  const {title, onUpload, fileExts, acceptedType, children, buttonContent='Upload', ...rest} = props;
   const [open, setOpen] = React.useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string|undefined>();
-  const [dateValue, setDateValue] = React.useState<Dayjs | null>(
-    dayjs(new Date()),
-  );
 
-  const handleDateChange = (newValue: Dayjs | null) => {
-    setDateValue(newValue);
-  };
 
   const onClose = () => setOpen(false);
 
@@ -64,11 +48,11 @@ export const FileUploadButton: React.FC<FileUploadButtonProps> = (props) => {
       setError('Please select or drag a file to upload');
       return;
     }
-    onUpload(files, {date: dateValue?.toDate()});
+    onUpload(files);
     setOpen(false);
   };
   return <>
-    <Button {...rest} onClick={()=>setOpen(true)}>Upload</Button>
+    <Button {...rest} onClick={()=>setOpen(true)}>{buttonContent}</Button>
     <Dialog open={open} onClose={()=>{setOpen(false)}} sx={{minWidth:400}}>
       <DialogContent>
         <FileUpload
@@ -107,15 +91,7 @@ export const FileUploadButton: React.FC<FileUploadButtonProps> = (props) => {
           }}
         />
         <hr/>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <MobileDatePicker
-            label="Date"
-            inputFormat="YYYY/MM/DD"
-            value={dateValue}
-            onChange={handleDateChange}
-            renderInput={(params) => <TextField {...params} size='small' fullWidth />}
-          />
-        </LocalizationProvider>
+        {children}
         {error?<Alert severity='error'>{error}</Alert>:null}
 
       </DialogContent>

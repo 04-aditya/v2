@@ -1,6 +1,6 @@
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { APIResponse, IPermission, IUser, IUserPAT } from "sharedtypes";
+import { APIResponse, IPermission, IStatsData, IUser, IUserPAT } from "sharedtypes";
 
 
 const USERAPI = '/api/users';
@@ -24,7 +24,7 @@ export const useUserPermissions = (id = 'me') => {
   return {...query, invalidateCache};
 }
 
-export const useUser = (id = 'me') => {
+export const useUser = (id : number|string = 'me') => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
   const keys = [CACHEKEY, id];
@@ -87,7 +87,7 @@ export const useUserStats = (id: number|string = 'me', stats = ['all'], snapshot
   const keys = [CACHEKEY, id, 'stats', stats.join(','), snapshot_date||'Last'];
   const query = useQuery(keys, async ()=>{
     const res = await axios.get(`${USERAPI}/${id}/stats?include=${stats.join(',')}&snapshot_date=${snapshot_date||'Last'}`);
-    const result = res.data as APIResponse<{name:string, value:any, all?:any, industry?:any, capability?:any, account?:any}[]>;
+    const result = res.data as APIResponse<Array<any>>;
     return result.data;
   },{
     enabled: !!axios,

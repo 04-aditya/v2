@@ -9,70 +9,97 @@ import { Row } from '@/components/Row';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { format, parse as parseDate } from 'date-fns';
 import BasicUserCard from '@/components/BasicUserCard';
-import WeekSlider from '@/components/WeekSlider';
 import { Stack } from '@mui/system';
 import Skeleton from '@mui/material/Skeleton';
 import EmailIcon from '@mui/icons-material/Email';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import { IStatsData } from 'sharedtypes';
+import useAxiosPrivate from '@/hooks/useAxiosPrivate';
+import { displayNotification } from '@/hooks/useNotificationState';
+import { FileUploadButton } from '@/components/FileUploadDialog';
 
 
-function PeopleStats({snapshot_date, userId, size}:{snapshot_date:string, userId?:string|number, size:'small'|'medium'|'large'}) {
+type PeopleStatsProps = {
+  snapshot_date: string|Date,
+  userId?: string|number,
+  size: 'small'|'medium'|'large',
+  onStatsLoaded?: ()=>void;
+}
+
+function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
+  const {data:user} = useUser(userId);
   const {data:stats} = useUserStats(userId,['Total Count', 'Directs', 'Leverage', 'Diversity %', 'FTE %', 'PS Exp','TiT Exp'], snapshot_date);
   const [statDetails, setStatDetails] = React.useState<React.ReactNode>(null);
 
-  const totalStat = stats?.find(s=>s.name==='Total Count');
-  const directsStat = stats?.find(s=>s.name==='Directs');
-  const leverageStat = stats?.find(s=>s.name==='Leverage');
-  const deiStat = stats?.find(s=>s.name==='Diversity %');
-  const fteStat = stats?.find(s=>s.name==='FTE %');
-  const psexpStat = stats?.find(s=>s.name==='PS Exp');
-  const titexpStat = stats?.find(s=>s.name==='TiT Exp');
-  return <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-  {totalStat?<NumberStatWidget size={size}
-    valueTopLeft={totalStat.industry} valueTopRight={totalStat.account}
-    value={totalStat.value}
-    valueBottomLeft={totalStat.all} valueBottomRight={totalStat.capability}
-    title='Total Count'
-    sx={{m:0.5}}/>:null}
-  {directsStat?<NumberStatWidget size={size}
-    valueTopLeft={Math.trunc(directsStat.industry*10)/10} valueTopRight={Math.trunc(directsStat.account*10)/10}
-    value={directsStat.value}
-    valueBottomLeft={Math.trunc(directsStat.all*10)/10} valueBottomRight={Math.trunc(directsStat.capability*10)/10}
-    title='Directs'
-    sx={{m:0.5}}/>:null}
-  {fteStat?<PercentStatWidget size={size}
-    valueTopLeft={Math.trunc(fteStat.industry*1000)/10} valueTopRight={Math.trunc(fteStat.account*1000)/10}
-    value={Math.trunc(fteStat.value*1000)/10}
-    valueBottomLeft={Math.trunc(fteStat.all*1000)/10} valueBottomRight={Math.trunc(fteStat.capability*1000)/10}
-    title='FTE %' sx={{m:0.5}}/>:null}
-  {deiStat?<PercentStatWidget size={size}
-    valueTopLeft={Math.trunc(deiStat.industry*1000)/10} valueTopRight={Math.trunc(deiStat.account*1000)/10}
-    value={Math.trunc(deiStat.value*1000)/10}
-    valueBottomLeft={Math.trunc(deiStat.all*1000)/10} valueBottomRight={Math.trunc(deiStat.capability*1000)/10}
-    title='Diversity %'
-    sx={{m:0.5}}/>:null}
-  <PieStatWidget size={size}
-    valueTopLeft={[{name:'JA', value:11},{name:'A', value:35},{name:'SA', value:35},{name:'Mgr', value:10.5},{name:'SM', value:2},{name:'D', value:1},{name:'VP', value:0.5}]}
-    valueTopRight={[{name:'JA', value:5},{name:'A', value:30},{name:'SA', value:45},{name:'Mgr', value:13.5},{name:'SM', value:4},{name:'D', value:2},{name:'VP', value:0.5}]}
-    value={leverageStat?.value||[]}
-    title='Leverage' sx={{m:0.5}}/>
-  {psexpStat?<NumberStatWidget size={size}
-    valueTopLeft={Math.trunc(psexpStat.industry*100)/100} valueTopRight={Math.trunc(psexpStat.account*100)/100}
-    value={Math.trunc(psexpStat.value*100)/100}
-    valueBottomLeft={Math.trunc(psexpStat.all*100)/100} valueBottomRight={Math.trunc(psexpStat.capability*100)/100}
-    title='Avg PS Experience'
-    sx={{m:0.5}}/>:null}
-    {titexpStat?<NumberStatWidget size={size}
-      valueTopLeft={Math.trunc(titexpStat.industry*100)/100} valueTopRight={Math.trunc(titexpStat.account*100)/100}
-      value={Math.trunc(titexpStat.value*100)/100}
-      valueBottomLeft={Math.trunc(titexpStat.all*100)/100} valueBottomRight={Math.trunc(titexpStat.capability*100)/100}
-      title='Avg Time in Title'
-      sx={{m:0.5}}/>:null}
-  {/* <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}>{'N/A'}</StatWidget>
-  <StatWidget title='KPI' leftNode={'VL'} sx={{m:0.5}}/>
-  <StatWidget title='KPI' rightNode={'VR'} sx={{m:0.5}}/>
-  <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}/> */}
-</Row>
+  // const options = useMemo(()=>{
+  //   if (!stats) return [];
+  //   const ops = [];
+  //   for (const stat:IStatsData<number> of stats) {
+  //     if (stats.name === 'Total Count') {
+  //       ops.push({name: 'Total Count', value: stat.value});
+  //     }
+  //   }
+  //   return ops;
+  // }, [stats])
+  const totalStat: IStatsData<number> = stats?.find(s=>s.name==='Total Count');
+  const directsStat: IStatsData<number> = stats?.find(s=>s.name==='Directs');
+  const leverageStat: IStatsData< Array<{name: string, value: number}> > = stats?.find(s=>s.name==='Leverage');
+  const deiStat: IStatsData<number> = stats?.find(s=>s.name==='Diversity %');
+  const fteStat: IStatsData<number> = stats?.find(s=>s.name==='FTE %');
+  const psexpStat: IStatsData<number> = stats?.find(s=>s.name==='PS Exp');
+  const titexpStat: IStatsData<number> = stats?.find(s=>s.name==='TiT Exp');
+  const count = directsStat?.value;
+  return <Box>
+    <Typography variant='caption' sx={{ml:1}}>People Stats aggregated for <Select value={'org'} variant='standard'>
+        {directsStat?.value>0?<MenuItem value={'directs'}><strong>{directsStat?.value}</strong>&nbsp;directs</MenuItem>:null}
+        <MenuItem value={'org'}><strong>{totalStat?.value}</strong>&nbsp;team members</MenuItem>
+        <MenuItem value={'account'}><strong>{user?.account}</strong>&nbsp;team members</MenuItem>
+        <MenuItem divider/>
+        <MenuItem value={'craft'}><strong>{user?.craft}</strong>&nbsp;team members</MenuItem>
+        <MenuItem value={'capability'}><strong>{user?.capability}</strong>&nbsp;team members</MenuItem>
+        <MenuItem value={'ps'}><strong>All PS</strong>&nbsp;team members</MenuItem>
+      </Select> </Typography>
+    <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+      {totalStat?<NumberStatWidget size={size}
+        valueTopLeft ={totalStat.industry} valueTopRight={totalStat.account}
+        value={totalStat.value}
+        valueBottomLeft={totalStat.all} valueBottomRight={totalStat.capability}
+        title='Total Count'
+        sx={{m:0.5}}/>:null}
+      {fteStat?<PercentStatWidget size={size}
+        valueTopLeft={fteStat.industry ? Math.trunc(fteStat.industry*1000)/10 : ''} valueTopRight={fteStat.account ? Math.trunc(fteStat.account*1000)/10 : ''}
+        value={Math.trunc(fteStat.value*1000)/10}
+        valueBottomLeft={fteStat.all ? Math.trunc(fteStat.all*1000)/10 : ''} valueBottomRight={fteStat.capability ? Math.trunc(fteStat.capability*1000)/10 : ''}
+        title='FTE %' sx={{m:0.5}}/>:null}
+      {deiStat?<PercentStatWidget size={size}
+        valueTopLeft={deiStat.industry ? Math.trunc(deiStat.industry*1000)/10 : ''} valueTopRight={deiStat.account ? Math.trunc(deiStat.account*1000)/10 : ''}
+        value={Math.trunc(deiStat.value*1000)/10}
+        valueBottomLeft={deiStat.all ? Math.trunc(deiStat.all*1000)/10 : ''} valueBottomRight={deiStat.capability ? Math.trunc(deiStat.capability*1000)/10 : ''}
+        title='Diversity %'
+        sx={{m:0.5}}/>:null}
+      <PieStatWidget size={size}
+        valueTopLeft={[{name:'JA', value:11},{name:'A', value:35},{name:'SA', value:35},{name:'Mgr', value:10.5},{name:'SM', value:2},{name:'D', value:1},{name:'VP', value:0.5}]}
+        valueTopRight={[{name:'JA', value:5},{name:'A', value:30},{name:'SA', value:45},{name:'Mgr', value:13.5},{name:'SM', value:4},{name:'D', value:2},{name:'VP', value:0.5}]}
+        value={leverageStat?.value||[]}
+        title='Leverage' sx={{m:0.5}}/>
+      {psexpStat?<NumberStatWidget size={size}
+        valueTopLeft={psexpStat.industry ? Math.trunc(psexpStat.industry*100)/100 : ''} valueTopRight={psexpStat.account ? Math.trunc(psexpStat.account*100)/100 : ''}
+        value={Math.trunc(psexpStat.value*100)/100}
+        valueBottomLeft={psexpStat.all ? Math.trunc(psexpStat.all*100)/100 : ''} valueBottomRight={psexpStat.capability ? Math.trunc(psexpStat.capability*100)/100 : ''}
+        title='Avg PS Experience'
+        sx={{m:0.5}}/>:null}
+        {titexpStat?<NumberStatWidget size={size}
+          valueTopLeft={titexpStat.industry ? Math.trunc(titexpStat.industry*100)/100 : ''} valueTopRight={titexpStat.account ? Math.trunc(titexpStat.account*100)/100 : ''}
+          value={Math.trunc(titexpStat.value*100)/100}
+          valueBottomLeft={titexpStat.all ? Math.trunc(titexpStat.all*100)/100 : ''} valueBottomRight={titexpStat.capability ? Math.trunc(titexpStat.capability*100)/100 : ''}
+          title='Avg Time in Title'
+          sx={{m:0.5}}/>:null}
+      {/* <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}>{'N/A'}</StatWidget>
+      <StatWidget title='KPI' leftNode={'VL'} sx={{m:0.5}}/>
+      <StatWidget title='KPI' rightNode={'VR'} sx={{m:0.5}}/>
+      <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}/> */}
+    </Row>
+  </Box>
 }
 
 /* eslint-disable-next-line */
@@ -83,7 +110,7 @@ export function Dashboard(props: DashboardProps) {
   const { userId } = useParams();
   const {data:user} = useUser(userId)
   const {data:teamMembers} = useUserTeam(userId);
-
+  const axios = useAxiosPrivate();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [snapshot_date, setSnapshotDate] = React.useState<string>('Last');
@@ -116,6 +143,25 @@ export function Dashboard(props: DashboardProps) {
     setTabValue(newValue);
   };
 
+  const onUserDataUpload = async (files:File[], otherFields:{date:Date})=>{
+    const formData = new FormData();
+    formData.append("file", files[0]);
+
+    try {
+      await axios.post(`/api/users/uploaddata`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      .then (ar => displayNotification('User data upload',`Updating data for users from file ${files[0].name}.`, 'pending', {axios, ar}))
+      .catch (ex => {
+        console.error(ex);
+      })
+    } catch (ex) {
+      console.error(ex);
+    }
+  }
+
   return (
     <Box sx={{displar:'flex'}}>
       <div>
@@ -136,8 +182,9 @@ export function Dashboard(props: DashboardProps) {
                 </MenuItem>
                 {snapshot_dates?.map(d=>d?<MenuItem key={d.toString()} value={d.toISOString()}>{format(d,'MMM dd')}</MenuItem>:null)}
               </Select>
-              <FormHelperText>select date</FormHelperText>
             </FormControl>
+
+            <FileUploadButton buttonContent={'Upload Data'} title='Upload Additional Data from excel' onUpload={onUserDataUpload} variant='outlined' />
           </Row>
           <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs" sx={{mx:1}}>
             <Tab label="People" {...a11yProps('People', 0)} />
@@ -159,6 +206,7 @@ export function Dashboard(props: DashboardProps) {
                       <IconButton size="small" aria-label='dashboard' onClick={e=>navigate(`/dashboard/${u.email}`)} ><DashboardIcon fontSize='small' /></IconButton>
                     </Typography>
                     <Typography variant='caption'>{u.business_title}</Typography>
+                    <Typography variant='caption'></Typography>
                   </Stack>
                 </Grid>
                 <Grid item xs={12} md={8} lg={9}>

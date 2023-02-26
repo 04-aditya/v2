@@ -17,6 +17,14 @@ export class UserDataEntity extends BaseEntity implements IUserData {
   @Column({ type: 'jsonb', nullable: false })
   value: string | number | boolean | Record<string, unknown>;
 
+  toJSON() {
+    return {
+      userid: this.userid,
+      key: this.key,
+      timestamp: this.timestamp,
+      value: this.value,
+    };
+  }
   static async Add(userid: number, key: string, value: string | number | boolean | Record<string, unknown>, timestamp: Date) {
     const repo = AppDataSource.getRepository(UserDataEntity);
     // const month = `${timestamp.getUTCFullYear()}-${timestamp.getUTCMonth()}`;

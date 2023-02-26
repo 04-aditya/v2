@@ -1,5 +1,7 @@
 import React from 'react';
+import { AxiosInstance, AxiosResponse } from 'axios';
 import { createStore } from 'react-hooks-global-state';
+import useAxiosPrivate from './useAxiosPrivate';
 
 let nid=1;
 export class NotificationInfo {
@@ -73,3 +75,44 @@ const reducer = (state:INotificationState, action:{type:string, notification?:No
 const initialNotificationState:INotificationState = { busy: false, unreadCount:0, notifications:[]};
 export const { dispatch:notificationDispatch, useStoreState:useNotificationStore } = createStore(reducer, initialNotificationState);
 
+export const displayNotification = (title:string, description:string, status: string, poll?:{axios:AxiosInstance, ar:AxiosResponse})=>{
+  const notification = new NotificationInfo(title, description, status, true);
+  notificationDispatch({type:'add', notification});
+  //poll for completion
+  if (poll) {
+    const {axios, ar} = poll;
+    const pollid = setInterval(()=>{
+      axios.get(`/api/q/${ar.data.qid}`)
+        .then(res=>{
+          if (res.status===200) {
+            if (res.data.status==='done') {
+              clearInterval(pollid);
+              notification.busy = false;
+              notification.status = 'done';
+              notification.description = `${description}\n${res.data.results.message}`;
+              notificationDispatch({type:'update', notification})
+            }
+            else if (res.data.status==='error') {
+              clearInterval(pollid);
+              notification.busy = false;
+              notification.status = 'error';
+              notification.description = `error:${res.data.results.error}\n` + notification.description;
+              notificationDispatch({type:'update', notification})
+            } else {
+              notification.status = res.data.status;
+              notification.description = `${description}\n${res.data.results.message}`;
+              notificationDispatch({type:'update', notification})
+            }
+          }
+        })
+        .catch(ex=>{
+          console.error(ex);
+          clearInterval(pollid);
+          notification.busy=false;
+          notification.status='error';
+          notification.description='error:\n' + notification.description;
+          notificationDispatch({type:'update', notification})
+        })
+    }, 1000);
+  }
+}

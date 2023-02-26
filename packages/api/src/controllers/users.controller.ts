@@ -32,7 +32,9 @@ import { logger } from '@/utils/logger';
 import { LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
 import { groupBy } from '@/utils/util';
 import { UserDataEntity } from '@/entities/userdata.entity';
-import { resolve } from 'path';
+import { BlobServiceClient, RestError } from '@azure/storage-blob';
+import AsyncTask, { stringFn } from '@/utils/asyncTask';
+import Excel from 'exceljs';
 
 @JsonController('/api/users')
 @UseBefore(authMiddleware)
@@ -55,14 +57,21 @@ export class UsersController {
   @Get('/:id')
   @OpenAPI({ summary: 'Return user matched by the `id`' })
   @Authorized(['user.read'])
-  async getUserById(@Param('id') userId: string, @CurrentUser() currentUser?: UserEntity) {
+  async getUserById(@Param('id') userId: string, @Req() req: RequestWithUser) {
     const result = new APIResponse<IUser>();
     if (userId === '-1') return result;
+    const currentUser = req.user;
     const matchedUser = await this.getUser(userId, currentUser);
     if (matchedUser.id !== currentUser.id) {
-      if (!currentUser.hasRoleOrPermission(['admin'])) throw new HttpError(403);
+      const readPerms = req.permissions.filter(p => p.startsWith('user.read'));
+      const canRead = await UserEntity.canRead(currentUser, matchedUser, readPerms);
+      if (canRead === false) {
+        logger.warn(`user ${currentUser.email} does not have permission to read user ${matchedUser.email}}`);
+        throw new HttpError(403);
+      }
     }
     result.data = matchedUser.toJSON();
+    result.data.permissions = req.permissions;
     return result;
   }
 
@@ -91,25 +100,155 @@ export class UsersController {
       throw new HttpError(400, `Bad snapshot_date`);
     }
     const teamMembers = await matchedUser.loadOrg(reqdate);
-    // if (depth === 'all') {
-    //   teamMembers = await AppDataSource.getTreeRepository(UserEntity).findDescendants(matchedUser);
-    // } else {
-    //   const depthLevel = depth ? parseInt(depth) : 1;
-    //   const userWithReportees = await AppDataSource.getTreeRepository(UserEntity).findDescendantsTree(matchedUser, { depth: depthLevel });
-    //   const makeFlat = (user: UserEntity) => {
-    //     user.reportees.forEach(r => {
-    //       teamMembers.push(r);
-    //       makeFlat(r);
-    //     });
-    //   };
-    //   makeFlat(userWithReportees);
-    // }
-    // if (matchedUser.id !== currentUser.id) {
-    //   if (!currentUser.hasRoleOrPermission(['admin'])) throw new HttpError(403);
-    // }
-
     result.data = teamMembers.map(u => u.toJSON());
     return result;
+  }
+
+  @Post('/uploaddata')
+  @OpenAPI({
+    summary: 'Upload user data from a excel file.',
+    description: `
+Data from the excel file will be read from the first sheet.
+The sheet should contain following mandatory columns.
+
+* EMAIL_ADDRESS
+* TIMESTAMP
+* KEY
+* VALUE
+
+The sheet could also contain additional columns starting with \`VALUE_\` which will be used as additional values for the data.
+
+Any additional columns will be ignored.
+
+example:
+\`\`\`csv
+EMAIL_ADDRESS,       TIMESTAMP,                KEY,   VALUE, VALUE_section1, VALUE_section2
+someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
+\`\`\`
+`,
+  })
+  @Authorized(['user.write'])
+  async uploadData(@UploadedFile('file') file: any, @Req() req: RequestWithUser) {
+    const AZURE_STORAGE_CONNECTION_STRING = process.env.AZCONNSTR;
+
+    if (!AZURE_STORAGE_CONNECTION_STRING) {
+      logger.error('Azure Storage Connection string not found');
+    }
+
+    // Create the BlobServiceClient object with connection string
+    const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+    const containerClient = blobServiceClient.getContainerClient(process.env.AZUPLOADCONTAINER);
+
+    // Create a unique name for the blob
+    const blobName = `${req.user.id}/data/${file.originalname}`;
+
+    // Get a block blob client
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+    // Display blob name and url
+    logger.info(`\nUploading to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`);
+
+    // Upload data to the blob
+    const uploadBlobResponse = await blockBlobClient.uploadData(file.buffer);
+    logger.debug(`Blob was uploaded successfully. requestId: ${uploadBlobResponse.requestId}`);
+    logger.debug(`Starting processing User data`);
+    const qt = new AsyncTask(updater => this.processFileData(updater, file.buffer, req.permissions, req.user), req.user.id);
+    return { qid: qt.id, message: 'created' };
+  }
+
+  async processFileData(updater: stringFn, buffer: Buffer, permissions: string[], currentuser: UserEntity) {
+    try {
+      // load from buffer
+      const workbook: any = new Excel.Workbook();
+      await workbook.xlsx.load(buffer);
+
+      // access by `worksheets` array:
+      //get the first worksheet from workbook
+      const worksheet = workbook.worksheets[0];
+
+      const headerRow: any = worksheet.getRow(1);
+      const columns = headerRow.values.map(h => h.trim().toUpperCase().replace(/ /g, '_'));
+
+      const headers = {
+        oid: columns.indexOf('ORACLE_ID') || columns.indexOf('OID'),
+        csid: columns.indexOf('CAREER_SETTINGS_ID') || columns.indexOf('CSID'),
+        email: columns.indexOf('EMAIL_ADDRESS') || columns.indexOf('EMAIL'),
+        timestamp: columns.indexOf('TIMESTAMP') || columns.indexOf('DATE'),
+        key: columns.indexOf('KEY'),
+        value: columns.indexOf('VALUE'),
+        details: columns.filter(c => c.startsWith('VALUE_')).map(c => ({ key: c.replace('VALUE_', ''), index: columns.indexOf(c) })),
+      };
+      logger.debug(JSON.stringify(headers));
+      logger.info(`File contains: ${worksheet.rowCount} rows`);
+      updater(`processing: ${worksheet.rowCount} rows of user data`);
+      const teamMembers = await currentuser.loadOrg(currentuser.snapshot_date);
+      let updatedCount = 0;
+      const errors: string[] = [];
+      for await (const values of this.getUserDataValues(worksheet, headers)) {
+        try {
+          updatedCount++;
+          const user = await UserEntity.CreateUser(values.email);
+          if (!UserEntity.canWrite(currentuser, user, teamMembers, permissions)) {
+            const error_message = `User ${currentuser.email} does not have permission to write data for ${values.email}`;
+            logger.info(error_message);
+            errors.push(error_message);
+            continue;
+          }
+          const data = await UserDataEntity.Add(user.id, values.key, values.value, values.timestamp);
+          if (updatedCount === 1) {
+            logger.debug(JSON.stringify(data.toJSON()));
+          }
+        } catch (ex) {
+          logger.error(JSON.stringify(ex));
+          logger.error(JSON.stringify(values, null, 2));
+        }
+      }
+      logger.info(`Finished processing ${updatedCount} rows`);
+      return { count: updatedCount, message: `Finished processing ${updatedCount} rows.`, errors: errors.join('\n') };
+    } catch (error) {
+      console.error(error);
+      logger.error(JSON.stringify(error));
+      return { count: 0, error: 'Unable to process the data' };
+    }
+  }
+
+  async *getUserDataValues(worksheet, headers) {
+    let i = 2;
+    while (i < worksheet.rowCount) {
+      logger.debug(`Processing row ${i}`);
+      const row = worksheet.getRow(i);
+      const details: any = {};
+      let email: any = (headers.email < 0 ? null : row.getCell(headers.email).value) || '';
+      if (email.text) {
+        email = email.text;
+      }
+      details.email = email.trim().toLowerCase();
+      if (details.email !== '') {
+        details.key = ((headers.key < 0 ? null : row.getCell(headers.key).value) || '').toLowerCase();
+
+        if (headers.timestamp && headers.timestamp !== -1) {
+          details.timestamp = row.getCell(headers.timestamp).value;
+        }
+
+        const value: any = {};
+        if (headers.value && headers.value !== -1) {
+          value.value = row.getCell(headers.value).value;
+        }
+        if (headers.details && headers.details.length > 0) {
+          const additionalDetails: any = {};
+          for (const col of headers.details) {
+            additionalDetails[col.key] = row.getCell(col.index).value;
+          }
+          value.details = additionalDetails;
+        }
+
+        details.value = value;
+        yield details;
+      } else {
+        logger.debug(`Row ${i} has empty email`);
+      }
+      i++;
+    }
   }
 
   @Get('/:id/stats')
@@ -137,10 +276,16 @@ export class UsersController {
       logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
       throw new HttpError(400, `Bad snapshot_date`);
     }
-    const orgUsers = await matchedUser.loadOrg(reqdate);
-    if (!UserEntity.canRead(currentUser, matchedUser, orgUsers, req.permissions)) throw new HttpError(403);
 
     try {
+      const orgUsers = await matchedUser.loadOrg(reqdate);
+      const readPerms = req.permissions.filter(p => p.startsWith('user.read'));
+      const canRead = await UserEntity.canRead(currentUser, matchedUser, readPerms);
+      if (canRead === false) {
+        logger.warn(`user ${currentUser.email} does not have permission to read user ${matchedUser.email}}`);
+        throw new HttpError(403);
+      }
+
       const dataworkers = orgUsers.map(u => {
         return new Promise(resolve => {
           if (u.snapshot_date.getTime() === reqdate.getTime()) return resolve(u);

@@ -186,11 +186,12 @@ export class UserEntity extends BaseEntity implements IUser {
     return directs;
   }
 
-  async loadOrgUserIds(snapshot_date: Date): Promise<Array<{ userid: number; oid: number; supervisor_id: number }>> {
-    const CACHEKEY = `org_${this.id}_${snapshot_date.toISOString()}`;
+  async loadOrgUserIds(snapshot_date?: Date): Promise<Array<{ userid: number; oid: number; supervisor_id: number }>> {
+    if (!snapshot_date) snapshot_date = this.snapshot_date;
+    const CACHEKEY = `org_${this.id}_${snapshot_date}`;
     let userids: Array<{ userid: number; oid: number; supervisor_id: number }> = await cache.get(CACHEKEY);
     if (!userids) {
-      logger.debug(`get org userids for ${this.oid} on date ${snapshot_date.toISOString()}`);
+      logger.debug(`get org userids from db for ${this.oid} on date ${snapshot_date}`);
       userids = await AppDataSource.getRepository(UserEntity).query(
         `
         WITH RECURSIVE cte AS (
@@ -201,15 +202,19 @@ export class UserEntity extends BaseEntity implements IUser {
           WHERE p.key='supervisor_id' and p.timestamp = $2
         ) SELECT * FROM cte;
         `,
-        [this.oid, snapshot_date.toISOString()],
+        [this.oid, snapshot_date],
       );
       logger.debug(userids.length);
-      cache.set(CACHEKEY, userids, 60000);
+      cache.set(CACHEKEY, userids, 60000).then(v => {
+        console.log('cache set', CACHEKEY);
+      }, console.error);
+    } else {
+      logger.debug(`get org userids from cache for ${this.oid} on date ${snapshot_date}`);
     }
     return userids;
   }
 
-  async loadOrg(snapshot_date: Date) {
+  async loadOrg(snapshot_date?: Date) {
     // select userid from psuserdata where key='supervisor_id' and CAST(value as INTEGER)=36990 and timestamp<='2023-01-09' group by userid;
     // if (this.org) return this.org;
     const userids = await this.loadOrgUserIds(snapshot_date);
@@ -258,13 +263,12 @@ export class UserEntity extends BaseEntity implements IUser {
       'employment_type',
       'current_office',
       'current_region',
-      'orgHierarchy',
     ],
     get org() {
       return [...this.basic, 'most_recent_hire_date'];
     },
     get all() {
-      return [...this.org, 'home_office', 'home_region'];
+      return [...this.org, 'home_office', 'home_region', 'snapshot_date'];
     },
   };
 
@@ -585,15 +589,21 @@ export class UserEntity extends BaseEntity implements IUser {
     return pdastatsdata;
   }
 
-  static canRead(currentUser: UserEntity, matchedUser: UserEntity, orgUsers: UserEntity[], permissions: string[]): boolean {
-    if (matchedUser.id === currentUser.id) return true;
-    if (permissions.findIndex(p => p.startsWith('user.read.all')) !== -1) return true;
-    if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.read.client')) !== -1) return true;
-    if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.read.team')) !== -1) return true;
-    if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.read.capability')) !== -1) return true;
-    if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.read.craft')) !== -1) return true;
-    if (permissions.findIndex(p => p.startsWith('user.read.org')) !== -1) {
-      if (orgUsers.findIndex(u => u.id === matchedUser.id) !== -1) return true;
+  static async canRead(currentUser: UserEntity, matchedUser: UserEntity, permissions: string[]): Promise<boolean> {
+    try {
+      if (matchedUser.id === currentUser.id) return true;
+      if (permissions.findIndex(p => p.startsWith('user.read.all')) !== -1) return true;
+      if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.read.client')) !== -1) return true;
+      if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.read.team')) !== -1) return true;
+      if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.read.capability')) !== -1) return true;
+      if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.read.craft')) !== -1) return true;
+      if (permissions.findIndex(p => p.startsWith('user.read.org')) !== -1) {
+        const orgUsers = await currentUser.loadOrg();
+        logger.debug(`checking org read for ${currentUser.email} and ${matchedUser.email}`);
+        if (orgUsers.find(u => u.id === matchedUser.id)) return true;
+      }
+    } catch (ex) {
+      console.error(ex);
     }
     return false;
   }
