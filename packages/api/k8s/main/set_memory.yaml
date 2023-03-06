@@ -9,4 +9,4 @@ spec:
       - name: psni-app
         resources:
           limits:
-            memory: 2Gi
+            memory: 8Gi
