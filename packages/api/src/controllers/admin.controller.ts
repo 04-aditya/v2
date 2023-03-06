@@ -94,128 +94,134 @@ export class AdminController {
     let i = 2;
     while (i < worksheet.rowCount) {
       const row = worksheet.getRow(i);
-      const details: any = {};
-      const email = (headers.email < 0 ? null : row.getCell(headers.email).value) || '';
-      details.email = email.trim().toLowerCase();
-      if (details.email !== '') {
-        const first_name = (headers.first_name < 0 ? null : row.getCell(headers.first_name).value) || '';
-        const middle_name = (headers.middle_name < 0 ? null : row.getCell(headers.middle_name).value) || '';
-        const last_name = (headers.last_name < 0 ? null : row.getCell(headers.last_name).value) || '';
-        const name = first_name.trim() + ' ' + middle_name.trim() + ' ' + last_name.trim();
-        details.name = name;
-        details.first_name = first_name;
-        details.middle_name = middle_name;
-        details.last_name = last_name;
-        if (headers.gender && headers.gender !== -1) {
-          details.gender = row.getCell(headers.gender).value.trim();
-        }
-        if (headers.persontype && headers.persontype !== -1) {
-          const persontype = row.getCell(headers.persontype).value.trim();
-          if (persontype === 'Contractor') {
-            details.contractor = true;
-          } else {
-            details.contractor = false;
+      try {
+        const details: any = {};
+        const email = (headers.email < 0 ? null : row.getCell(headers.email).value) || '';
+        details.email = email.trim().toLowerCase();
+        if (details.email !== '') {
+          const first_name = (headers.first_name < 0 ? null : row.getCell(headers.first_name).value) || '';
+          const middle_name = (headers.middle_name < 0 ? null : row.getCell(headers.middle_name).value) || '';
+          const last_name = (headers.last_name < 0 ? null : row.getCell(headers.last_name).value) || '';
+          const name = first_name.trim() + ' ' + middle_name.trim() + ' ' + last_name.trim();
+          details.name = name;
+          details.first_name = first_name;
+          details.middle_name = middle_name;
+          details.last_name = last_name;
+          if (headers.gender && headers.gender !== -1) {
+            details.gender = row.getCell(headers.gender).value.trim();
           }
-        }
-        if (headers.oid && headers.oid !== -1) {
-          details.oid = parseInt(row.getCell(headers.oid).value);
-        }
-        if (headers.csid && headers.csid !== -1) {
-          details.csid = parseInt(row.getCell(headers.csid).value);
-        }
-        if (headers.supervisor_id && headers.supervisor_id !== -1) {
-          details.supervisor_id = parseInt(row.getCell(headers.supervisor_id).value);
-        }
-
-        if (headers.hrms_team_level1 && headers.hrms_team_level1 !== -1) {
-          details.hrms_team_levell1 = (headers.hrms_team_level1 < 0 ? null : row.getCell(headers.hrms_team_level1).value) || '';
-        }
-        if (headers.hrms_team_level2 && headers.hrms_team_level2 !== -1) {
-          details.capability = (headers.hrms_team_level2 < 0 ? null : row.getCell(headers.hrms_team_level2).value) || '';
-        }
-        if (headers.hrms_team_level3 && headers.hrms_team_level3 !== -1) {
-          details.craft = (headers.hrms_team_level3 < 0 ? null : row.getCell(headers.hrms_team_level3).value) || '';
-        }
-
-        if (headers.team_name && headers.team_name !== -1) {
-          details.team = row.getCell(headers.team_name).value;
-          if (details.team.startsWith('Team ')) {
-            details.team = details.team.substring(5);
-          }
-          details.team = details.team ? details.team.trim() : details.team;
-        }
-
-        if (headers.client_name && headers.client_name !== -1) {
-          details.client = row.getCell(headers.client_name).value;
-          details.client = details.client ? details.client.trim() : details.client;
-        }
-
-        if (headers.home_office && headers.home_office !== -1) {
-          details.home_office = row.getCell(headers.home_office).value;
-        }
-
-        if (headers.home_region && headers.home_region !== -1) {
-          details.home_region = row.getCell(headers.home_region).value;
-        }
-        if (headers.current_region && headers.current_region !== -1) {
-          details.current_region = row.getCell(headers.current_region).value;
-        }
-        if (headers.current_office && headers.current_office !== -1) {
-          details.current_office = row.getCell(headers.current_office).value;
-        }
-        if (headers.supervisor && headers.supervisor !== -1) {
-          let sparts = row.getCell(headers.supervisor).value;
-          if (sparts) {
-            sparts = sparts.split('(');
-            if (!details.supervisor_id) {
-              details.supervisor_id = parseInt(sparts[1]);
+          if (headers.persontype && headers.persontype !== -1) {
+            const persontype = row.getCell(headers.persontype).value.trim();
+            if (persontype === 'Contractor') {
+              details.contractor = true;
+            } else {
+              details.contractor = false;
             }
-            details.supervisor_name = sparts[0]
-              .split(',')
-              .reverse()
-              .map(s => s.trim())
-              .filter(s => s !== '')
-              .join(' ');
           }
-        }
-        if (headers.title && headers.title !== -1) {
-          details.title = row.getCell(headers.title).value;
-        }
-        if (headers.career_stage && headers.career_stage !== -1) {
-          details.career_stage = row.getCell(headers.career_stage).value;
-        }
-        if (headers.start_date && headers.start_date !== -1) {
-          details.startdate = format(row.getCell(headers.start_date).value, 'yyyy-MM-dd');
-        }
-        if (headers.last_promotion_date && headers.last_promotion_date !== -1) {
-          try {
-            const lpd = row.getCell(headers.last_promotion_date).value;
-            if (lpd) {
-              details.lastpromodate = format(lpd, 'yyyy-MM-dd');
+          if (headers.oid && headers.oid !== -1) {
+            details.oid = parseInt(row.getCell(headers.oid).value);
+          }
+          if (headers.csid && headers.csid !== -1) {
+            details.csid = parseInt(row.getCell(headers.csid).value);
+          }
+          if (headers.supervisor_id && headers.supervisor_id !== -1) {
+            details.supervisor_id = parseInt(row.getCell(headers.supervisor_id).value);
+          }
+
+          if (headers.hrms_team_level1 && headers.hrms_team_level1 !== -1) {
+            details.hrms_team_levell1 = (headers.hrms_team_level1 < 0 ? null : row.getCell(headers.hrms_team_level1).value) || '';
+          }
+          if (headers.hrms_team_level2 && headers.hrms_team_level2 !== -1) {
+            details.capability = (headers.hrms_team_level2 < 0 ? null : row.getCell(headers.hrms_team_level2).value) || '';
+          }
+          if (headers.hrms_team_level3 && headers.hrms_team_level3 !== -1) {
+            details.craft = (headers.hrms_team_level3 < 0 ? null : row.getCell(headers.hrms_team_level3).value) || '';
+          }
+
+          if (headers.team_name && headers.team_name !== -1) {
+            details.team = row.getCell(headers.team_name).value;
+            if (details.team.startsWith('Team ')) {
+              details.team = details.team.substring(5);
             }
-          } catch (err) {
-            logger.error(err);
-            logger.debug(row.getCell(headers.last_promotion_date).value);
+            details.team = details.team ? details.team.trim() : details.team;
           }
-        }
-        if (headers.time_since_last_promotion && headers.time_since_last_promotion !== -1) {
-          try {
-            const val = row.getCell(headers.time_since_last_promotion).value;
-            if (val) {
-              const tlp = parseFloat(val + '');
-              details.lastpromodate = format(addYears(new Date(), -1 * tlp), 'yyyy-MM-dd');
+
+          if (headers.client_name && headers.client_name !== -1) {
+            details.client = row.getCell(headers.client_name).value;
+            details.client = details.client ? details.client.trim() : details.client;
+          }
+
+          if (headers.home_office && headers.home_office !== -1) {
+            details.home_office = row.getCell(headers.home_office).value;
+          }
+
+          if (headers.home_region && headers.home_region !== -1) {
+            details.home_region = row.getCell(headers.home_region).value;
+          }
+          if (headers.current_region && headers.current_region !== -1) {
+            details.current_region = row.getCell(headers.current_region).value;
+          }
+          if (headers.current_office && headers.current_office !== -1) {
+            details.current_office = row.getCell(headers.current_office).value;
+          }
+          if (headers.supervisor && headers.supervisor !== -1) {
+            let sparts = row.getCell(headers.supervisor).value;
+            if (sparts) {
+              sparts = sparts.split('(');
+              if (!details.supervisor_id) {
+                details.supervisor_id = parseInt(sparts[1]);
+              }
+              details.supervisor_name = sparts[0]
+                .split(',')
+                .reverse()
+                .map(s => s.trim())
+                .filter(s => s !== '')
+                .join(' ');
             }
-          } catch (err) {
-            logger.error(err);
-            logger.debug(row.getCell(headers.time_since_last_promotion).value);
           }
+          if (headers.title && headers.title !== -1) {
+            details.title = row.getCell(headers.title).value;
+          }
+          if (headers.career_stage && headers.career_stage !== -1) {
+            details.career_stage = row.getCell(headers.career_stage).value;
+          }
+          if (headers.start_date && headers.start_date !== -1) {
+            details.startdate = format(row.getCell(headers.start_date).value, 'yyyy-MM-dd');
+          }
+          if (headers.last_promotion_date && headers.last_promotion_date !== -1) {
+            try {
+              const lpd = row.getCell(headers.last_promotion_date).value;
+              if (lpd) {
+                details.lastpromodate = format(lpd, 'yyyy-MM-dd');
+              }
+            } catch (err) {
+              logger.error(err);
+              logger.debug(row.getCell(headers.last_promotion_date).value);
+            }
+          }
+          if (headers.time_since_last_promotion && headers.time_since_last_promotion !== -1) {
+            try {
+              const val = row.getCell(headers.time_since_last_promotion).value;
+              if (val) {
+                const tlp = parseFloat(val + '');
+                details.lastpromodate = format(addYears(new Date(), -1 * tlp), 'yyyy-MM-dd');
+              }
+            } catch (err) {
+              logger.error(err);
+              logger.debug(row.getCell(headers.time_since_last_promotion).value);
+            }
+          }
+          if (headers.snapshot_date && headers.snapshot_date !== -1) {
+            details.snapshot_date = format(row.getCell(headers.snapshot_date).value, 'yyyy-MM-dd');
+          }
+          yield details;
+        } else {
+          logger.debug(`Row ${i} has empty email`);
         }
-        if (headers.snapshot_date && headers.snapshot_date !== -1) {
-          details.snapshot_date = format(row.getCell(headers.snapshot_date).value, 'yyyy-MM-dd');
-        }
-        yield details;
-      } else {
-        logger.debug(`Row ${i} has empty email`);
+      } catch (ex) {
+        logger.error(JSON.stringify(ex));
+        logger.error(`Error processing row ${i}`);
+        logger.debug(JSON.stringify(row.values));
       }
       i++;
     }

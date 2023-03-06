@@ -128,7 +128,7 @@ export interface DashboardProps {
 export function Dashboard(props: DashboardProps) {
   const { userId } = useParams();
   const {data:user} = useUser(userId)
-  const {data:teamMembers} = useUserTeam(userId);
+  const {data:teamMembers} = useUserTeam(userId,[],['org:Directs']);
   const axios = useAxiosPrivate();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
