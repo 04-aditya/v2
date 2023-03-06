@@ -38,6 +38,15 @@ const defaultPermissions = [
   { name: 'permissions.read.self', description: 'permission to read permissions of self' },
   { name: 'permissions.read.all', description: 'permission to read all permissions' },
   { name: 'permissions.write.all', description: 'permission to read all permissions' },
+
+  { name: 'usergroup.read.all', description: 'permission to read all usergroup data' },
+  { name: 'usergroup.write.all', description: 'permission to write all usergroup data' },
+
+  { name: 'client.read.all', description: 'permission to read all client data' },
+  { name: 'client.write.all', description: 'permission to write all client data' },
+
+  { name: 'industry.read.all', description: 'permission to read all industry data' },
+  { name: 'industry.write.all', description: 'permission to write all industry data' },
 ];
 
 const defaultRoles = [
@@ -53,9 +62,25 @@ const defaultRoles = [
     permissions: ['user.read.all.all', 'user.write.all.all'],
   },
   {
+    name: 'usergroup.admin',
+    includedRoleNames: ['default'],
+    description: 'admin role to read and write all usergroup data',
+    permissions: ['usergroup.read.all', 'usergroup.write.all'],
+  },
+  {
+    name: 'client.admin',
+    description: 'admin role to read and write all client data',
+    permissions: ['client.read.all', 'client.write.all'],
+  },
+  {
+    name: 'industry.admin',
+    description: 'admin role to read and write all industry data',
+    permissions: ['industry.read.all', 'industry.write.all'],
+  },
+  {
     name: 'admin',
     description: 'master admin role.',
-    includedRoleNames: ['default', 'user.admin'],
+    includedRoleNames: ['default', 'user.admin', 'usergroup.admin', 'client.admin', 'industry.admin'],
     permissions: ['roles.read.all', 'roles.write.all', 'permissions.read.all', 'permissions.write.all'],
   },
 ];

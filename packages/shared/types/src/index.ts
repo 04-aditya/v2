@@ -5,3 +5,7 @@ export * from './interfaces/userdata.interface';
 export * from './interfaces/userpat.interface';
 export * from './interfaces/permission.interface';
 export * from './interfaces/statsdata.interface';
+export * from './interfaces/teammember.interface';
+export * from './interfaces/usergroup.interface';
+export * from './interfaces/client.interface';
+export * from './interfaces/industry.interface';

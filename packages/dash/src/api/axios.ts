@@ -25,7 +25,7 @@ const axiosPrivate = axios.create({
 });
 
 axiosRetry(axiosPrivate, {
-  retries: 3,
+  retries: 0,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: error => {
     return isNetworkOrIdempotentRequestError(error);

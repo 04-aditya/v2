@@ -1,9 +1,9 @@
-import { Box, FormControl, FormHelperText, Grid, IconButton, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, Tab, Tabs, Typography } from '@mui/material';
+import { Box, CircularProgress, FormControl, FormHelperText, Grid, IconButton, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, Tab, Tabs, Typography } from '@mui/material';
 import { Route, Link, Outlet, useParams,useSearchParams, useNavigate } from 'react-router-dom';
 import { appstateDispatch } from '@/hooks/useAppState';
 import styles from './dashboard.module.scss';
 import React, { useEffect, useMemo } from 'react';
-import { useUser, useUserSnapshotDates, useUserTeam, useUserStats } from '@/api/users';
+import { useUser, useUserSnapshotDates, useUserTeam, useUserStats, useUserGroups } from '@/api/users';
 import { NumberStatWidget, PercentStatWidget, PieStatWidget, StatWidget } from '@/components/StatWidget';
 import { Row } from '@/components/Row';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
@@ -28,9 +28,14 @@ type PeopleStatsProps = {
 
 function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
   const {data:user} = useUser(userId);
-  const {data:stats} = useUserStats(userId,['Total Count', 'Directs', 'Leverage', 'Diversity %', 'FTE %', 'PS Exp','TiT Exp'], snapshot_date);
+  const {data:userGroups=[]} = useUserGroups(userId);
+  const [userGroup, setUserGroup] = React.useState<string>('org:Team');
+  const {data:stats, isLoading} = useUserStats(userId,['Total Count', 'Directs', 'Leverage', 'Diversity %', 'FTE %', 'PS Exp','TiT Exp'], [userGroup], snapshot_date);
   const [statDetails, setStatDetails] = React.useState<React.ReactNode>(null);
 
+  useEffect(()=>{
+    setUserGroup('org:Team');
+  }, [userId])
   // const options = useMemo(()=>{
   //   if (!stats) return [];
   //   const ops = [];
@@ -41,31 +46,45 @@ function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
   //   }
   //   return ops;
   // }, [stats])
-  const totalStat: IStatsData<number> = stats?.find(s=>s.name==='Total Count');
+  const totalStat: IStatsData<number> = stats?.find(s=>s.name==='Count');
   const directsStat: IStatsData<number> = stats?.find(s=>s.name==='Directs');
   const leverageStat: IStatsData< Array<{name: string, value: number}> > = stats?.find(s=>s.name==='Leverage');
   const deiStat: IStatsData<number> = stats?.find(s=>s.name==='Diversity %');
   const fteStat: IStatsData<number> = stats?.find(s=>s.name==='FTE %');
   const psexpStat: IStatsData<number> = stats?.find(s=>s.name==='PS Exp');
   const titexpStat: IStatsData<number> = stats?.find(s=>s.name==='TiT Exp');
-  const count = directsStat?.value;
+
+  const handleUserGroupChange = (event: SelectChangeEvent) => {
+    setUserGroup(event.target.value);
+  }
+
+  if (userGroups.length===0)
+    return <Box>
+      <Row sx={{m:1}}>
+        <Typography variant='caption'>No reportees.</Typography>
+      </Row>
+    </Box>
+
   return <Box>
-    <Typography variant='caption' sx={{ml:1}}>People Stats aggregated for <Select value={'org'} variant='standard'>
-        {directsStat?.value>0?<MenuItem value={'directs'}><strong>{directsStat?.value}</strong>&nbsp;directs</MenuItem>:null}
-        <MenuItem value={'org'}><strong>{totalStat?.value}</strong>&nbsp;team members</MenuItem>
-        <MenuItem value={'account'}><strong>{user?.account}</strong>&nbsp;team members</MenuItem>
-        <MenuItem divider/>
-        <MenuItem value={'craft'}><strong>{user?.craft}</strong>&nbsp;team members</MenuItem>
-        <MenuItem value={'capability'}><strong>{user?.capability}</strong>&nbsp;team members</MenuItem>
-        <MenuItem value={'ps'}><strong>All PS</strong>&nbsp;team members</MenuItem>
-      </Select> </Typography>
-    <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-      {totalStat?<NumberStatWidget size={size}
+    <Row sx={{m:1}}>
+      <Typography variant='caption'>People Stats aggregated for <Select value={userGroup} onChange={handleUserGroupChange} variant='standard'>
+          {userGroups.map(g=><MenuItem key={g.name} value={g.type+':'+g.name}><strong>{g.name}</strong>&nbsp;{g.type} members</MenuItem>)}
+        </Select> </Typography>
+    </Row>
+    {isLoading?<Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+        <CircularProgress/>
+      </Row> : <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+      {userGroup==='org:directs' ? directsStat &&  <NumberStatWidget size={size}
+        valueTopLeft ={directsStat.industry} valueTopRight={directsStat.account}
+        value={directsStat.value}
+        valueBottomLeft={directsStat.all} valueBottomRight={directsStat.capability}
+        title='Directs'
+        sx={{m:0.5}}/> : totalStat && <NumberStatWidget size={size}
         valueTopLeft ={totalStat.industry} valueTopRight={totalStat.account}
         value={totalStat.value}
         valueBottomLeft={totalStat.all} valueBottomRight={totalStat.capability}
-        title='Total Count'
-        sx={{m:0.5}}/>:null}
+        title='Count'
+        sx={{m:0.5}}/>}
       {fteStat?<PercentStatWidget size={size}
         valueTopLeft={fteStat.industry ? Math.trunc(fteStat.industry*1000)/10 : ''} valueTopRight={fteStat.account ? Math.trunc(fteStat.account*1000)/10 : ''}
         value={Math.trunc(fteStat.value*1000)/10}
@@ -98,7 +117,7 @@ function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
       <StatWidget title='KPI' leftNode={'VL'} sx={{m:0.5}}/>
       <StatWidget title='KPI' rightNode={'VR'} sx={{m:0.5}}/>
       <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}/> */}
-    </Row>
+    </Row>}
   </Box>
 }
 
@@ -143,25 +162,6 @@ export function Dashboard(props: DashboardProps) {
     setTabValue(newValue);
   };
 
-  const onUserDataUpload = async (files:File[], otherFields:{date:Date})=>{
-    const formData = new FormData();
-    formData.append("file", files[0]);
-
-    try {
-      await axios.post(`/api/users/uploaddata`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      .then (ar => displayNotification('User data upload',`Updating data for users from file ${files[0].name}.`, 'pending', {axios, ar}))
-      .catch (ex => {
-        console.error(ex);
-      })
-    } catch (ex) {
-      console.error(ex);
-    }
-  }
-
   return (
     <Box sx={{displar:'flex'}}>
       <div>
@@ -183,8 +183,6 @@ export function Dashboard(props: DashboardProps) {
                 {snapshot_dates?.map(d=>d?<MenuItem key={d.toString()} value={d.toISOString()}>{format(d,'MMM dd')}</MenuItem>:null)}
               </Select>
             </FormControl>
-
-            <FileUploadButton buttonContent={'Upload Data'} title='Upload Additional Data from excel' onUpload={onUserDataUpload} variant='outlined' />
           </Row>
           <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs" sx={{mx:1}}>
             <Tab label="People" {...a11yProps('People', 0)} />

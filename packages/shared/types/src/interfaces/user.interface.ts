@@ -35,4 +35,9 @@ export interface IUser {
   permissions?: string[];
 
   pats?: IUserPAT[];
+
+  custom_details?: Record<string, any>;
 }
+
+
+export const getUserName = (user: IUser)=>user?`${user.first_name||''} ${user.last_name||''}`.trim():'';

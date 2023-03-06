@@ -76,10 +76,12 @@ const initialNotificationState:INotificationState = { busy: false, unreadCount:0
 export const { dispatch:notificationDispatch, useStoreState:useNotificationStore } = createStore(reducer, initialNotificationState);
 
 export const displayNotification = (title:string, description:string, status: string, poll?:{axios:AxiosInstance, ar:AxiosResponse})=>{
-  const notification = new NotificationInfo(title, description, status, true);
-  notificationDispatch({type:'add', notification});
-  //poll for completion
-  if (poll) {
+  return new Promise<void>(resolve=>{
+    const notification = new NotificationInfo(title, description, status, true);
+    notificationDispatch({type:'add', notification});
+    //poll for completion
+    if (!poll) return resolve();
+
     const {axios, ar} = poll;
     const pollid = setInterval(()=>{
       axios.get(`/api/q/${ar.data.qid}`)
@@ -91,6 +93,7 @@ export const displayNotification = (title:string, description:string, status: st
               notification.status = 'done';
               notification.description = `${description}\n${res.data.results.message}`;
               notificationDispatch({type:'update', notification})
+              resolve();
             }
             else if (res.data.status==='error') {
               clearInterval(pollid);
@@ -98,6 +101,7 @@ export const displayNotification = (title:string, description:string, status: st
               notification.status = 'error';
               notification.description = `error:${res.data.results.error}\n` + notification.description;
               notificationDispatch({type:'update', notification})
+              resolve();
             } else {
               notification.status = res.data.status;
               notification.description = `${description}\n${res.data.results.message}`;
@@ -112,7 +116,8 @@ export const displayNotification = (title:string, description:string, status: st
           notification.status='error';
           notification.description='error:\n' + notification.description;
           notificationDispatch({type:'update', notification})
+          resolve();
         })
     }, 1000);
-  }
+  });
 }

@@ -23,11 +23,11 @@ import {
 import { OpenAPI } from 'routing-controllers-openapi';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
-import { IUser, APIResponse, IPermission, IUserPAT } from 'sharedtypes';
+import { IUser, APIResponse, IPermission, IUserPAT, IUserData } from 'sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserPATEntity } from '@/entities/userpat.entity';
-import { format, parse as parseDate, parseJSON, intervalToDuration, parseISO } from 'date-fns';
+import { format, parse as parseDate, parseJSON, intervalToDuration, parseISO, isDate } from 'date-fns';
 import { logger } from '@/utils/logger';
 import { LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
 import { groupBy } from '@/utils/util';
@@ -35,6 +35,7 @@ import { UserDataEntity } from '@/entities/userdata.entity';
 import { BlobServiceClient, RestError } from '@azure/storage-blob';
 import AsyncTask, { stringFn } from '@/utils/asyncTask';
 import Excel from 'exceljs';
+import { UserGroupEntity } from '@/entities/usergroup.entity';
 
 @JsonController('/api/users')
 @UseBefore(authMiddleware)
@@ -53,6 +54,13 @@ export class UsersController {
     result.data = dates;
     return result;
   }
+  @Get('/datakeys')
+  @OpenAPI({ summary: 'Get all allowed keys for user data' })
+  async getDataKeys() {
+    const result = new APIResponse<string[]>();
+    result.data = await UserDataEntity.getCustomUserDataKeys();
+    return result;
+  }
 
   @Get('/:id')
   @OpenAPI({ summary: 'Return user matched by the `id`' })
@@ -64,7 +72,7 @@ export class UsersController {
     const matchedUser = await this.getUser(userId, currentUser);
     if (matchedUser.id !== currentUser.id) {
       const readPerms = req.permissions.filter(p => p.startsWith('user.read'));
-      const canRead = await UserEntity.canRead(currentUser, matchedUser, readPerms);
+      const canRead = await currentUser.canRead(matchedUser, readPerms);
       if (canRead === false) {
         logger.warn(`user ${currentUser.email} does not have permission to read user ${matchedUser.email}}`);
         throw new HttpError(403);
@@ -81,12 +89,18 @@ export class UsersController {
   async getUserTeamById(
     @Param('id') userId: string,
     @Req() req: RequestWithUser,
+    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+    @QueryParam('usergroup') usergroup: string = 'org:Team',
+    @QueryParam('custom_details') custom_details_keys?: string,
     @QueryParam('snapshot_date') snapshot_date?: string,
     @CurrentUser() currentUser?: UserEntity,
   ) {
     const result = new APIResponse<IUser[]>();
     if (userId === '-1') return result;
     const matchedUser = await this.getUser(userId, currentUser);
+    if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) {
+      throw new HttpError(403);
+    }
     const dates = await UserEntity.getSnapshots();
     let reqdate: Date = dates[0];
     try {
@@ -99,7 +113,89 @@ export class UsersController {
       logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
       throw new HttpError(400, `Bad snapshot_date`);
     }
-    const teamMembers = await matchedUser.loadOrg(reqdate);
+
+    const groups = usergroup.split(',').map(g => g.trim());
+    const { users: teamMembers } = await matchedUser.loadOrg(reqdate, groups);
+    const custom_keys = (custom_details_keys || '').split(',').map(k => k.trim().toLowerCase());
+    if (reqdate.getTime() !== dates[0].getTime()) {
+      const dataworkers = teamMembers.map(u => {
+        return new Promise(resolve => {
+          if (u.snapshot_date.getTime() === reqdate.getTime()) return resolve(u);
+          UserDataEntity.getUserData(u.id, reqdate).then(data => {
+            UserEntity.merge(u, data);
+            if (!custom_details_keys) return resolve(u);
+            UserDataEntity.getUserData(u.id, reqdate, custom_keys).then(data => {
+              u.custom_details = data;
+              resolve(u);
+            });
+          });
+        });
+      });
+      await Promise.all(dataworkers);
+    } else if (custom_details_keys) {
+      const dataworkers = teamMembers.map(u => {
+        return new Promise(resolve => {
+          UserDataEntity.getUserData(u.id, reqdate, custom_keys).then(data => {
+            u.custom_details = data;
+            resolve(u);
+          });
+        });
+      });
+      await Promise.all(dataworkers);
+    }
+
+    result.data = teamMembers.map(u => u.toJSON());
+    return result;
+  }
+
+  @Get('/:id/teamdata')
+  @OpenAPI({ summary: 'Return teams custom data of the user matched by the `id` on give snapshot_date`' })
+  @Authorized(['user.read.org'])
+  async getUserTeamDataById(
+    @Param('id') userId: string,
+    @Req() req: RequestWithUser,
+    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+    @QueryParam('usergroup') usergroup: string = 'org:Team',
+    @QueryParam('custom_details_keys') custom_details_keys?: string[],
+    @QueryParam('snapshot_date') snapshot_date?: string,
+    @CurrentUser() currentUser?: UserEntity,
+  ) {
+    const result = new APIResponse<IUser[]>();
+    if (userId === '-1') return result;
+    const matchedUser = await this.getUser(userId, currentUser);
+    if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) {
+      throw new HttpError(403);
+    }
+    const dates = await UserEntity.getSnapshots();
+    let reqdate: Date = dates[0];
+    try {
+      if (snapshot_date) {
+        if (snapshot_date.toLowerCase() !== 'last') {
+          reqdate = parseJSON(snapshot_date);
+        }
+      }
+    } catch (ex) {
+      logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
+      throw new HttpError(400, `Bad snapshot_date`);
+    }
+    const groups = usergroup.split(',').map(g => g.trim());
+    const { users: teamMembers } = await matchedUser.loadOrg(reqdate, groups);
+    if (reqdate.getTime() !== dates[0].getTime()) {
+      const dataworkers = teamMembers.map(u => {
+        return new Promise(resolve => {
+          // if (u.snapshot_date.getTime() === reqdate.getTime()) return resolve(u);
+          UserDataEntity.getUserData(u.id, reqdate).then(data => {
+            UserEntity.merge(u, data);
+            UserDataEntity.getUserData(u.id, reqdate, custom_details_keys).then(data => {
+              u.custom_details = data;
+              resolve(u);
+            });
+          });
+        });
+      });
+      await Promise.all(dataworkers);
+    }
+
     result.data = teamMembers.map(u => u.toJSON());
     return result;
   }
@@ -181,20 +277,20 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       logger.debug(JSON.stringify(headers));
       logger.info(`File contains: ${worksheet.rowCount} rows`);
       updater(`processing: ${worksheet.rowCount} rows of user data`);
-      const teamMembers = await currentuser.loadOrg(currentuser.snapshot_date);
+      const { users: teamMembers } = await currentuser.loadOrg(currentuser.snapshot_date);
       let updatedCount = 0;
       const errors: string[] = [];
       for await (const values of this.getUserDataValues(worksheet, headers)) {
         try {
           updatedCount++;
           const user = await UserEntity.CreateUser(values.email);
-          if (!UserEntity.canWrite(currentuser, user, teamMembers, permissions)) {
+          if (!UserEntity.canWrite(currentuser, user, permissions, teamMembers)) {
             const error_message = `User ${currentuser.email} does not have permission to write data for ${values.email}`;
             logger.info(error_message);
             errors.push(error_message);
             continue;
           }
-          const data = await UserDataEntity.Add(user.id, values.key, values.value, values.timestamp);
+          const data = await UserDataEntity.Add(user.id, 'c-' + values.key, values.value, values.timestamp);
           if (updatedCount === 1) {
             logger.debug(JSON.stringify(data.toJSON()));
           }
@@ -257,6 +353,9 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
   async getUserStatsById(
     @Param('id') userId: string,
     @Req() req: RequestWithUser,
+    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+    @QueryParam('usergroup') usergroup: string = 'org:Team',
+    @QueryParam('types') types?: string,
     @QueryParam('snapshot_date') snapshot_date?: string,
     @CurrentUser() currentUser?: UserEntity,
   ) {
@@ -277,28 +376,124 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       throw new HttpError(400, `Bad snapshot_date`);
     }
 
+    const groups = usergroup.split(',').map(g => g.trim());
+
     try {
-      const orgUsers = await matchedUser.loadOrg(reqdate);
       const readPerms = req.permissions.filter(p => p.startsWith('user.read'));
-      const canRead = await UserEntity.canRead(currentUser, matchedUser, readPerms);
+      const canRead = await currentUser.canRead(matchedUser, readPerms);
       if (canRead === false) {
         logger.warn(`user ${currentUser.email} does not have permission to read user ${matchedUser.email}}`);
         throw new HttpError(403);
       }
+      const { users: groupUsers, matchedgroups } = await matchedUser.loadOrg(reqdate, groups);
+      const { industries, clients, crafts, capabilities } = matchedgroups;
 
-      const dataworkers = orgUsers.map(u => {
+      // const industries: string[] = [];
+      // const clients: string[] = [];
+      // const crafts: string[] = [];
+      // const capabilities: string[] = [];
+      // const allowedGroups = await UserGroupEntity.GetGroupsForUser(matchedUser);
+      // if (groups.indexOf('org:Team') !== -1) {
+      //   groupUsers = orgUsers;
+      // } else if (groups.indexOf('org:Directs') !== -1) {
+      //   groupUsers = orgUsers.filter(u => u.supervisor_id === matchedUser.oid);
+      // }
+
+      // for await (const industrygroup of groups.filter(g => g.startsWith('industry:'))) {
+      //   const industry = industrygroup.substring('industry:'.length);
+      //   if (!allowedGroups.find(ir => ir.name === industry && ir.type === 'industry'))
+      //     throw new HttpError(403, `Access to industry(${industry}) data is denied`);
+
+      //   industries.push(industry);
+      //   const iusers = await AppDataSource.getRepository(UserEntity).find({
+      //     where: {
+      //       team: industry,
+      //       snapshot_date: MoreThanOrEqual(reqdate),
+      //       most_recent_hire_date: LessThanOrEqual(reqdate),
+      //     },
+      //     cache: 60000,
+      //   });
+      //   iusers.forEach(iu => {
+      //     if (groupUsers.find(gu => gu.id === iu.id) === undefined) groupUsers.push(iu);
+      //   });
+      // }
+
+      // for await (const clientgroup of groups.filter(g => g.startsWith('client:'))) {
+      //   const client = clientgroup.substring('client:'.length);
+      //   if (!allowedGroups.find(ir => ir.name === client && ir.type === 'client'))
+      //     throw new HttpError(403, `Access to client(${client}) data is denied`);
+
+      //   clients.push(client);
+      //   const iusers = await AppDataSource.getRepository(UserEntity).find({
+      //     where: {
+      //       account: client,
+      //       snapshot_date: MoreThanOrEqual(reqdate),
+      //       most_recent_hire_date: LessThanOrEqual(reqdate),
+      //     },
+      //     cache: 60000,
+      //   });
+      //   iusers.forEach(iu => {
+      //     if (groupUsers.find(gu => gu.id === iu.id) === undefined) groupUsers.push(iu);
+      //   });
+      // }
+
+      // for await (const craftgroup of groups.filter(g => g.startsWith('craft:'))) {
+      //   const craft = craftgroup.substring('craft:'.length);
+      //   if (!allowedGroups.find(ir => ir.name === craft && ir.type === 'craft'))
+      //     throw new HttpError(403, `Access to craft(${craft}) data is denied`);
+
+      //   crafts.push(craft);
+      //   const iusers = await AppDataSource.getRepository(UserEntity).find({
+      //     where: {
+      //       craft: craft,
+      //       snapshot_date: MoreThanOrEqual(reqdate),
+      //       most_recent_hire_date: LessThanOrEqual(reqdate),
+      //     },
+      //     cache: 60000,
+      //   });
+      //   iusers.forEach(iu => {
+      //     if (groupUsers.find(gu => gu.id === iu.id) === undefined) groupUsers.push(iu);
+      //   });
+      // }
+
+      // for await (const cpabilitygroup of groups.filter(g => g.startsWith('capability:'))) {
+      //   const capability = cpabilitygroup.substring('capability:'.length);
+      //   if (!allowedGroups.find(ir => ir.name === capability && ir.type === 'capability'))
+      //     throw new HttpError(403, `Access to capability(${capability}) data is denied`);
+
+      //   capabilities.push(capability);
+      //   const iusers = await AppDataSource.getRepository(UserEntity).find({
+      //     where: {
+      //       capability: capability,
+      //       snapshot_date: MoreThanOrEqual(reqdate),
+      //       most_recent_hire_date: LessThanOrEqual(reqdate),
+      //     },
+      //     cache: 60000,
+      //   });
+      //   iusers.forEach(iu => {
+      //     if (groupUsers.find(gu => gu.id === iu.id) === undefined) groupUsers.push(iu);
+      //   });
+      // }
+
+      logger.debug(`getting stats for ${groupUsers.length} for ${usergroup} users`);
+
+      const dataworkers = groupUsers.map(u => {
         return new Promise(resolve => {
+          if (!u.snapshot_date) {
+            logger.debug(`user ${u.email} has no snapshot date`);
+            return resolve(u);
+          }
           if (u.snapshot_date.getTime() === reqdate.getTime()) return resolve(u);
-
-          UserEntity.getUserData(u.id, reqdate).then(data => {
+          UserDataEntity.getUserData(u.id, reqdate).then(data => {
             UserEntity.merge(u, data);
             resolve(u);
           });
         });
       });
       await Promise.all(dataworkers);
+
       const pdastats = await UserEntity.getPDAStats(reqdate);
-      const orgStats = UserEntity.calculatePDAStats(orgUsers);
+      const groupStats = UserEntity.calculatePDAStats(groupUsers);
       const cpStats = pdastats.capability[matchedUser.capability || 'N/A'] || {};
       const cfStats = pdastats.craft[matchedUser.craft || 'N/A'] || {};
       const accountStats = pdastats.account[matchedUser.account || 'N/A'] || {};
@@ -307,16 +502,16 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
 
       result.data.push({
         name: 'Directs',
-        value: orgUsers.filter(u => u.supervisor_id === matchedUser.oid).length,
-        all: pdastats.all.totalCount,
-        capability: cpStats.totalCount,
-        industry: teamStats.totalCount,
-        account: accountStats.totalCount,
-        craft: cfStats.totalCount,
+        value: groupUsers.filter(u => u.supervisor_id === matchedUser.oid).length,
+        all: Math.trunc(pdastats.all.avgDirectsCount * 100) / 100,
+        capability: Math.trunc(cpStats.avgDirectsCount * 100) / 100,
+        industry: Math.trunc(teamStats.avgDirectsCount * 100) / 100,
+        account: Math.trunc(accountStats.avgDirectsCount * 100) / 100,
+        craft: Math.trunc(cfStats.avgDirectsCount * 100) / 100,
       });
       result.data.push({
         name: 'Leverage',
-        value: orgStats.cs_map,
+        value: groupStats.cs_map,
         all: pdastats.all.cs_map,
         capability: cpStats.cs_map,
         industry: teamStats.cs_map,
@@ -324,8 +519,8 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
         craft: cfStats.cs_map,
       });
       result.data.push({
-        name: 'Total Count',
-        value: orgStats.totalCount,
+        name: 'Count',
+        value: groupStats.totalCount,
         all: pdastats.all.totalCount,
         capability: cpStats.totalCount,
         industry: teamStats.totalCount,
@@ -334,7 +529,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       });
       result.data.push({
         name: 'FTE %',
-        value: orgStats.fteCount / orgUsers.length,
+        value: groupStats.fteCount / groupUsers.length,
         all: pdastats.all.fteCount / pdastats.all.totalCount,
         capability: cpStats.fteCount / cpStats.totalCount,
         industry: teamStats.fteCount / teamStats.totalCount,
@@ -343,7 +538,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       });
       result.data.push({
         name: 'Diversity %',
-        value: orgStats.diversityCount / orgUsers.length,
+        value: groupStats.diversityCount / groupUsers.length,
         all: pdastats.all.diversityCount / pdastats.all.totalCount,
         capability: cpStats.diversityCount / cpStats.totalCount,
         industry: teamStats.diversityCount / teamStats.totalCount,
@@ -352,7 +547,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       });
       result.data.push({
         name: 'PS Exp',
-        value: orgStats.totalExp / orgUsers.length,
+        value: groupStats.totalExp / groupUsers.length,
         all: pdastats.all.totalExp / pdastats.all.totalCount,
         capability: cpStats.totalExp / cpStats.totalCount,
         industry: teamStats.totalExp / teamStats.totalCount,
@@ -361,7 +556,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       });
       result.data.push({
         name: 'TiT Exp',
-        value: orgStats.titleExp / orgUsers.length,
+        value: groupStats.titleExp / groupUsers.length,
         all: pdastats.all.titleExp / pdastats.all.totalCount,
         capability: cpStats.titleExp / cpStats.totalCount,
         industry: teamStats.titleExp / teamStats.totalCount,
@@ -398,6 +593,17 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       console.log(err);
       throw err;
     }
+  }
+
+  @Get('/:id/groups')
+  @OpenAPI({ summary: 'Return groups of the user matched by the `id` is member of and their role' })
+  @Authorized(['user.read'])
+  async getUserGroups(@Param('id') userId: string, @CurrentUser() currentUser?: UserEntity) {
+    const result = new APIResponse<Array<{ type: string; name: string; role: string }>>();
+    if (userId === '-1') return [];
+    const matchedUser = await this.getUser(userId, currentUser);
+    result.data = await UserGroupEntity.GetGroupsForUser(matchedUser);
+    return result;
   }
 
   @Get('/:id/pat')
@@ -461,6 +667,34 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
     }
   }
 
+  @Post('/data')
+  @OpenAPI({ summary: 'Add/update a data for the user matched by the `id`' })
+  async addData(@Body() data: IUserData, @CurrentUser() currentUser?: UserEntity) {
+    const matchedUser = await UserEntity.getUserById(data.userid);
+    if (!matchedUser) throw new NotFoundError();
+    const result = new APIResponse<IUserData>();
+    const matchedData = await AppDataSource.getRepository(UserDataEntity).findOne({
+      where: {
+        userid: data.userid,
+        key: data.key,
+        timestamp: data.timestamp,
+      },
+    });
+    if (matchedData) {
+      matchedData.value = data.value;
+      result.data = matchedData.toJSON();
+      return result.data;
+    }
+    try {
+      const newData = await UserDataEntity.Add(data.userid, data.key, data.value, data.timestamp);
+      result.data = newData.toJSON();
+      return result;
+    } catch (err) {
+      logger.error(JSON.stringify(err));
+      throw err;
+    }
+  }
+
   @Post('/:id/pat')
   @OpenAPI({ summary: 'Create a new personal access token for the user matched by the `id`' })
   async createPAT(@Param('id') userId: string, @Body() data: IUserPAT, @CurrentUser() currentUser?: UserEntity) {
@@ -487,7 +721,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       result.data.token = pat.token;
       return result;
     } catch (err) {
-      console.log(err);
+      logger.error(JSON.stringify(err));
       throw err;
     }
   }

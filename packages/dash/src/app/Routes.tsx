@@ -47,6 +47,19 @@ const AdminRolesPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}>
 const AdminPerms = React.lazy(() => import('@/pages/admin/permissions/admin.permissions'));
 const AdminPermsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminPerms/></React.Suspense>
 
+const AdminIndustry = React.lazy(() => import('@/pages/admin/usergroup/admin.industry'));
+const AdminIndustryPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminIndustry/></React.Suspense>
+
+const AdminClient = React.lazy(() => import('@/pages/admin/usergroup/admin.clients'));
+const AdminClientPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminClient/></React.Suspense>
+
+const AdminCapability = React.lazy(() => import('@/pages/admin/usergroup/admin.capability'));
+const AdminCapabilityPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminCapability/></React.Suspense>
+
+const AdminCraft = React.lazy(() => import('@/pages/admin/usergroup/admin.craft'));
+const AdminCraftPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminCraft/></React.Suspense>
+
+
 export type RouteMap = {
   path?: string,
   element?: JSX.Element,
@@ -84,6 +97,10 @@ const routeMap:RouteMap ={
           {path:'users', element:<AdminUsersPage/>},
           {path:'roles', element:<AdminRolesPage/>},
           {path:'permissions', element:<AdminPermsPage/>},
+          {path:'industries', element:<AdminIndustryPage/>},
+          {path:'clients', element:<AdminClientPage/>},
+          {path:'crafts', element:<AdminCraftPage/>},
+          {path:'capabilities', element:<AdminCapabilityPage/>},
         ]}
       ]
     }

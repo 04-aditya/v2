@@ -4,6 +4,7 @@ import { APIResponse, IPermission, IStatsData, IUser, IUserPAT } from "sharedtyp
 
 
 const USERAPI = '/api/users';
+const ADMINAPI = '/api/admin';
 
 const CACHEKEY = 'users';
 
@@ -46,12 +47,29 @@ export const useUser = (id : number|string = 'me') => {
 }
 
 
-export const useUserTeam = (id: number|string = 'me') => {
+export const useAllUsers = () => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY, id, 'team'];
+  const keys = [CACHEKEY,'all'];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${USERAPI}/${id}/team`);
+    const res = await axios.get(`${ADMINAPI}/users`);
+    return res.data.data as IUser[];
+  },{
+    enabled: !!axios,
+    staleTime:  30 * 60 * 1000 // 5 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
+export const useUserTeam = (id: number|string = 'me', custom_details_keys: string[]=[], usergroups=['org:all'],) => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, id, 'team', custom_details_keys.sort((a,b) => a.localeCompare(b)).join(','), usergroups.join(',')];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/${id}/team?custom_details=${custom_details_keys.join(',')}&usergroup=${usergroups.join(',')}`);
     return res.data.data as IUser[];
   },{
     enabled: !!axios,
@@ -81,17 +99,52 @@ export const useUserSnapshotDates = () => {
   return {...query, invalidateCache};
 }
 
-export const useUserStats = (id: number|string = 'me', stats = ['all'], snapshot_date?: string|Date) => {
+export const useUserDataKeys = () => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY, id, 'stats', stats.join(','), snapshot_date||'Last'];
+  const keys = [CACHEKEY, 'datakeys'];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${USERAPI}/${id}/stats?include=${stats.join(',')}&snapshot_date=${snapshot_date||'Last'}`);
+    const res = await axios.get(`${USERAPI}/datakeys`);
+    const result = res.data as APIResponse<string[]>;
+    return result.data;
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 60 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
+export const useUserStats = (id: number|string = 'me', types = ['all'], usergroup=['org:Team'], snapshot_date?: string|Date) => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, id, 'stats', types.join(','), usergroup.join(','), snapshot_date||'Last'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/${id}/stats?types=${types.join(',')}&usergroup=${usergroup.join(',')}&snapshot_date=${snapshot_date||'Last'}`);
     const result = res.data as APIResponse<Array<any>>;
     return result.data;
   },{
     enabled: !!axios,
     staleTime:  60 * 60 * 1000 // 60 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
+export const useUserGroups = (id: number|string = 'me') => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, id, 'groups'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${USERAPI}/${id}/groups`);
+    return res.data.data as Array<{type: string, name: string, role: string}>;
+  }, {
+    enabled: !!axios,
+    staleTime:  5 * 60 * 1000 // 5 minute
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);
@@ -108,7 +161,7 @@ export const useUserPATs = (id: number|string = 'me') => {
     return res.data.data as IUserPAT[];
   },{
     enabled: !!axios,
-    staleTime:  60 * 60 * 1000 // 5 minute
+    staleTime:  60 * 60 * 1000 // 1 minute
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);

@@ -37,5 +37,5 @@
     }
   },
   "exclude": ["jest.config.ts", "**/*.spec.ts", "**/*.test.ts"],
-  "include": ["**/*.ts", "src/**/*.json", "../shared/types/src/lib/apiResponse.interface.ts"]
+  "include": ["**/*.ts", "src/**/*.json", "../shared/types/src/lib/apiResponse.interface.ts",]
 }

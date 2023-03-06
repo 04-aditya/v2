@@ -1,6 +1,8 @@
 import { AppDataSource } from '@/databases';
+import { logger } from '@/utils/logger';
 import { IUserData } from 'sharedtypes';
 import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan } from 'typeorm';
+import { UserEntity } from './user.entity';
 
 @Entity({ name: 'psuserdata' })
 @Index(['userid', 'key', 'timestamp'])
@@ -17,7 +19,7 @@ export class UserDataEntity extends BaseEntity implements IUserData {
   @Column({ type: 'jsonb', nullable: false })
   value: string | number | boolean | Record<string, unknown>;
 
-  toJSON() {
+  toJSON(): IUserData {
     return {
       userid: this.userid,
       key: this.key,
@@ -79,5 +81,30 @@ export class UserDataEntity extends BaseEntity implements IUserData {
       cache,
     });
     return data;
+  }
+
+  static async getCustomUserDataKeys() {
+    const data = await AppDataSource.query(`select distinct(key) from psuserdata where key like 'c-%';`);
+    return data.map(d => d.key);
+  }
+
+  static async getUserData(id: number, timestamp: Date, keys?: string[]) {
+    if (!keys) keys = UserEntity.UserDataMap.default;
+
+    if (keys.length === 0) return {};
+
+    const query = keys
+      .map(k => `(SELECT * FROM psuserdata WHERE key='${k}' AND userid=$1 AND timestamp<=$2 ORDER BY timestamp DESC LIMIT 1)`)
+      .join(' UNION ALL ');
+    const data = await AppDataSource.query(query, [id, timestamp]);
+    const result: any = {};
+    data.forEach(d => {
+      if (d.key === 'supervisor_id') {
+        result[d.key] = d.value.supervisor_id;
+      } else {
+        result[d.key] = d.value;
+      }
+    });
+    return result;
   }
 }

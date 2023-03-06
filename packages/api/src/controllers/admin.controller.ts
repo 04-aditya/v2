@@ -31,6 +31,7 @@ import Excel from 'exceljs';
 import { format, parse as parseDate, intervalToDuration, addYears } from 'date-fns';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import { RequestWithUser } from '@/interfaces/auth.interface';
+import { UserGroupEntity } from '@/entities/usergroup.entity';
 
 @JsonController('/api/admin')
 @UseBefore(authMiddleware)
@@ -141,10 +142,12 @@ export class AdminController {
           if (details.team.startsWith('Team ')) {
             details.team = details.team.substring(5);
           }
+          details.team = details.team ? details.team.trim() : details.team;
         }
 
         if (headers.client_name && headers.client_name !== -1) {
           details.client = row.getCell(headers.client_name).value;
+          details.client = details.client ? details.client.trim() : details.client;
         }
 
         if (headers.home_office && headers.home_office !== -1) {
@@ -331,12 +334,20 @@ export class AdminController {
               user.team = values.team;
             }
             UserDataEntity.Add(user.id, 'team', values.team, snapshot_date);
+            UserGroupEntity.Add(values.team, 'industry');
           }
           if (values.client) {
             if (isNewData) {
               user.account = values.client;
             }
             UserDataEntity.Add(user.id, 'client', values.client, snapshot_date);
+            UserGroupEntity.Add(values.client, 'client');
+            // .then(client => {
+            //   if (!client.industry && user.team) {
+            //     client.industry = user.team;
+            //     client.save();
+            //   }
+            // });
           }
           if (values.current_region) {
             if (isNewData) {

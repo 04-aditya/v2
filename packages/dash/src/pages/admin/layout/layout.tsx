@@ -12,6 +12,10 @@ export function AdminLayout(props: AdminLayoutProps) {
         <Link to={'/admin/users'}>Users</Link>
         <Link to={'/admin/roles'}>Roles</Link>
         <Link to={'/admin/permissions'}>Permissions</Link>
+        <Link to={'/admin/industries'}>Industries</Link>
+        <Link to={'/admin/clients'}>Clients</Link>
+        <Link to={'/admin/capabilities'}>Capabilities</Link>
+        <Link to={'/admin/crafts'}>Crafts</Link>
       </Stack>
       <Outlet/>
     </Box>

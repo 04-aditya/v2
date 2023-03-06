@@ -322,8 +322,8 @@ export const PieStatWidget: React.FC<PieStatWidgetProps> = (props) => {
   }, [setSelectedIndex]);
 
   return <StatWidget {...statProps}
-    leftTopNode={<Typography variant="body2"><span>{valueTopLeft&&selectedIndex!==-1?valueTopLeft[selectedIndex].value:''}</span></Typography>}
-    rightTopNode={<Typography variant="body2"><span>{valueTopRight&&selectedIndex!==-1?valueTopRight[selectedIndex].value:''}</span></Typography>}
+    leftTopNode={<Typography variant="body2"><span>{valueTopLeft&&selectedIndex!==-1?valueTopLeft[selectedIndex]?.value:''}</span></Typography>}
+    rightTopNode={<Typography variant="body2"><span>{valueTopRight&&selectedIndex!==-1?valueTopRight[selectedIndex]?.value:''}</span></Typography>}
     details={<Card sx={{minHeight:400, minWidth: 400}}>
       <CardHeader
         title ={<Typography variant="h6"><span>{props.title}</span></Typography>}

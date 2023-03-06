@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { IUser } from 'sharedtypes';
 import BasicUserCard, { BasicUserCardTooltip } from '@/components/BasicUserCard';
 import { appstateDispatch } from '@/hooks/useAppState';
-import { Accordion, AccordionDetails, AccordionSummary, Box, FormControlLabel, FormGroup, Switch, Tab, Tabs, Typography } from '@mui/material';
+import { Accordion, AccordionDetails, AccordionSummary, Autocomplete, Box, FormControlLabel, FormGroup, Switch, Tab, Tabs, Typography } from '@mui/material';
 import styles from './teams.module.scss';
-import { useUser, useUserTeam } from '@/api/users';
+import { useUser, useUserDataKeys, useUserGroups, useUserTeam } from '@/api/users';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Row } from '@/components/Row';
+import AutocompleteCheckbox from '@/components/AutocompleteCheckbox';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -20,6 +21,10 @@ import { AgGridColumnGroupProps, AgGridColumnProps, AgGridReact } from 'ag-grid-
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { ColDef, GetContextMenuItemsParams, MenuItemDef, RowNode, SideBarDef } from 'ag-grid-enterprise';
+import { displayNotification } from '@/hooks/useNotificationState';
+import { FileUploadButton } from '@/components/FileUploadDialog';
+import useAxiosPrivate from '@/hooks/useAxiosPrivate';
+import { ColumnVisibleEvent } from 'ag-grid-community';
 
 const createFlagImg = (flag:string) => {
   return <img width="15" height="10" src={`https://flagcdn.com/h20/${flag}.png`}/>;
@@ -43,30 +48,42 @@ const RegionRenderer = (props:any) => {
 /* eslint-disable-next-line */
 export interface TeamsProps {}
 
+const standardColumns: ColDef<IUser>[] = [
+  { field: 'csid', enableRowGroup: false, tooltipField: 'csid',},
+  { field: 'email', enableRowGroup: false, tooltipField: 'email', },
+  { field: 'name', valueGetter: 'data.first_name + " " + data.last_name', enableRowGroup: false, colId: 'name', tooltipField: 'first_name', tooltipComponent: BasicUserCardTooltip },
+  { field: 'title', valueGetter:'data.business_title', enableRowGroup: true, colId: 'title', tooltipField: 'business_title', },
+  { field: 'Career Stage', valueGetter:'data.career_stage', enableRowGroup: true, colId: 'career_stage', tooltipField: 'career_stage', filter: 'agSetColumnFilter'},
+  { field: 'Supervisor', valueGetter:'data.supervisor_name', enableRowGroup: true, colId: 'supervisor_name', tooltipField: 'supervisor_name', },
+  { field: 'Current Region', valueGetter:'data.current_region', enableRowGroup: true, colId: 'current_region', tooltipField: 'current_region', filter: 'agSetColumnFilter', cellRenderer: RegionRenderer, },
+  { field: 'account', enableRowGroup: true, tooltipField: 'account', },
+  { field: 'capability', enableRowGroup: true, tooltipField: 'capability', filter: 'agSetColumnFilter' },
+  { field: 'craft', enableRowGroup: true, tooltipField: 'craft', filter: 'agSetColumnFilter'},
+  { field: 'team', enableRowGroup: true, tooltipField: 'team', filter: 'agSetColumnFilter'},
+];
+
 export function Teams(props: TeamsProps) {
   const navigate = useNavigate();
   const { userId } = useParams();
+  const {data:groups} = useUserGroups(userId);
+  const {data:datakeys, invalidateCache:invalidateDatakeysCache} = useUserDataKeys();
+  const [visibleDataKeys, setVisibleDataKeys] = useState<string[]>([]);
+
   const [searchParams, setSearchParams] = useSearchParams();
+  const axios = useAxiosPrivate();
   const [tabValue, setTabValue] = React.useState(0);
   const {data:user} = useUser(userId)
-  const {data:teamMembers} = useUserTeam(userId);
-  const [teamOptions, setTeamOptions] = React.useState<string[]>([]);
+  const [selectedUserGroups, setSelectedUserGroups] = React.useState<Array<{type: string, name: string, role: string}>>([]);
+  const {data:teamMembers, isLoading} = useUserTeam(userId, visibleDataKeys, selectedUserGroups.map(g=>g.type+':'+g.name));
   const gridStyle = useMemo(() => ({ height: '100%', width: '100%' }), []);
   const gridRef = useRef<AgGridReact<IUser>>(null);
   const [directsOnly, setDirectsOnly] = React.useState(false);
-  const [columnDefs] = useState<ColDef<IUser>[]>([
-    { field: 'csid', enableRowGroup: false, tooltipField: 'csid',},
-    { field: 'email', enableRowGroup: false, tooltipField: 'email', },
-    { field: 'name', valueGetter: 'data.first_name + " " + data.last_name', enableRowGroup: false, colId: 'name', tooltipField: 'first_name', tooltipComponent: BasicUserCardTooltip },
-    { field: 'title', valueGetter:'data.business_title', enableRowGroup: true, colId: 'title', tooltipField: 'business_title', },
-    { field: 'Career Stage', valueGetter:'data.career_stage', enableRowGroup: true, colId: 'career_stage', tooltipField: 'career_stage', filter: 'agSetColumnFilter'},
-    { field: 'Supervisor', valueGetter:'data.supervisor_name', enableRowGroup: true, colId: 'supervisor_name', tooltipField: 'supervisor_name', },
-    { field: 'Current Region', valueGetter:'data.current_region', enableRowGroup: true, colId: 'current_region', tooltipField: 'current_region', filter: 'agSetColumnFilter', cellRenderer: RegionRenderer, },
-    { field: 'account', enableRowGroup: true, tooltipField: 'account', },
-    { field: 'capability', enableRowGroup: true, tooltipField: 'capability', filter: 'agSetColumnFilter' },
-    { field: 'craft', enableRowGroup: true, tooltipField: 'craft', filter: 'agSetColumnFilter'},
-    { field: 'team', enableRowGroup: true, tooltipField: 'team', filter: 'agSetColumnFilter'},
-  ]);
+  const [columnDefs, setColumnDefs] = useState<ColDef<IUser>[]>(standardColumns);
+  // possible options: 'never', 'always', 'onlyWhenGrouping'
+  const rowGroupPanelShow = 'always';
+  // display each row grouping in a separate group column
+  const groupDisplayType = 'groupRows';
+
   const defaultColDef: ColDef = useMemo(() => {
     return {
       flex: 1,
@@ -89,15 +106,12 @@ export function Teams(props: TeamsProps) {
       // },
     };
   }, []);
+
   const getDataPath = useMemo(() => {
     return (data:any) => {
       return data.orgHierarchy;
     };
   }, []);
-  // possible options: 'never', 'always', 'onlyWhenGrouping'
-  const rowGroupPanelShow = 'always';
-  // display each row grouping in a separate group column
-  const groupDisplayType = 'groupRows';
 
   const statusBar = {
     statusPanels: [
@@ -111,6 +125,7 @@ export function Teams(props: TeamsProps) {
         }
     ]
   };
+
   const sideBar: SideBarDef = {
     toolPanels: [
         {
@@ -135,7 +150,7 @@ export function Teams(props: TeamsProps) {
         }
     ],
     position: 'right',
-};
+  };
 
   const getContextMenuItems = useCallback((params:GetContextMenuItemsParams<IUser>) => {
     let menuItems : (string | MenuItemDef)[] = [
@@ -222,12 +237,11 @@ export function Teams(props: TeamsProps) {
   }, []);
 
   const handleTeamOptions = (
-    event: React.MouseEvent<HTMLElement>,
-    newOptions: string[],
+    event: React.SyntheticEvent,
+    newOptions: Array<{type: string, name: string, role: string}>,
   ) => {
-    event.stopPropagation();
-    setTeamOptions(newOptions);
     console.log(newOptions);
+    setSelectedUserGroups(newOptions);
   };
 
   useEffect(() => {
@@ -238,6 +252,39 @@ export function Teams(props: TeamsProps) {
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
+
+  useEffect(() => {
+    if (!datakeys)
+      return setColumnDefs(standardColumns);
+
+    const coldefs = [...standardColumns];
+    for(const key of datakeys) {
+      coldefs.push({field: key, valueGetter: params => {
+        if (!params.data) return null;
+        if (!params.data.custom_details) return null;
+        const kpi = params.data.custom_details[`${key}`];
+        if (!kpi) return null;
+        return kpi.value;
+      },
+      enableRowGroup: true, colId: `details-${key}`, initialHide: true });
+    }
+    setColumnDefs(coldefs);
+  },[datakeys]);
+
+  const onColumnVisible = (event: ColumnVisibleEvent<IUser>) => {
+    console.log(event);
+    if (event.visible && event.column) {
+      if (event.column.getColId().startsWith('details-')) {
+        // load data for the key if not loaded
+        const key = event.column.getColId().substring(8);
+        setVisibleDataKeys((prev) => {
+          if (prev.includes(key)) return prev;
+          return [...prev, key];
+        });
+      }
+    }
+  }
+
 
   const handleDirectsOnlyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setDirectsOnly(event.target.checked);
@@ -250,6 +297,29 @@ export function Teams(props: TeamsProps) {
       },
     });
   };
+
+
+  const onUserDataUpload = async (files:File[], otherFields:{date:Date})=>{
+    const formData = new FormData();
+    formData.append("file", files[0]);
+    try {
+      await axios.post(`/api/users/uploaddata`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      .then (ar => {
+        displayNotification('User data upload',`Updating data for users from file ${files[0].name}.`, 'pending', {axios, ar})
+          .then(() => invalidateDatakeysCache())
+      })
+      .catch (ex => {
+        console.error(ex);
+      })
+    } catch (ex) {
+      console.error(ex);
+    }
+  }
+
   return (
     <Box sx={{p:1}}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -259,13 +329,16 @@ export function Teams(props: TeamsProps) {
       </Box>
       <TabPanel value={tabValue} index={0} idprefix={'Data'}>
         <Row spacing={1}>
-        <FormGroup>
-          <FormControlLabel control={<Switch checked={directsOnly} onChange={handleDirectsOnlyChange} />} label="Directs Only" />
-        </FormGroup>
+          <AutocompleteCheckbox options={groups||[]} getOptionLabel={g=>g.name} value={selectedUserGroups} onChange={handleTeamOptions} style={{width:300}} />
+          <FormGroup>
+            <FormControlLabel control={<Switch checked={directsOnly} onChange={handleDirectsOnlyChange} />} label="Directs Only" />
+          </FormGroup>
+          <FileUploadButton buttonContent={'Upload Data'} title='Upload Additional Data from excel' onUpload={onUserDataUpload} variant='outlined' />
         </Row>
         <Row spacing={1}>
           <Box className="ag-theme-alpine" sx={{height: '75vh', width: '100%'}}>
-            <AgGridReact<IUser> ref={gridRef} statusBar={statusBar}
+            <AgGridReact<IUser> ref={gridRef}
+              statusBar={statusBar}
               rowData={teamMembers}
               columnDefs={columnDefs}
               defaultColDef={defaultColDef}
@@ -286,6 +359,8 @@ export function Teams(props: TeamsProps) {
               enableRangeSelection={true}
               allowContextMenuWithControlKey={true}
               getContextMenuItems={getContextMenuItems}
+
+              onColumnVisible={onColumnVisible}
               // treeData={true}
               // groupDefaultExpanded={-1}
               // getDataPath={getDataPath}
