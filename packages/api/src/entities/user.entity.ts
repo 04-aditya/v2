@@ -215,7 +215,7 @@ export class UserEntity extends BaseEntity implements IUser {
     );
     await cache.set(CACHEKEY, JSON.stringify(userids), 60000);
     //.then(v => {
-      logger.debug('cache set', CACHEKEY);
+    logger.debug('cache set', CACHEKEY);
     //}, console.error);
     return userids;
   }
@@ -279,8 +279,7 @@ export class UserEntity extends BaseEntity implements IUser {
 
     for await (const craftgroup of groups.filter(g => g.startsWith('craft:'))) {
       const craft = craftgroup.substring('craft:'.length);
-      if (!allowedGroups.find(ir => ir.name === craft && ir.type === 'craft'))
-        throw new HttpError(403, `Access to craft(${craft}) data is denied`);
+      if (!allowedGroups.find(ir => ir.name === craft && ir.type === 'craft')) throw new HttpError(403, `Access to craft(${craft}) data is denied`);
 
       crafts.push(craft);
       const iusers = await AppDataSource.getRepository(UserEntity).find({
@@ -315,7 +314,17 @@ export class UserEntity extends BaseEntity implements IUser {
       });
     }
 
-    return {users: groupUsers, matchedgroups: {industries, clients, crafts, capabilities}};
+    return {
+      users: groupUsers,
+      matchedgroups: { industries, clients, crafts, capabilities },
+      orgUsers,
+      allowedGroups: {
+        industries: allowedGroups.filter(g => g.type === 'industry').map(g => g.name),
+        clients: allowedGroups.filter(g => g.type === 'client').map(g => g.name),
+        crafts: allowedGroups.filter(g => g.type === 'craft').map(g => g.name),
+        capabilities: allowedGroups.filter(g => g.type === 'capability').map(g => g.name),
+      },
+    };
   }
 
   private fieldMap = {
@@ -537,9 +546,20 @@ export class UserEntity extends BaseEntity implements IUser {
     let titleExp = 0;
     let diversityCount = 0;
 
+    const csTypes = [
+      'Intern',
+      'Junior Associate',
+      'Associate',
+      'Senior Associate',
+      'Manager/Specialist',
+      'Sr. Manager/Sr. Specialist',
+      'Director/Expert',
+      'VP/Fellow',
+      'Executive',
+    ];
     const cs_map = new Map<string, UserEntity[]>();
     const supervisor_map = new Map<string, UserEntity[]>();
-
+    csTypes.forEach(cs => cs_map.set(cs, []));
     list.forEach(u => {
       if (!cs_map.has(u.career_stage)) {
         cs_map.set(u.career_stage, []);

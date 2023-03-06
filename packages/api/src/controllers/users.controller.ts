@@ -385,95 +385,8 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
         logger.warn(`user ${currentUser.email} does not have permission to read user ${matchedUser.email}}`);
         throw new HttpError(403);
       }
-      const { users: groupUsers, matchedgroups } = await matchedUser.loadOrg(reqdate, groups);
-      const { industries, clients, crafts, capabilities } = matchedgroups;
-
-      // const industries: string[] = [];
-      // const clients: string[] = [];
-      // const crafts: string[] = [];
-      // const capabilities: string[] = [];
-      // const allowedGroups = await UserGroupEntity.GetGroupsForUser(matchedUser);
-      // if (groups.indexOf('org:Team') !== -1) {
-      //   groupUsers = orgUsers;
-      // } else if (groups.indexOf('org:Directs') !== -1) {
-      //   groupUsers = orgUsers.filter(u => u.supervisor_id === matchedUser.oid);
-      // }
-
-      // for await (const industrygroup of groups.filter(g => g.startsWith('industry:'))) {
-      //   const industry = industrygroup.substring('industry:'.length);
-      //   if (!allowedGroups.find(ir => ir.name === industry && ir.type === 'industry'))
-      //     throw new HttpError(403, `Access to industry(${industry}) data is denied`);
-
-      //   industries.push(industry);
-      //   const iusers = await AppDataSource.getRepository(UserEntity).find({
-      //     where: {
-      //       team: industry,
-      //       snapshot_date: MoreThanOrEqual(reqdate),
-      //       most_recent_hire_date: LessThanOrEqual(reqdate),
-      //     },
-      //     cache: 60000,
-      //   });
-      //   iusers.forEach(iu => {
-      //     if (groupUsers.find(gu => gu.id === iu.id) === undefined) groupUsers.push(iu);
-      //   });
-      // }
-
-      // for await (const clientgroup of groups.filter(g => g.startsWith('client:'))) {
-      //   const client = clientgroup.substring('client:'.length);
-      //   if (!allowedGroups.find(ir => ir.name === client && ir.type === 'client'))
-      //     throw new HttpError(403, `Access to client(${client}) data is denied`);
-
-      //   clients.push(client);
-      //   const iusers = await AppDataSource.getRepository(UserEntity).find({
-      //     where: {
-      //       account: client,
-      //       snapshot_date: MoreThanOrEqual(reqdate),
-      //       most_recent_hire_date: LessThanOrEqual(reqdate),
-      //     },
-      //     cache: 60000,
-      //   });
-      //   iusers.forEach(iu => {
-      //     if (groupUsers.find(gu => gu.id === iu.id) === undefined) groupUsers.push(iu);
-      //   });
-      // }
-
-      // for await (const craftgroup of groups.filter(g => g.startsWith('craft:'))) {
-      //   const craft = craftgroup.substring('craft:'.length);
-      //   if (!allowedGroups.find(ir => ir.name === craft && ir.type === 'craft'))
-      //     throw new HttpError(403, `Access to craft(${craft}) data is denied`);
-
-      //   crafts.push(craft);
-      //   const iusers = await AppDataSource.getRepository(UserEntity).find({
-      //     where: {
-      //       craft: craft,
-      //       snapshot_date: MoreThanOrEqual(reqdate),
-      //       most_recent_hire_date: LessThanOrEqual(reqdate),
-      //     },
-      //     cache: 60000,
-      //   });
-      //   iusers.forEach(iu => {
-      //     if (groupUsers.find(gu => gu.id === iu.id) === undefined) groupUsers.push(iu);
-      //   });
-      // }
-
-      // for await (const cpabilitygroup of groups.filter(g => g.startsWith('capability:'))) {
-      //   const capability = cpabilitygroup.substring('capability:'.length);
-      //   if (!allowedGroups.find(ir => ir.name === capability && ir.type === 'capability'))
-      //     throw new HttpError(403, `Access to capability(${capability}) data is denied`);
-
-      //   capabilities.push(capability);
-      //   const iusers = await AppDataSource.getRepository(UserEntity).find({
-      //     where: {
-      //       capability: capability,
-      //       snapshot_date: MoreThanOrEqual(reqdate),
-      //       most_recent_hire_date: LessThanOrEqual(reqdate),
-      //     },
-      //     cache: 60000,
-      //   });
-      //   iusers.forEach(iu => {
-      //     if (groupUsers.find(gu => gu.id === iu.id) === undefined) groupUsers.push(iu);
-      //   });
-      // }
+      const { users: groupUsers, allowedGroups } = await matchedUser.loadOrg(reqdate, groups);
+      const { industries, clients, crafts, capabilities } = allowedGroups;
 
       logger.debug(`getting stats for ${groupUsers.length} for ${usergroup} users`);
 
@@ -492,76 +405,84 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       });
       await Promise.all(dataworkers);
 
+      console.log(allowedGroups);
       const pdastats = await UserEntity.getPDAStats(reqdate);
       const groupStats = UserEntity.calculatePDAStats(groupUsers);
-      const cpStats = pdastats.capability[matchedUser.capability || 'N/A'] || {};
-      const cfStats = pdastats.craft[matchedUser.craft || 'N/A'] || {};
-      const accountStats = pdastats.account[matchedUser.account || 'N/A'] || {};
-      const teamStats = pdastats.team[matchedUser.team || 'N/A'] || {};
+      const cpStats = capabilities.map(c => pdastats.capability[c]).filter(s => s !== undefined);
+      const cfStats = crafts.map(c => pdastats.craft[c]).filter(s => s !== undefined);
+      const accountStats = clients.map(c => pdastats.account[c]).filter(s => s !== undefined);
+      const teamStats = industries.map(c => pdastats.team[c]).filter(s => s !== undefined);
       result.data = [];
+
+      const countStat = {
+        name: 'Count',
+        value: groupStats.totalCount,
+        all: pdastats.all.totalCount,
+        capability: cpStats.reduce((s, c) => s + c.totalCount, 0),
+        industry: teamStats.reduce((s, c) => s + c.totalCount, 0),
+        account: accountStats.reduce((s, c) => s + c.totalCount, 0),
+        craft: cfStats.reduce((s, c) => s + c.totalCount, 0),
+      };
 
       result.data.push({
         name: 'Directs',
         value: groupUsers.filter(u => u.supervisor_id === matchedUser.oid).length,
         all: Math.trunc(pdastats.all.avgDirectsCount * 100) / 100,
-        capability: Math.trunc(cpStats.avgDirectsCount * 100) / 100,
-        industry: Math.trunc(teamStats.avgDirectsCount * 100) / 100,
-        account: Math.trunc(accountStats.avgDirectsCount * 100) / 100,
-        craft: Math.trunc(cfStats.avgDirectsCount * 100) / 100,
+        capability: cpStats.length > 0 ? Math.trunc((cpStats.reduce((s, c) => s + c.avgDirectsCount, 0) / cpStats.length) * 100) / 100 : undefined,
+        industry:
+          teamStats.length > 0 ? Math.trunc((teamStats.reduce((s, c) => s + c.avgDirectsCount, 0) / teamStats.length) * 100) / 100 : undefined,
+        account:
+          accountStats.length > 0
+            ? Math.trunc((accountStats.reduce((s, c) => s + c.avgDirectsCount, 0) / accountStats.length) * 100) / 100
+            : undefined,
+        craft: cfStats.length > 0 ? Math.trunc((cfStats.reduce((s, c) => s + c.avgDirectsCount, 0) / cfStats.length) * 100) / 100 : undefined,
       });
+
       result.data.push({
         name: 'Leverage',
         value: groupStats.cs_map,
         all: pdastats.all.cs_map,
-        capability: cpStats.cs_map,
-        industry: teamStats.cs_map,
-        account: accountStats.cs_map,
-        craft: cfStats.cs_map,
+        // capability: cpStats.cs_map,
+        // industry: teamStats.cs_map,
+        // account: accountStats.cs_map,
+        // craft: cfStats.cs_map,
       });
-      result.data.push({
-        name: 'Count',
-        value: groupStats.totalCount,
-        all: pdastats.all.totalCount,
-        capability: cpStats.totalCount,
-        industry: teamStats.totalCount,
-        account: accountStats.totalCount,
-        craft: cfStats.totalCount,
-      });
+      result.data.push(countStat);
       result.data.push({
         name: 'FTE %',
         value: groupStats.fteCount / groupUsers.length,
         all: pdastats.all.fteCount / pdastats.all.totalCount,
-        capability: cpStats.fteCount / cpStats.totalCount,
-        industry: teamStats.fteCount / teamStats.totalCount,
-        account: accountStats.fteCount / accountStats.totalCount,
-        craft: cfStats.fteCount / cfStats.totalCount,
+        capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.fteCount, 0) / countStat.capability : undefined,
+        industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.fteCount, 0) / countStat.industry : undefined,
+        account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.fteCount, 0) / countStat.account : undefined,
+        craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.fteCount, 0) / countStat.craft : undefined,
       });
       result.data.push({
         name: 'Diversity %',
         value: groupStats.diversityCount / groupUsers.length,
         all: pdastats.all.diversityCount / pdastats.all.totalCount,
-        capability: cpStats.diversityCount / cpStats.totalCount,
-        industry: teamStats.diversityCount / teamStats.totalCount,
-        account: accountStats.diversityCount / accountStats.totalCount,
-        craft: cfStats.diversityCount / cfStats.totalCount,
+        capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.capability : undefined,
+        industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.industry : undefined,
+        account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.account : undefined,
+        craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.craft : undefined,
       });
       result.data.push({
         name: 'PS Exp',
         value: groupStats.totalExp / groupUsers.length,
         all: pdastats.all.totalExp / pdastats.all.totalCount,
-        capability: cpStats.totalExp / cpStats.totalCount,
-        industry: teamStats.totalExp / teamStats.totalCount,
-        account: accountStats.totalExp / accountStats.totalCount,
-        craft: cfStats.totalExp / cfStats.totalCount,
+        capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.totalExp, 0) / countStat.capability : undefined,
+        industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.totalExp, 0) / countStat.industry : undefined,
+        account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.totalExp, 0) / countStat.account : undefined,
+        craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.totalExp, 0) / countStat.craft : undefined,
       });
       result.data.push({
         name: 'TiT Exp',
         value: groupStats.titleExp / groupUsers.length,
         all: pdastats.all.titleExp / pdastats.all.totalCount,
-        capability: cpStats.titleExp / cpStats.totalCount,
-        industry: teamStats.titleExp / teamStats.totalCount,
-        account: accountStats.titleExp / accountStats.totalCount,
-        craft: cfStats.titleExp / cfStats.totalCount,
+        capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.titleExp, 0) / countStat.capability : undefined,
+        industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.titleExp, 0) / countStat.industry : undefined,
+        account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.titleExp, 0) / countStat.account : undefined,
+        craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.titleExp, 0) / countStat.craft : undefined,
       });
       return result;
     } catch (ex) {
