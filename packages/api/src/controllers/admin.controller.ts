@@ -318,19 +318,19 @@ export class AdminController {
           }
 
           if (values.career_stage) {
-            UserDataEntity.Add(user.id, 'career_stage', values.career_stage, snapshot_date);
+            await UserDataEntity.Add(user.id, 'career_stage', values.career_stage, snapshot_date);
             if (isNewData) {
               user.career_stage = values.career_stage;
             }
           }
           if (values.craft) {
-            UserDataEntity.Add(user.id, 'craft', values.craft, snapshot_date);
+            await UserDataEntity.Add(user.id, 'craft', values.craft, snapshot_date);
             if (isNewData) {
               user.craft = values.craft;
             }
           }
           if (values.capability) {
-            UserDataEntity.Add(user.id, 'capability', values.capability, snapshot_date);
+            await UserDataEntity.Add(user.id, 'capability', values.capability, snapshot_date);
             if (isNewData) {
               user.capability = values.capability;
             }
@@ -339,15 +339,15 @@ export class AdminController {
             if (isNewData) {
               user.team = values.team;
             }
-            UserDataEntity.Add(user.id, 'team', values.team, snapshot_date);
-            UserGroupEntity.Add(values.team, 'industry');
+            await UserDataEntity.Add(user.id, 'team', values.team, snapshot_date);
+            await UserGroupEntity.Add(values.team, 'industry');
           }
           if (values.client) {
             if (isNewData) {
               user.account = values.client;
             }
-            UserDataEntity.Add(user.id, 'client', values.client, snapshot_date);
-            UserGroupEntity.Add(values.client, 'client');
+            await UserDataEntity.Add(user.id, 'client', values.client, snapshot_date);
+            await UserGroupEntity.Add(values.client, 'client');
             // .then(client => {
             //   if (!client.industry && user.team) {
             //     client.industry = user.team;
@@ -359,35 +359,35 @@ export class AdminController {
             if (isNewData) {
               user.current_region = values.current_region;
             }
-            UserDataEntity.Add(user.id, 'current_region', values.current_region, snapshot_date);
+            await UserDataEntity.Add(user.id, 'current_region', values.current_region, snapshot_date);
           }
           if (values.current_office) {
             if (isNewData) {
               user.current_office = values.current_office;
             }
-            UserDataEntity.Add(user.id, 'current_office', values.current_office, snapshot_date);
+            await UserDataEntity.Add(user.id, 'current_office', values.current_office, snapshot_date);
           }
 
           if (values.home_office) {
             if (isNewData) {
               user.home_office = values.home_office;
             }
-            UserDataEntity.Add(user.id, 'home_office', values.home_office, snapshot_date);
+            await UserDataEntity.Add(user.id, 'home_office', values.home_office, snapshot_date);
           }
 
           if (values.home_region) {
             if (isNewData) {
               user.home_region = values.home_region;
             }
-            UserDataEntity.Add(user.id, 'home_region', values.home_region, snapshot_date);
+            await UserDataEntity.Add(user.id, 'home_region', values.home_region, snapshot_date);
           }
 
           if (values.contractor) {
             user.employment_type = 'Contractor';
-            UserDataEntity.Add(user.id, 'employment_type', 'Contractor', snapshot_date);
+            await UserDataEntity.Add(user.id, 'employment_type', 'Contractor', snapshot_date);
           } else {
             user.employment_type = 'Fulltime';
-            UserDataEntity.Add(user.id, 'employment_type', 'Fulltime', snapshot_date);
+            await UserDataEntity.Add(user.id, 'employment_type', 'Fulltime', snapshot_date);
           }
           if (values.supervisor_id) {
             if (user.supervisor_id !== values.supervisor_id) {
@@ -399,16 +399,15 @@ export class AdminController {
                 }
               }
             }
-            UserDataEntity.create({
+            await UserDataEntity.create({
               userid: user.id,
               key: 'supervisor_id',
               value: { supervisor_id: values.supervisor_id, oid: user.oid, csid: user.csid },
               timestamp: snapshot_date,
-            })
-              .save()
-              .catch(ex => {
-                logger.error(ex);
-              });
+            }).save();
+            //.catch(ex => {
+            //  logger.error(ex);
+            //});
           }
           if (isNewData) {
             user.snapshot_date = snapshot_date;
