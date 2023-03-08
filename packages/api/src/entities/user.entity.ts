@@ -526,11 +526,13 @@ export class UserEntity extends BaseEntity implements IUser {
     return UserEntity.canWrite(this, matchedUser, permissions, orgUsers);
   }
 
-  static async getSnapshots() {
-    const snapshotjson: string = await cache.get(`snapshot_dates`);
-    if (snapshotjson) {
-      const dates = JSON.parse(snapshotjson);
-      return dates.map(d => parseISO(d));
+  static async getSnapshots(ignoreCache = false) {
+    if (!ignoreCache) {
+      const snapshotjson: string = await cache.get(`snapshot_dates`);
+      if (snapshotjson) {
+        const dates = JSON.parse(snapshotjson);
+        return dates.map(d => parseISO(d));
+      }
     }
     const ss: Date[] = (await AppDataSource.query(`select distinct timestamp from psuserdata where key='supervisor_id' order by timestamp desc`)).map(
       (s: any) => s.timestamp,

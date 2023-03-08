@@ -16,6 +16,7 @@ export function AdminLayout(props: AdminLayoutProps) {
         <Link to={'/admin/clients'}>Clients</Link>
         <Link to={'/admin/capabilities'}>Capabilities</Link>
         <Link to={'/admin/crafts'}>Crafts</Link>
+        <Link to={'/admin/cache'}>Cache</Link>
       </Stack>
       <Outlet/>
     </Box>

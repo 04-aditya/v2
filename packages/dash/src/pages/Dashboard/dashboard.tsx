@@ -68,8 +68,15 @@ function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
   return <Box>
     <Row sx={{m:1}}>
       <Typography variant='caption'>People Stats aggregated for <Select value={userGroup} onChange={handleUserGroupChange} variant='standard'>
-          {userGroups.map(g=><MenuItem key={g.name} value={g.type+':'+g.name}><strong>{g.name}</strong>&nbsp;{g.type} members</MenuItem>)}
-        </Select> </Typography>
+          {userGroups.map((g,i)=><MenuItem key={g.name+g.type+i} value={g.type+':'+g.name}><strong>{g.name}</strong>&nbsp;{g.type} members</MenuItem>)}
+        </Select>
+      </Typography>
+
+      {/* {userGroups.length>2 && size!=='small'?<Typography variant='caption'>&nbsp;compare People Stats with <Select value={userGroup} onChange={handleUserGroupChange} variant='standard'>
+          {userGroups.map((g,i)=><MenuItem key={g.name+g.type+i} value={g.type+':'+g.name}><strong>{g.name}</strong>&nbsp;{g.type} members</MenuItem>)}
+        </Select>
+      </Typography>:null} */}
+
     </Row>
     {isLoading?<Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
         <CircularProgress/>
@@ -194,7 +201,7 @@ export function Dashboard(props: DashboardProps) {
         </Box>
         <TabPanel value={tabValue} index={0} idprefix={'People'}>
           <PeopleStats snapshot_date={snapshot_date} size='large' userId={userId}/>
-          {directs.map(u=><Box sx={{mx:1, my:2, width:'100%', borderColor:'#ccc', borderTopStyle:'solid', borderTopWidth:1}}>
+          {directs.map(u=><Box key={u.id} sx={{mx:1, my:2, width:'100%', borderColor:'#ccc', borderTopStyle:'solid', borderTopWidth:1}}>
               <Grid container spacing={1} sx={{p:1}}>
                 <Grid item xs={12} md={4} lg={3}>
                   <Stack spacing={1} direction='column' justifyContent='center' sx={{height:'100%'}}>

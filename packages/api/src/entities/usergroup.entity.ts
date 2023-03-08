@@ -64,17 +64,28 @@ export class UserGroupEntity extends BaseEntity implements IUserGroup {
   static async Add(name: string, type: string) {
     const existing = await UserGroupEntity.GetByNameAndType(name, type);
     if (existing) return existing;
-    const newclient = new UserGroupEntity();
-    newclient.name = name;
-    await newclient.save();
-    return newclient;
+    try {
+      const newclient = new UserGroupEntity();
+      newclient.name = name;
+      await newclient.save();
+      return newclient;
+    } catch (ex) {
+      if (ex.code === '23505') {
+        // if duplicate
+        logger.warn(`duplicate usergroup for ${name} & ${type}.`, ex);
+        return await UserGroupEntity.GetByNameAndType(name, type);
+      } else {
+        logger.error(ex);
+        throw ex;
+      }
+    }
   }
 
   static async GetGroupsForUser(user: IUser) {
     const CACHEKEY = `usergroups-${user.id}`;
     const usergroupjson: string = await cache.get(CACHEKEY);
     if (usergroupjson) {
-      logger.debug(`cache hit for ${CACHEKEY}`)
+      logger.debug(`cache hit for ${CACHEKEY}`);
       return JSON.parse(usergroupjson) as Array<{ name: string; type: string; role: string }>;
     }
     let userGroupList: Array<{ name: string; type: string; role: string }> = await AppDataSource.query(

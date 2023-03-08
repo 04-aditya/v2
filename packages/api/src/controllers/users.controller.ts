@@ -36,6 +36,23 @@ import { BlobServiceClient, RestError } from '@azure/storage-blob';
 import AsyncTask, { stringFn } from '@/utils/asyncTask';
 import Excel from 'exceljs';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
+import { group } from 'console';
+
+interface IStatType {
+  group: string;
+  name: string;
+  type: string;
+}
+
+const StatTypes: ReadonlyArray<IStatType> = [
+  { group: 'people', name: 'Count', type: 'number' },
+  { group: 'people', name: 'Directs', type: 'number' },
+  { group: 'people', name: 'Leverage', type: 'array' },
+  { group: 'people', name: 'FTE %', type: 'number' },
+  { group: 'people', name: 'Diversity %', type: 'number' },
+  { group: 'people', name: 'PS Exp', type: 'number' },
+  { group: 'people', name: 'TiT Exp', type: 'number' },
+] as const;
 
 @JsonController('/api/users')
 @UseBefore(authMiddleware)
@@ -59,6 +76,14 @@ export class UsersController {
   async getDataKeys() {
     const result = new APIResponse<string[]>();
     result.data = await UserDataEntity.getCustomUserDataKeys();
+    return result;
+  }
+
+  @Get('/stattypes')
+  @OpenAPI({ summary: 'Get supported type of aggregations' })
+  async getStatTypes() {
+    const result = new APIResponse<ReadonlyArray<IStatType>>();
+    result.data = StatTypes;
     return result;
   }
 

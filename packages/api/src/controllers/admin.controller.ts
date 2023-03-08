@@ -318,19 +318,31 @@ export class AdminController {
           }
 
           if (values.career_stage) {
-            await UserDataEntity.Add(user.id, 'career_stage', values.career_stage, snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'career_stage', values.career_stage, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(career_stage: ${values.career_stage}) for ${user.email}`);
+            }
             if (isNewData) {
               user.career_stage = values.career_stage;
             }
           }
           if (values.craft) {
-            await UserDataEntity.Add(user.id, 'craft', values.craft, snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'craft', values.craft, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(craft: ${values.craft}) for ${user.email}`);
+            }
             if (isNewData) {
               user.craft = values.craft;
             }
           }
           if (values.capability) {
-            await UserDataEntity.Add(user.id, 'capability', values.capability, snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'capability', values.capability, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(capability: ${values.capability}) for ${user.email}`);
+            }
             if (isNewData) {
               user.capability = values.capability;
             }
@@ -339,15 +351,31 @@ export class AdminController {
             if (isNewData) {
               user.team = values.team;
             }
-            await UserDataEntity.Add(user.id, 'team', values.team, snapshot_date);
-            await UserGroupEntity.Add(values.team, 'industry');
+            try {
+              await UserDataEntity.Add(user.id, 'team', values.team, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(team: ${values.team}) for ${user.email}`);
+            }
+            try {
+              await UserGroupEntity.Add(values.team, 'industry');
+            } catch (err) {
+              logger.warn(`Unable to add usergroup(industry: ${values.team}) for ${user.email}`);
+            }
           }
           if (values.client) {
             if (isNewData) {
               user.account = values.client;
             }
-            await UserDataEntity.Add(user.id, 'client', values.client, snapshot_date);
-            await UserGroupEntity.Add(values.client, 'client');
+            try {
+              await UserDataEntity.Add(user.id, 'client', values.client, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(team: ${values.client}) for ${user.email}`);
+            }
+            try {
+              await UserGroupEntity.Add(values.client, 'client');
+            } catch (err) {
+              logger.warn(`Unable to add usergroup(client: ${values.client}) for ${user.email}`);
+            }
             // .then(client => {
             //   if (!client.industry && user.team) {
             //     client.industry = user.team;
@@ -359,35 +387,59 @@ export class AdminController {
             if (isNewData) {
               user.current_region = values.current_region;
             }
-            await UserDataEntity.Add(user.id, 'current_region', values.current_region, snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'current_region', values.current_region, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(current_region: ${values.current_region}) for ${user.email}`);
+            }
           }
           if (values.current_office) {
             if (isNewData) {
               user.current_office = values.current_office;
             }
-            await UserDataEntity.Add(user.id, 'current_office', values.current_office, snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'current_office', values.current_office, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(current_office: ${values.current_office}) for ${user.email}`);
+            }
           }
 
           if (values.home_office) {
             if (isNewData) {
               user.home_office = values.home_office;
             }
-            await UserDataEntity.Add(user.id, 'home_office', values.home_office, snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'home_office', values.home_office, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(home_office: ${values.home_office}) for ${user.email}`);
+            }
           }
 
           if (values.home_region) {
             if (isNewData) {
               user.home_region = values.home_region;
             }
-            await UserDataEntity.Add(user.id, 'home_region', values.home_region, snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'home_region', values.home_region, snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(home_region: ${values.home_region}) for ${user.email}`);
+            }
           }
 
           if (values.contractor) {
             user.employment_type = 'Contractor';
-            await UserDataEntity.Add(user.id, 'employment_type', 'Contractor', snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'employment_type', 'Contractor', snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(employment_type: Contractor) for ${user.email}`);
+            }
           } else {
             user.employment_type = 'Fulltime';
-            await UserDataEntity.Add(user.id, 'employment_type', 'Fulltime', snapshot_date);
+            try {
+              await UserDataEntity.Add(user.id, 'employment_type', 'Fulltime', snapshot_date);
+            } catch (err) {
+              logger.warn(`Unable to add userdata(employment_type: Fulltime) for ${user.email}`);
+            }
           }
           if (values.supervisor_id) {
             if (user.supervisor_id !== values.supervisor_id) {
@@ -399,15 +451,16 @@ export class AdminController {
                 }
               }
             }
-            await UserDataEntity.create({
-              userid: user.id,
-              key: 'supervisor_id',
-              value: { supervisor_id: values.supervisor_id, oid: user.oid, csid: user.csid },
-              timestamp: snapshot_date,
-            }).save();
-            //.catch(ex => {
-            //  logger.error(ex);
-            //});
+            try {
+              await UserDataEntity.create({
+                userid: user.id,
+                key: 'supervisor_id',
+                value: { supervisor_id: values.supervisor_id, oid: user.oid, csid: user.csid },
+                timestamp: snapshot_date,
+              }).save();
+            } catch (err) {
+              logger.warn(`Unable to add userdata(supervisor_id) for ${user.email}`);
+            }
           }
           if (isNewData) {
             user.snapshot_date = snapshot_date;
@@ -428,8 +481,9 @@ export class AdminController {
         }
       }
 
-      UserEntity.updatePDAStats(defaultsnapshot_date);
       logger.info(`Finished processing ${updatedCount} rows`);
+      UserEntity.updatePDAStats(defaultsnapshot_date);
+      UserEntity.getSnapshots(true); // refresh cache for snapshots
       return { count: updatedCount, message: `Finished processing ${updatedCount} rows.` };
     } catch (error) {
       logger.error(JSON.stringify(error));
