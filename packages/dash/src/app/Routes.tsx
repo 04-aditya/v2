@@ -59,6 +59,9 @@ const AdminCapabilityPage = ()=><React.Suspense fallback={<PageLoadingPlaceholde
 const AdminCraft = React.lazy(() => import('@/pages/admin/usergroup/admin.craft'));
 const AdminCraftPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminCraft/></React.Suspense>
 
+const AdminStats = React.lazy(() => import('@/pages/admin/manage/stats'))
+const AdminStatsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminStats/></React.Suspense>
+
 const AdminCache = React.lazy(() => import('@/pages/admin/manage/cache'))
 const AdminCachePage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminCache/></React.Suspense>
 
@@ -104,6 +107,7 @@ const routeMap:RouteMap ={
           {path:'clients', element:<AdminClientPage/>},
           {path:'crafts', element:<AdminCraftPage/>},
           {path:'capabilities', element:<AdminCapabilityPage/>},
+          {path:'stats', element:<AdminStatsPage/>},
           {path:'cache', element:<AdminCachePage/>},
         ]}
       ]

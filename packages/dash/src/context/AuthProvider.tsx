@@ -14,7 +14,15 @@ interface IAuthContext {
 const AuthContext = createContext<IAuthContext>({auth: {}, setAuth:()=>{ console.log('default setAuth')}});
 
 export const AuthProvider = ({ children }:{children:React.ReactNode}) => {
-    const [auth, setAuthInternal] = useState<IAuth>(JSON.parse(window.sessionStorage.getItem('auth') || '{}'));
+
+    let authSession:IAuth = {};
+    try {
+      authSession = JSON.parse(window.sessionStorage.getItem('auth')||'{}') as IAuth;
+    } catch (e) {
+      console.error(e);
+    }
+
+    const [auth, setAuthInternal] = useState<IAuth>(authSession);
 
     const setAuth = (auth:IAuth) => {
       window.sessionStorage.setItem('auth', JSON.stringify(auth));

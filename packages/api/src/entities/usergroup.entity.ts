@@ -1,7 +1,7 @@
 import { AppDataSource } from '@/databases';
 import cache from '@/utils/cache';
 import { logger } from '@/utils/logger';
-import { IUser, IUserGroup } from 'sharedtypes';
+import { IUser, IUserGroup } from '@sharedtypes';
 import {
   BaseEntity,
   Column,

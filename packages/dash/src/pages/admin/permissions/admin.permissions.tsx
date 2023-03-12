@@ -12,6 +12,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/api/permissions';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 import { checkboxSelection, headerCheckboxSelection } from '@/components/checkboxSelection';
+import { PageContainer } from '@/components/PageContainer';
+import { PageHeader } from '@/components/PageHeader';
 
 
 /* eslint-disable-next-line */
@@ -66,9 +68,8 @@ export function AdminPerms(props: AdminPermsProps) {
     }
   }, [selectedPerms, invalidateCache])
   return (
-    <Box sx={{p:1}}>
-      <Typography variant='h4'>Permissions</Typography>
-      <hr/>
+    <PageContainer>
+      <PageHeader title='Permissions'/>
       <Button variant='outlined' disabled={selectedPerms.length===0} onClick={onDeleteSelected}>Delete Selected</Button>
       <Box className="ag-theme-alpine" sx={{height: '70vh', width: '100%'}}>
         <AgGridReact ref={r => gridRef}
@@ -86,7 +87,7 @@ export function AdminPerms(props: AdminPermsProps) {
         >
         </AgGridReact>
       </Box>
-    </Box>
+    </PageContainer>
   );
 }
 

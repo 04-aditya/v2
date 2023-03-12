@@ -45,6 +45,24 @@ interface CommonStatWidgetProps {
   size?: 'large'|'medium'|'small';
   onClick?: () => void;
 }
+interface StatContainerProps extends CommonStatWidgetProps {
+  children: React.ReactNode,
+}
+
+export function StatContainer(props: StatContainerProps) {
+  const [isMouseOver, setMouseOver] = React.useState(false);
+
+  const size = props.size||'medium';
+  const sx = {minWidth:size!=='small'?128:undefined, minHeight: size!=='small'?168:undefined, background:'#fff', ...props.sx};
+  const elevation = props.elevation===undefined ? (size === 'small' ? 0 : 1) : props.elevation;
+
+  return <Paper elevation={isMouseOver?elevation+4:elevation} sx={sx}
+    onMouseOver={()=>setMouseOver(true)}
+    onMouseOut={()=>setMouseOver(false)}>
+    {props.children}
+  </Paper>
+}
+
 interface StatWidgetProps extends CommonStatWidgetProps {
   children?: React.ReactNode,
   rightTopNode?: React.ReactNode,
@@ -59,8 +77,6 @@ export const StatWidget: React.FC<StatWidgetProps> = (props) => {
   const [isMouseOver, setMouseOver] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
   const size = props.size||'medium';
-  const sx = {minWidth:size!=='small'?128:undefined, minHeight: size!=='small'?158:undefined, background:'#fff', ...props.sx}
-  const elevation = props.elevation===undefined ? (size === 'small' ? 0 : 1) : props.elevation;
   const open = Boolean(anchorEl);
   const handleOpenPopover = (event: any) => {
     if (props.details) {
@@ -78,13 +94,9 @@ export const StatWidget: React.FC<StatWidgetProps> = (props) => {
     setAnchorEl(null);
   };
 
-  return <Paper
-      sx={sx}
-      elevation={isMouseOver?elevation+4:elevation}
-      onMouseOver={()=>setMouseOver(true)}
-      onMouseOut={()=>setMouseOver(false)}>
-    <div
-      style={{display:'flex', flexDirection:'column', justifyContent:'space-between', height:'100%'}}
+  return <StatContainer sx={props.sx} elevation={props.elevation} size={size}>
+    <Box
+      sx={{display:'flex', flexDirection:'column', justifyContent:'space-between', height:'100%'}}
       onClick={handleOpenPopover}
     >
       {size!=='small'?<Row justifyContent="space-between" sx={{p:1}}>
@@ -135,7 +147,7 @@ export const StatWidget: React.FC<StatWidgetProps> = (props) => {
           </div>
         </Tooltip>
       </Row>:null}
-    </div>
+    </Box>
     <Popover
       open={open}
       anchorEl={anchorEl}
@@ -151,7 +163,7 @@ export const StatWidget: React.FC<StatWidgetProps> = (props) => {
     >
       {props.details}
     </Popover>
-  </Paper>
+  </StatContainer>
 }
 
 

@@ -1,5 +1,5 @@
 import { AppDataSource } from '@/databases';
-import { IUserRole } from 'sharedtypes';
+import { IUserRole } from '@sharedtypes';
 import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, In } from 'typeorm';
 import { PermissionEntity } from './permission.entity';
 

@@ -29,7 +29,7 @@ export default function ButtonPopover(props:ButtonPopoverProps) {
   const id = open ? 'popover' : undefined;
 
   return (
-    <div>
+    <>
       {icon?<IconButton {...rest} aria-describedby={id} onClick={handleClick}>
         {icon}
       </IconButton>:<Button {...rest} aria-describedby={id} onClick={handleClick}>
@@ -51,6 +51,6 @@ export default function ButtonPopover(props:ButtonPopoverProps) {
       >
         {props.children}
       </Popover>
-    </div>
+    </>
   );
 }

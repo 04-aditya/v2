@@ -4,7 +4,7 @@ import { appstateDispatch } from '@/hooks/useAppState';
 import styles from './dashboard.module.scss';
 import React, { useEffect, useMemo } from 'react';
 import { useUser, useUserSnapshotDates, useUserTeam, useUserStats, useUserGroups } from '@/api/users';
-import { NumberStatWidget, PercentStatWidget, PieStatWidget, StatWidget } from '@/components/StatWidget';
+import { NumberStatWidget, PercentStatWidget, PieStatWidget, StatContainer, StatWidget } from '@/components/StatWidget';
 import { Row } from '@/components/Row';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { format, parse as parseDate } from 'date-fns';
@@ -13,10 +13,13 @@ import { Stack } from '@mui/system';
 import Skeleton from '@mui/material/Skeleton';
 import EmailIcon from '@mui/icons-material/Email';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import { IStatsData } from 'sharedtypes';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { getUserName, IStatsData } from 'sharedtypes';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 import { displayNotification } from '@/hooks/useNotificationState';
 import { FileUploadButton } from '@/components/FileUploadDialog';
+import ButtonPopover from '@/components/ButtonPopover';
+import { PageContainer } from '@/components/PageContainer';
 
 
 type PeopleStatsProps = {
@@ -120,6 +123,15 @@ function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
           valueBottomLeft={titexpStat.all ? Math.trunc(titexpStat.all*100)/100 : ''} valueBottomRight={titexpStat.capability ? Math.trunc(titexpStat.capability*100)/100 : ''}
           title='Avg Time in Title'
           sx={{m:0.5}}/>:null}
+      <StatContainer size={size} elevation={0} sx={{
+        backgroundColor:'#fff6', display:'grid', borderStyle: 'dashed',
+        borderWidth: 'thin', borderColor: 'lightskyblue',}}>
+          <ButtonPopover icon={<AddCircleIcon sx={{fontSize:'1em'}}/>} color='primary'>
+            <Paper sx={{p:1, minWidth:128, minHeight:256}} elevation={6}>
+
+            </Paper>
+          </ButtonPopover>
+      </StatContainer>
       {/* <StatWidget title='KPI' baseline={'baseline'} sx={{m:0.5}}>{'N/A'}</StatWidget>
       <StatWidget title='KPI' leftNode={'VL'} sx={{m:0.5}}/>
       <StatWidget title='KPI' rightNode={'VR'} sx={{m:0.5}}/>
@@ -128,30 +140,25 @@ function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
   </Box>
 }
 
-/* eslint-disable-next-line */
-export interface DashboardProps {
-}
-
-export function Dashboard(props: DashboardProps) {
+export function Dashboard() {
   const { userId } = useParams();
   const {data:user} = useUser(userId)
   const {data:teamMembers} = useUserTeam(userId,[],['org:Directs']);
-  const axios = useAxiosPrivate();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [snapshot_date, setSnapshotDate] = React.useState<string>('Last');
   const {data: snapshot_dates} = useUserSnapshotDates();
   const [tabValue, setTabValue] = React.useState(0);
+  const [pageError, setPageError] = React.useState<string|undefined>();
 
   const handleSnapshotDateChange = (event: SelectChangeEvent) => {
     setSnapshotDate(event.target.value);
   };
 
-  useEffect(() => {
+  const title = useMemo(() => {
     if (user) {
-      appstateDispatch({type:'title', data:`Dashboard for ${user.first_name+' '+user.last_name}`});
+      return `Dashboard for ${getUserName(user)}`;
     } else {
-      appstateDispatch({type:'title', data:`Dashboard - Loading...`});
+      return `Dashboard - Loading...`;
     }
   }, [user]);
 
@@ -165,94 +172,91 @@ export function Dashboard(props: DashboardProps) {
     }
   }, [user, teamMembers])
 
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
   return (
-    <Box sx={{displar:'flex'}}>
-      <div>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <BasicUserCard user={user} sx={{m:1}}/>
-          <Row spacing={1}>
-            <FormControl sx={{ m: 1, minWidth: 150 }} size='small'>
-              <InputLabel id="snapshotdate-selector-label">Snapshot Date</InputLabel>
-              <Select
-                labelId="snapshotdate-selector-label"
-                id="snapshotdate-selector"
-                value={snapshot_date}
-                label="Snapshot Date"
-                onChange={handleSnapshotDateChange}
-              >
-                <MenuItem value="Last">
-                  <em>Last</em>
-                </MenuItem>
-                {snapshot_dates?.map(d=>d?<MenuItem key={d.toString()} value={d.toISOString()}>{format(d,'MMM dd')}</MenuItem>:null)}
-              </Select>
-            </FormControl>
-          </Row>
-          <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs" sx={{mx:1}}>
-            <Tab label="People" {...a11yProps('People', 0)} />
-            <Tab label="Learning" {...a11yProps('Learning', 1)} />
-            <Tab label="Hiring" {...a11yProps('Hiring', 2)} />
-            <Tab label="Delivery" {...a11yProps('Delivery', 3)} />
-            <Tab label="Finance" {...a11yProps('Finance', 4)} />
-          </Tabs>
-        </Box>
-        <TabPanel value={tabValue} index={0} idprefix={'People'}>
-          <PeopleStats snapshot_date={snapshot_date} size='large' userId={userId}/>
-          {directs.map(u=><Box key={u.id} sx={{mx:1, my:2, width:'100%', borderColor:'#ccc', borderTopStyle:'solid', borderTopWidth:1}}>
-              <Grid container spacing={1} sx={{p:1}}>
-                <Grid item xs={12} md={4} lg={3}>
-                  <Stack spacing={1} direction='column' justifyContent='center' sx={{height:'100%'}}>
-                    <Typography variant='caption'>
-                      <strong>{u.first_name+' '+u.last_name}</strong>
-                      <IconButton size="small" aria-label='email' LinkComponent='a' href={`mailto:${u.email}`} ><EmailIcon fontSize='small' /></IconButton>
-                      <IconButton size="small" aria-label='dashboard' onClick={e=>navigate(`/dashboard/${u.email}`)} ><DashboardIcon fontSize='small' /></IconButton>
-                    </Typography>
-                    <Typography variant='caption'>{u.business_title}</Typography>
-                    <Typography variant='caption'></Typography>
-                  </Stack>
-                </Grid>
-                <Grid item xs={12} md={8} lg={9}>
-                  <PeopleStats snapshot_date={snapshot_date} size='small' userId={u.id}/>
-                </Grid>
+    <PageContainer title={title} error={pageError}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <BasicUserCard user={user} sx={{m:1}}/>
+        <Row spacing={1}>
+          <FormControl sx={{ m: 1, minWidth: 150 }} size='small'>
+            <InputLabel id="snapshotdate-selector-label">Snapshot Date</InputLabel>
+            <Select
+              labelId="snapshotdate-selector-label"
+              id="snapshotdate-selector"
+              value={snapshot_date}
+              label="Snapshot Date"
+              onChange={handleSnapshotDateChange}
+            >
+              <MenuItem value="Last">
+                <em>Last</em>
+              </MenuItem>
+              {snapshot_dates?.map(d=>d?<MenuItem key={d.toString()} value={d.toISOString()}>{format(d,'MMM dd')}</MenuItem>:null)}
+            </Select>
+          </FormControl>
+        </Row>
+        <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs" sx={{mx:1}}>
+          <Tab label="People" {...a11yProps('People', 0)} />
+          <Tab label="Learning" {...a11yProps('Learning', 1)} />
+          <Tab label="Hiring" {...a11yProps('Hiring', 2)} />
+          <Tab label="Delivery" {...a11yProps('Delivery', 3)} />
+          <Tab label="Finance" {...a11yProps('Finance', 4)} />
+        </Tabs>
+      </Box>
+      <TabPanel value={tabValue} index={0} idprefix={'People'}>
+        <PeopleStats snapshot_date={snapshot_date} size='large' userId={userId}/>
+        {directs.map(u=><Box key={u.id} sx={{mx:1, my:2, width:'100%', borderColor:'#ccc', borderTopStyle:'solid', borderTopWidth:1}}>
+            <Grid container spacing={1} sx={{p:1}}>
+              <Grid item xs={12} md={4} lg={3}>
+                <Stack spacing={1} direction='column' justifyContent='center' sx={{height:'100%'}}>
+                  <Typography variant='caption'>
+                    <strong>{u.first_name+' '+u.last_name}</strong>
+                    <IconButton size="small" aria-label='email' LinkComponent='a' href={`mailto:${u.email}`} ><EmailIcon fontSize='small' /></IconButton>
+                    <IconButton size="small" aria-label='dashboard' onClick={_e=>navigate(`/dashboard/${u.email}`)} ><DashboardIcon fontSize='small' /></IconButton>
+                  </Typography>
+                  <Typography variant='caption'>{u.business_title}</Typography>
+                  <Typography variant='caption'></Typography>
+                </Stack>
               </Grid>
-            </Box>)}
-        </TabPanel>
-        {/* <fieldset style={{borderRadius:4, borderColor: '#00000020', fontSize: '0.75em', padding: '0.5em'}}> */}
-        <TabPanel value={tabValue} index={1} idprefix={'Learning'}>
-            <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-              <StatWidget title='Learning Hours' baseline={'baseline'} sx={{m:0.5}}>{'2.5 / 5'}</StatWidget>
-              <StatWidget title='Certifications' sx={{m:0.5}}>{'N/A'}</StatWidget>
-              <StatWidget title='KPI1' sx={{m:0.5}}>{'N/A'}</StatWidget>
-              <StatWidget title='KPI2' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            </Row>
-        </TabPanel>
-        <TabPanel value={tabValue} index={2} idprefix={'Hiring'}>
-            <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-              <StatWidget title='Hiring Hours' sx={{m:0.5}}>{'N/A'}</StatWidget>
-              <StatWidget title='Interview Slots' sx={{m:0.5}}>{'N/A'}</StatWidget>
-              <StatWidget title='Certifications' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            </Row>
-        </TabPanel>
-        <TabPanel value={tabValue} index={3} idprefix={'Delivery'}>
-            <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-              <StatWidget title='Speed' sx={{m:0.5}}>{'N/A'}</StatWidget>
-              <StatWidget title='Value' sx={{m:0.5}}>{'N/A'}</StatWidget>
-              <StatWidget title='Quality' sx={{m:0.5}}>{'N/A'}</StatWidget>
-            </Row>
-        </TabPanel>
-        <TabPanel value={tabValue} index={4} idprefix={'Finance'}>
-            <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
-              <StatWidget title='Billability' sx={{m:0.5}} >{'N/A'}</StatWidget>
-              <StatWidget title='Yeild' sx={{m:0.5}} >{'N/A'}</StatWidget>
-              <StatWidget title='Sales Time' sx={{m:0.5}} >{'N/A'}</StatWidget>
-            </Row>
-        </TabPanel>
-        <Box sx={{p:1}}>
-        </Box>
-      </div>
+              <Grid item xs={12} md={8} lg={9}>
+                <PeopleStats snapshot_date={snapshot_date} size='small' userId={u.id}/>
+              </Grid>
+            </Grid>
+          </Box>)}
+      </TabPanel>
+      <TabPanel value={tabValue} index={1} idprefix={'Learning'}>
+          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+            <StatWidget title='Learning Hours' baseline={'baseline'} sx={{m:0.5}}>{'2.5 / 5'}</StatWidget>
+            <StatWidget title='Certifications' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            <StatWidget title='KPI1' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            <StatWidget title='KPI2' sx={{m:0.5}}>{'N/A'}</StatWidget>
+          </Row>
+      </TabPanel>
+      <TabPanel value={tabValue} index={2} idprefix={'Hiring'}>
+          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+            <StatWidget title='Hiring Hours' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            <StatWidget title='Interview Slots' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            <StatWidget title='Certifications' sx={{m:0.5}}>{'N/A'}</StatWidget>
+          </Row>
+      </TabPanel>
+      <TabPanel value={tabValue} index={3} idprefix={'Delivery'}>
+          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+            <StatWidget title='Speed' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            <StatWidget title='Value' sx={{m:0.5}}>{'N/A'}</StatWidget>
+            <StatWidget title='Quality' sx={{m:0.5}}>{'N/A'}</StatWidget>
+          </Row>
+      </TabPanel>
+      <TabPanel value={tabValue} index={4} idprefix={'Finance'}>
+          <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
+            <StatWidget title='Billability' sx={{m:0.5}} >{'N/A'}</StatWidget>
+            <StatWidget title='Yeild' sx={{m:0.5}} >{'N/A'}</StatWidget>
+            <StatWidget title='Sales Time' sx={{m:0.5}} >{'N/A'}</StatWidget>
+          </Row>
+      </TabPanel>
+      <Box sx={{p:1}}>
+      </Box>
       {/* <Outlet/>
       <hr/>
       <h1>Welcome to Dashboard!</h1>
@@ -311,7 +315,7 @@ export function Dashboard(props: DashboardProps) {
           overline text
         </Typography>
       </Box> */}
-    </Box>
+    </PageContainer>
   );
 }
 

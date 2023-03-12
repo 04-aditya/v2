@@ -23,7 +23,7 @@ import {
 import { OpenAPI } from 'routing-controllers-openapi';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
-import { IUser, APIResponse, IPermission, IUserPAT, IUserData } from 'sharedtypes';
+import { IUser, APIResponse, IPermission, IUserPAT, IUserData } from '@sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserPATEntity } from '@/entities/userpat.entity';
@@ -32,11 +32,10 @@ import { logger } from '@/utils/logger';
 import { LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
 import { groupBy } from '@/utils/util';
 import { UserDataEntity } from '@/entities/userdata.entity';
-import { BlobServiceClient, RestError } from '@azure/storage-blob';
+import { BlobServiceClient } from '@azure/storage-blob';
 import AsyncTask, { stringFn } from '@/utils/asyncTask';
 import Excel from 'exceljs';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
-import { group } from 'console';
 
 interface IStatType {
   group: string;
@@ -59,7 +58,25 @@ const StatTypes: ReadonlyArray<IStatType> = [
 export class UsersController {
   private async getUser(id: string, currentUser: UserEntity): Promise<UserEntity> {
     if (id === 'me') return currentUser;
-    return UserEntity.getUserById(id);
+    const user = UserEntity.getUserById(id);
+    if (!user) throw new HttpError(404, `Unable to find user with id ${id}`);
+    return user;
+  }
+
+  private async getRequestedDate(snapshot_date: string) {
+    const dates = await UserEntity.getSnapshots();
+    let reqdate: Date = dates[0];
+    try {
+      if (snapshot_date) {
+        if (snapshot_date.toLowerCase() !== 'last') {
+          reqdate = parseJSON(snapshot_date);
+        }
+      }
+    } catch (ex) {
+      logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
+      throw new HttpError(400, `Bad snapshot_date`);
+    }
+    return { reqdate, dates };
   }
 
   @Get('/snapshotdates')
@@ -122,26 +139,20 @@ export class UsersController {
   ) {
     const result = new APIResponse<IUser[]>();
     if (userId === '-1') return result;
+
     const matchedUser = await this.getUser(userId, currentUser);
-    if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) {
-      throw new HttpError(403);
-    }
-    const dates = await UserEntity.getSnapshots();
-    let reqdate: Date = dates[0];
-    try {
-      if (snapshot_date) {
-        if (snapshot_date.toLowerCase() !== 'last') {
-          reqdate = parseJSON(snapshot_date);
-        }
-      }
-    } catch (ex) {
-      logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
-      throw new HttpError(400, `Bad snapshot_date`);
-    }
+    if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) throw new HttpError(403, 'Insufficient permissions.');
+
+    const custom_keys = (custom_details_keys || '')
+      .split(',')
+      .map(k => k.trim().toLowerCase())
+      .filter(k => k !== '');
+
+    const { reqdate, dates } = await this.getRequestedDate(snapshot_date);
 
     const groups = usergroup.split(',').map(g => g.trim());
     const { users: teamMembers } = await matchedUser.loadOrg(reqdate, groups);
-    const custom_keys = (custom_details_keys || '').split(',').map(k => k.trim().toLowerCase());
+
     if (reqdate.getTime() !== dates[0].getTime()) {
       const dataworkers = teamMembers.map(u => {
         return new Promise(resolve => {
@@ -163,58 +174,6 @@ export class UsersController {
           UserDataEntity.getUserData(u.id, reqdate, custom_keys).then(data => {
             u.custom_details = data;
             resolve(u);
-          });
-        });
-      });
-      await Promise.all(dataworkers);
-    }
-
-    result.data = teamMembers.map(u => u.toJSON());
-    return result;
-  }
-
-  @Get('/:id/teamdata')
-  @OpenAPI({ summary: 'Return teams custom data of the user matched by the `id` on give snapshot_date`' })
-  @Authorized(['user.read.org'])
-  async getUserTeamDataById(
-    @Param('id') userId: string,
-    @Req() req: RequestWithUser,
-    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-    @QueryParam('usergroup') usergroup: string = 'org:Team',
-    @QueryParam('custom_details_keys') custom_details_keys?: string[],
-    @QueryParam('snapshot_date') snapshot_date?: string,
-    @CurrentUser() currentUser?: UserEntity,
-  ) {
-    const result = new APIResponse<IUser[]>();
-    if (userId === '-1') return result;
-    const matchedUser = await this.getUser(userId, currentUser);
-    if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) {
-      throw new HttpError(403);
-    }
-    const dates = await UserEntity.getSnapshots();
-    let reqdate: Date = dates[0];
-    try {
-      if (snapshot_date) {
-        if (snapshot_date.toLowerCase() !== 'last') {
-          reqdate = parseJSON(snapshot_date);
-        }
-      }
-    } catch (ex) {
-      logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
-      throw new HttpError(400, `Bad snapshot_date`);
-    }
-    const groups = usergroup.split(',').map(g => g.trim());
-    const { users: teamMembers } = await matchedUser.loadOrg(reqdate, groups);
-    if (reqdate.getTime() !== dates[0].getTime()) {
-      const dataworkers = teamMembers.map(u => {
-        return new Promise(resolve => {
-          // if (u.snapshot_date.getTime() === reqdate.getTime()) return resolve(u);
-          UserDataEntity.getUserData(u.id, reqdate).then(data => {
-            UserEntity.merge(u, data);
-            UserDataEntity.getUserData(u.id, reqdate, custom_details_keys).then(data => {
-              u.custom_details = data;
-              resolve(u);
-            });
           });
         });
       });
@@ -248,8 +207,10 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
 \`\`\`
 `,
   })
-  @Authorized(['user.write'])
   async uploadData(@UploadedFile('file') file: any, @Req() req: RequestWithUser) {
+    const writePermissions = req.permissions.filter(p => p.startsWith('user.write'));
+    if (writePermissions.length === 0) throw new ForbiddenError('Insufficient permissions.');
+
     const AZURE_STORAGE_CONNECTION_STRING = process.env.AZCONNSTR;
 
     if (!AZURE_STORAGE_CONNECTION_STRING) {
@@ -288,7 +249,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       const worksheet = workbook.worksheets[0];
 
       const headerRow: any = worksheet.getRow(1);
-      const columns = headerRow.values.map(h => h.trim().toUpperCase().replace(/ /g, '_'));
+      const columns = headerRow.values.map((h: string) => h.trim().toUpperCase().replace(/ /g, '_'));
 
       const headers = {
         oid: columns.indexOf('ORACLE_ID') || columns.indexOf('OID'),
@@ -297,7 +258,9 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
         timestamp: columns.indexOf('TIMESTAMP') || columns.indexOf('DATE'),
         key: columns.indexOf('KEY'),
         value: columns.indexOf('VALUE'),
-        details: columns.filter(c => c.startsWith('VALUE_')).map(c => ({ key: c.replace('VALUE_', ''), index: columns.indexOf(c) })),
+        details: columns
+          .filter((c: string) => c.startsWith('VALUE_'))
+          .map((c: string) => ({ key: c.replace('VALUE_', ''), index: columns.indexOf(c) })),
       };
       logger.debug(JSON.stringify(headers));
       logger.info(`File contains: ${worksheet.rowCount} rows`);
@@ -387,19 +350,8 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
     const result = new APIResponse<{ name: string; value: any; all?: any; capability?: any; industry?: any; account?: any; craft?: any }[]>();
     if (userId === '-1') return [];
     const matchedUser = await this.getUser(userId, currentUser);
-    const dates = await UserEntity.getSnapshots();
-    if (dates.length === 0) return result;
-    let reqdate: Date = dates[0];
-    try {
-      if (snapshot_date) {
-        if (snapshot_date.toLowerCase() !== 'last') {
-          reqdate = new Date(snapshot_date);
-        }
-      }
-    } catch (ex) {
-      logger.error(`Bad snapshot_date: ${JSON.stringify(ex)}`);
-      throw new HttpError(400, `Bad snapshot_date`);
-    }
+
+    const { reqdate } = await this.getRequestedDate(snapshot_date);
 
     const groups = usergroup.split(',').map(g => g.trim());
 

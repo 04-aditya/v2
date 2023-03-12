@@ -28,6 +28,8 @@ import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { PageContainer } from '@/components/PageContainer';
+import { PageHeader } from '@/components/PageHeader';
 
 // create Plotly renderers via dependency injection
 const PlotlyRenderers = createPlotlyRenderers(Plot);
@@ -161,9 +163,8 @@ export function AdminUsers(props: AdminUsersProps) {
   }
 
   return (
-    <Box sx={{p:1}}>
-      <Typography variant='h4'>Users</Typography>
-      <hr/>
+    <PageContainer>
+      <PageHeader title='Users' />
       <Row>
         <Button variant='outlined' disabled={selectedUsers.length===0} onClick={refreshSelectedUsers}>Refresh Data</Button>
         <FileUploadButton title='Upload PDA excel' onUpload={onPDAUpload} variant='outlined'>
@@ -204,7 +205,7 @@ export function AdminUsers(props: AdminUsersProps) {
         {...pstate}
         />
       <hr/>
-    </Box>
+    </PageContainer>
   );
 }
 

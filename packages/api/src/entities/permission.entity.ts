@@ -1,4 +1,4 @@
-import { IPermission } from 'sharedtypes';
+import { IPermission } from '@sharedtypes';
 import { BaseEntity, Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity({ name: 'permission' })

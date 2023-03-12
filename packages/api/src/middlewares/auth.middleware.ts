@@ -6,7 +6,7 @@ import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import { logger } from '@/utils/logger';
 import { isInstance } from 'class-validator';
-import { IPermission, IUserRole } from 'sharedtypes';
+import { IPermission, IUserRole } from '@sharedtypes';
 import { UserPATEntity } from '@/entities/userpat.entity';
 
 const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFunction) => {
@@ -35,7 +35,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
           milliseconds: 30 * 60 * 1000, // 30 minutes
         },
       });
-      if (userPAT.user.id !== userId) return res.status(403).send('Invalid token');
+      if (userPAT.user.id !== userId) return res.status(401).send('Invalid token');
       matchedUser = userPAT.user;
       userPAT.lastUsedAt = new Date();
       userPAT.save();
@@ -54,7 +54,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
         },
       });
 
-      if (!matchedUser) return res.status(403).send('Wrong authentication token');
+      if (!matchedUser) return res.status(401).send('Invalid token');
     }
 
     req.user = matchedUser;
@@ -69,9 +69,9 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
     next();
   } catch (error) {
     if (isInstance(error, TokenExpiredError)) {
-      return res.status(401).send('Token Expired');
+      return res.status(412).send('Token Expired');
     }
-    console.log(error);
+    logger.error(JSON.stringify(error));
     return res.status(401).send('Invalid token');
   }
 };

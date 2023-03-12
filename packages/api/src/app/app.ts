@@ -15,6 +15,7 @@ import { logger, stream } from '@utils/logger';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import { bootstrapDB } from '../databases/bootstrapdb';
+import { HttpErrorHandler } from '@/utils/HttpErrorHandler';
 
 class App {
   public app: express.Application;
@@ -71,6 +72,7 @@ class App {
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTION', 'DELETE'],
       },
       controllers: controllers,
+      middlewares: [HttpErrorHandler],
       currentUserChecker: async (action: Action) => {
         return action.request.user as UserEntity;
       },
@@ -78,16 +80,21 @@ class App {
         try {
           // perform queries based on token from request headers
           const user = action.request.user as UserEntity;
-          if (permissions) {
+          if (permissions && permissions.length > 0) {
             for (const p of action.request.permissions) {
               if (permissions.findIndex(r => p.startsWith(r)) !== -1) return true;
             }
-            logger.warning(`Not found roles:[${permissions.join(',')}]`);
+            logger.warn(`Not found roles:[${permissions.join(',')}]`);
+            return false;
+          } else if (!user) {
+            logger.warn(`Not found user for the request`);
             return false;
           }
-          return user ? true : false;
+          return true;
         } catch (ex) {
-          logger.error(ex);
+          console.error(ex);
+          logger.error(ex.toString());
+          return false;
         }
       },
       defaultErrorHandler: false,

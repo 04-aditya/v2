@@ -1,9 +1,10 @@
-import { Box } from '@mui/material'
 import * as React from 'react'
-
+import { Box } from '@mui/material'
+import { PageHeader } from '@/components/PageHeader';
+import { PageContainer } from '@/components/PageContainer';
 
 export default function AdminCache() {
-  return <Box sx={{m:1}}>
-    Cache
-  </Box>
+  return <PageContainer>
+    <PageHeader title='Manage Cache' subtitle='This page is under construction.'/>
+  </PageContainer>;
 }

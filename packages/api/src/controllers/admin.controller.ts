@@ -1,37 +1,18 @@
-import {
-  Controller,
-  Param,
-  Body,
-  Get,
-  Post,
-  Put,
-  Delete,
-  HttpCode,
-  UseBefore,
-  JsonController,
-  Authorized,
-  CurrentUser,
-  BodyParam,
-  QueryParam,
-  UploadedFile,
-  Req,
-} from 'routing-controllers';
-import { OpenAPI } from 'routing-controllers-openapi';
+import Excel from 'exceljs';
+import { logger } from '@/utils/logger';
 import { AppDataSource } from '@/databases';
+import { IUser, APIResponse } from '@sharedtypes';
 import { UserEntity } from '@/entities/user.entity';
-import { IUser, APIResponse, IPermission, IUserRole } from 'sharedtypes';
+import { OpenAPI } from 'routing-controllers-openapi';
+import AsyncTask, { stringFn } from '@/utils/asyncTask';
+import { BlobServiceClient } from '@azure/storage-blob';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { HttpException } from '@/exceptions/HttpException';
-import AsyncTask, { stringFn } from '@/utils/asyncTask';
-import { PermissionEntity } from '@/entities/permission.entity';
-import { UserRoleEntity } from '@/entities/userrole.entity';
-import { logger } from '@/utils/logger';
-import { BlobServiceClient } from '@azure/storage-blob';
-import Excel from 'exceljs';
-import { format, parse as parseDate, intervalToDuration, addYears } from 'date-fns';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
+import { format, parse as parseDate, addYears } from 'date-fns';
+import { Get, Post, UseBefore, JsonController, Authorized, CurrentUser, BodyParam, UploadedFile, Req } from 'routing-controllers';
 
 @JsonController('/api/admin')
 @UseBefore(authMiddleware)
@@ -43,10 +24,9 @@ export class AdminController {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
     const result = new APIResponse<IUser[]>();
-    const matchedUsers = await AppDataSource.getRepository(UserEntity).find({ relations: { roles: true } });
+    const matchedUsers: UserEntity[] = await AppDataSource.getRepository(UserEntity).find({ relations: { roles: true } });
     console.log(`fetched ${matchedUsers.length} users.`);
     result.data = matchedUsers.map(u => u.toJSON('all'));
-
     return result;
   }
 
@@ -56,7 +36,7 @@ export class AdminController {
   async refreshUsers(@BodyParam('email') email: string, @CurrentUser() currentUser: UserEntity) {
     const user = await UserEntity.getUserById(email);
     if (!user) throw new HttpException(404, 'User not found');
-    const qt = new AsyncTask(updater => user.refresh(), currentUser.id);
+    const qt = new AsyncTask(() => user.refresh(), currentUser.id);
     return { qid: qt.id, message: 'created' };
   }
 
@@ -86,7 +66,7 @@ export class AdminController {
     const uploadBlobResponse = await blockBlobClient.uploadData(file.buffer);
     logger.debug(`Blob was uploaded successfully. requestId: ${uploadBlobResponse.requestId}`);
     logger.debug(`Starting processing PDA data for date: ${snapshotdate}`);
-    const qt = new AsyncTask(updater => this.processFileData(updater, file.buffer, snapshotdate, req.permissions, req.user), req.user.id);
+    const qt = new AsyncTask(updater => this.processFileData(updater, file.buffer, snapshotdate), req.user.id);
     return { qid: qt.id, message: 'created' };
   }
 
@@ -174,8 +154,8 @@ export class AdminController {
               details.supervisor_name = sparts[0]
                 .split(',')
                 .reverse()
-                .map(s => s.trim())
-                .filter(s => s !== '')
+                .map((s: string) => s.trim())
+                .filter((s: string) => s !== '')
                 .join(' ');
             }
           }
@@ -227,7 +207,7 @@ export class AdminController {
     }
   }
 
-  async processFileData(updater: stringFn, buffer: Buffer, defaultsnapshot_date: Date, permissions: string[], user: UserEntity) {
+  async processFileData(updater: stringFn, buffer: Buffer, defaultsnapshot_date: Date) {
     try {
       // load from buffer
       const workbook: any = new Excel.Workbook();
@@ -238,7 +218,7 @@ export class AdminController {
       const worksheet = workbook.worksheets[0];
 
       const headerRow: any = worksheet.getRow(1);
-      const columns = headerRow.values.map(h => h.trim().toUpperCase().replace(/ /g, '_'));
+      const columns = headerRow.values.map((h: string) => h.trim().toUpperCase().replace(/ /g, '_'));
       logger.info(`File contains: ${worksheet.rowCount} rows`);
       updater(`processing: ${worksheet.rowCount} rows`);
 

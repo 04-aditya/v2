@@ -1,5 +1,5 @@
 import { AppDataSource } from '@/databases';
-import { ITeamMember, IUser } from 'sharedtypes';
+import { ITeamMember, IUser } from '@sharedtypes';
 import { BaseEntity, Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { UserEntity } from './user.entity';
 

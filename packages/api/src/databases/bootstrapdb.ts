@@ -6,29 +6,19 @@ import { logger } from '@/utils/logger';
 import { In } from 'typeorm';
 
 const defaultPermissions = [
-  /* resource.action.group[.data] */
+  /* resource.action.group[.fields] */
   /* user permissions */
   { name: 'user.read.self.basic', description: 'permission to read basic userdetails data of self' },
   { name: 'user.read.org.basic', description: 'permission to read basic userdetails data of their org' },
-  { name: 'user.read.client.basic', description: 'permission to read basic userdetails data of their teams' },
-  { name: 'user.read.capability.basic', description: 'permission to read basic userdetails data of their capability' },
-  { name: 'user.read.craft.basic', description: 'permission to read basic userdetails data of their craft' },
-  { name: 'user.read.team.basic', description: 'permission to read basic userdetails data of their team' },
 
   { name: 'user.read.self.all', description: 'permission to read all userdetails data of self' },
   { name: 'user.read.org.all', description: 'permission to read all userdetails data of their org' },
-  { name: 'user.read.client.all', description: 'permission to read all userdetails data of their teams' },
-  { name: 'user.read.capability.all', description: 'permission to read all userdetails data of their capability' },
-  { name: 'user.read.craft.all', description: 'permission to read all userdetails data of their craft' },
-  { name: 'user.read.team.all', description: 'permission to read all userdetails data of their teams' },
   { name: 'user.read.all.all', description: 'permission to read all userdetails data of all' },
 
-  { name: 'user.write.self.basic', description: 'permission to write basic userdetails data of self' },
-  { name: 'user.write.org.all', description: 'permission to write all userdetails data of their org' },
-  { name: 'user.write.team.basic', description: 'permission to write basic userdetails data of their teams' },
+  { name: 'user.write.self.custom', description: 'permission to write custom userdetails data of self' },
+  { name: 'user.write.org.custom', description: 'permission to write custom userdetails data for org users' },
+  { name: 'user.write.org.custom', description: 'permission to write all userdetails data of their org' },
 
-  { name: 'user.write.self.all', description: 'permission to write all userdetails data of self' },
-  { name: 'user.write.team.all', description: 'permission to write all userdetails data of their teams' },
   { name: 'user.write.all.all', description: 'permission to write all userdetails data of all' },
 
   { name: 'roles.read.self', description: 'permission to read self roles data' },
@@ -41,12 +31,6 @@ const defaultPermissions = [
 
   { name: 'usergroup.read.all', description: 'permission to read all usergroup data' },
   { name: 'usergroup.write.all', description: 'permission to write all usergroup data' },
-
-  { name: 'client.read.all', description: 'permission to read all client data' },
-  { name: 'client.write.all', description: 'permission to write all client data' },
-
-  { name: 'industry.read.all', description: 'permission to read all industry data' },
-  { name: 'industry.write.all', description: 'permission to write all industry data' },
 ];
 
 const defaultRoles = [
@@ -68,19 +52,9 @@ const defaultRoles = [
     permissions: ['usergroup.read.all', 'usergroup.write.all'],
   },
   {
-    name: 'client.admin',
-    description: 'admin role to read and write all client data',
-    permissions: ['client.read.all', 'client.write.all'],
-  },
-  {
-    name: 'industry.admin',
-    description: 'admin role to read and write all industry data',
-    permissions: ['industry.read.all', 'industry.write.all'],
-  },
-  {
     name: 'admin',
     description: 'master admin role.',
-    includedRoleNames: ['default', 'user.admin', 'usergroup.admin', 'client.admin', 'industry.admin'],
+    includedRoleNames: ['default', 'user.admin', 'usergroup.admin'],
     permissions: ['roles.read.all', 'roles.write.all', 'permissions.read.all', 'permissions.write.all'],
   },
 ];

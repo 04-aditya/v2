@@ -7,4 +7,5 @@ WORKDIR /usr/psnextv2/api
 
 ENV NODE_ENV production
 ENV PORT=8080
+EXPOSE 8080
 CMD ["dumb-init", "node", "main.js" ]

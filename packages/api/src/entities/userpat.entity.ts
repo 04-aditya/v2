@@ -1,4 +1,4 @@
-import { IUserPAT } from 'sharedtypes';
+import { IUserPAT } from '@sharedtypes';
 import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from 'typeorm';
 import { UserEntity } from './user.entity';
 import { addDays } from 'date-fns';

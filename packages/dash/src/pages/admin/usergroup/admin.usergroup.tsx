@@ -4,7 +4,6 @@ import { useGroups } from '@/api/groups';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { TeamMembersRenderer } from '@/components/TeamMembersRenderer';
 import { UserRenderer } from '@/components/UserRenderer';
 import { ITeamMember, IUserGroup } from 'sharedtypes';
 import 'ag-grid-enterprise';

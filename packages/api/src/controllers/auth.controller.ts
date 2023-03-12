@@ -12,6 +12,7 @@ import {
   Get,
   UnauthorizedError,
   ForbiddenError,
+  HttpError,
 } from 'routing-controllers';
 
 import { logger } from '@/utils/logger';
@@ -90,7 +91,7 @@ export class AuthController {
   async refreshToken(@Res() res: Response, @CookieParam(REFRESHTOKENCOOKIE) cRT?: string) {
     logger.info('cookie: ' + cRT);
     const userRepo = AppDataSource.getRepository(UserEntity);
-    if (!cRT) throw new HttpException(403, 'Unauthorized');
+    if (!cRT) throw new HttpException(401, 'Unauthenticated');
 
     res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true, domain: DOMAIN });
 
@@ -106,7 +107,7 @@ export class AuthController {
           await hackedUser.save();
         }
       } catch (err) {
-        throw new ForbiddenError();
+        throw new HttpError(401);
       }
     }
     const existingTokens = (foundUser?.refreshTokens || '').split(',');

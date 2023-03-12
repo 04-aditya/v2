@@ -1,6 +1,6 @@
 import { AppDataSource } from '@/databases';
 import { logger } from '@/utils/logger';
-import { IUserData } from 'sharedtypes';
+import { IUserData } from '@sharedtypes';
 import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan } from 'typeorm';
 import { UserEntity } from './user.entity';
 

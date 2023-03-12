@@ -1,4 +1,4 @@
-import { IPermission, IUser } from 'sharedtypes';
+import { IPermission, IUser } from '@sharedtypes';
 import { IsNotEmpty } from 'class-validator';
 import {
   BaseEntity,
@@ -10,7 +10,6 @@ import {
   UpdateDateColumn,
   JoinTable,
   ManyToMany,
-  AfterInsert,
   AfterUpdate,
   OneToMany,
   Index,
@@ -192,15 +191,15 @@ export class UserEntity extends BaseEntity implements IUser {
 
   async loadOrgUserIds(snapshot_date?: Date): Promise<Array<{ userid: number; oid: number; supervisor_id: number }>> {
     const reqdate = snapshot_date ? snapshot_date : (await UserEntity.getSnapshots())[0];
-    const CACHEKEY = `orgids_${this.id}_${reqdate.toISOString()}`;
+    const CACHEKEY = `orgids_${this.id}_${typeof reqdate === 'string' ? reqdate : reqdate.toISOString()}`;
     const useridjson = await cache.get(CACHEKEY);
     if (useridjson) {
       const userids: Array<{ userid: number; oid: number; csid: number; supervisor_id: number }> = JSON.parse(useridjson as string);
-      logger.debug(`get org userids from cache for ${this.oid} on date ${reqdate.toISOString()}`);
+      logger.debug(`get org userids from cache for ${this.oid} on date ${reqdate}`);
       return userids;
     }
 
-    logger.debug(`get org userids from db for ${this.oid} on date ${reqdate.toISOString()}`);
+    logger.debug(`get org userids from db for ${this.oid} on date ${reqdate}`);
     const userids = await AppDataSource.getRepository(UserEntity).query(
       `
       WITH RECURSIVE cte AS (
@@ -223,7 +222,7 @@ export class UserEntity extends BaseEntity implements IUser {
   async loadOrg(snapshot_date?: Date, groups = ['org:Team']) {
     const userids = await this.loadOrgUserIds(snapshot_date);
     let groupUsers: UserEntity[] = [];
-    const orgUsers = await AppDataSource.getRepository(UserEntity).find({
+    const orgUsers: UserEntity[] = await AppDataSource.getRepository(UserEntity).find({
       where: {
         id: In(userids.map(u => u.userid)),
       },
@@ -245,7 +244,7 @@ export class UserEntity extends BaseEntity implements IUser {
         throw new HttpError(403, `Access to industry(${industry}) data is denied`);
 
       industries.push(industry);
-      const iusers = await AppDataSource.getRepository(UserEntity).find({
+      const iusers: UserEntity[] = await AppDataSource.getRepository(UserEntity).find({
         where: {
           team: industry,
           snapshot_date: MoreThanOrEqual(snapshot_date),
@@ -691,10 +690,6 @@ export class UserEntity extends BaseEntity implements IUser {
     try {
       if (matchedUser.id === currentUser.id) return true;
       if (permissions.findIndex(p => p.startsWith('user.read.all')) !== -1) return true;
-      if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.read.client')) !== -1) return true;
-      if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.read.team')) !== -1) return true;
-      if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.read.capability')) !== -1) return true;
-      if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.read.craft')) !== -1) return true;
       if (permissions.findIndex(p => p.startsWith('user.read.org')) !== -1) {
         let team = orgUsers;
         if (!orgUsers) {
@@ -703,6 +698,18 @@ export class UserEntity extends BaseEntity implements IUser {
         logger.debug(`checking is ${matchedUser.email} is in the org(${team.length}) for ${currentUser.email}`);
         if (team.find(u => u.id === matchedUser.id)) return true;
       }
+      const groups = await UserGroupEntity.GetGroupsForUser(currentUser);
+      let cgroups = groups.filter(g => g.type === 'client' && g.name === matchedUser.account);
+      if (cgroups.length > 0) return true;
+
+      cgroups = groups.filter(g => g.type === 'craft' && g.name === matchedUser.craft);
+      if (cgroups.length > 0) return true;
+
+      cgroups = groups.filter(g => g.type === 'capability' && g.name === matchedUser.capability);
+      if (cgroups.length > 0) return true;
+
+      cgroups = groups.filter(g => g.type === 'industry' && g.name === matchedUser.team);
+      if (cgroups.length > 0) return true;
     } catch (ex) {
       console.error(ex);
     }
@@ -710,19 +717,31 @@ export class UserEntity extends BaseEntity implements IUser {
   }
 
   static async canWrite(currentUser: UserEntity, matchedUser: UserEntity, permissions: string[], orgUsers?: UserEntity[]): Promise<boolean> {
-    if (matchedUser.id === currentUser.id) return true;
-    if (permissions.findIndex(p => p.startsWith('user.write.all')) !== -1) return true;
-    if (matchedUser.account === currentUser.account && permissions.findIndex(p => p.startsWith('user.write.client')) !== -1) return true;
-    if (matchedUser.team === currentUser.team && permissions.findIndex(p => p.startsWith('user.write.team')) !== -1) return true;
-    if (matchedUser.capability === currentUser.capability && permissions.findIndex(p => p.startsWith('user.write.capability')) !== -1) return true;
-    if (matchedUser.craft === currentUser.craft && permissions.findIndex(p => p.startsWith('user.write.craft')) !== -1) return true;
-    if (permissions.findIndex(p => p.startsWith('user.write.org')) !== -1) {
-      let team = orgUsers;
-      if (!orgUsers) {
-        team = (await currentUser.loadOrg()).users;
+    try {
+      if (matchedUser.id === currentUser.id) return true;
+      if (permissions.findIndex(p => p.startsWith('user.write.all')) !== -1) return true;
+      if (permissions.findIndex(p => p.startsWith('user.write.org')) !== -1) {
+        let team = orgUsers;
+        if (!orgUsers) {
+          team = (await currentUser.loadOrg()).users;
+        }
+        logger.debug(`checking is ${matchedUser.email} is in the org(${team.length}) for ${currentUser.email}`);
+        if (team.find(u => u.id === matchedUser.id)) return true;
       }
-      logger.debug(`checking is ${matchedUser.email} is in the org for ${currentUser.email}`);
-      if (team.findIndex(u => u.id === matchedUser.id) !== -1) return true;
+      const groups = await UserGroupEntity.GetGroupsForUser(currentUser);
+      let cgroups = groups.filter(g => g.type === 'client' && g.name === matchedUser.account);
+      if (cgroups.length > 0) return true;
+
+      cgroups = groups.filter(g => g.type === 'craft' && g.name === matchedUser.craft);
+      if (cgroups.length > 0) return true;
+
+      cgroups = groups.filter(g => g.type === 'capability' && g.name === matchedUser.capability);
+      if (cgroups.length > 0) return true;
+
+      cgroups = groups.filter(g => g.type === 'industry' && g.name === matchedUser.team);
+      if (cgroups.length > 0) return true;
+    } catch (ex) {
+      console.error(ex);
     }
     return false;
   }

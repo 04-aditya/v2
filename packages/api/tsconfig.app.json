@@ -33,7 +33,7 @@
       "@routes/*": ["routes/*"],
       "@services/*": ["services/*"],
       "@utils/*": ["utils/*"],
-      "sharedtypes": ["../../shared/types/src/index.ts"]
+      "@sharedtypes": ["../../shared/types/src/index.ts"]
     }
   },
   "exclude": ["jest.config.ts", "**/*.spec.ts", "**/*.test.ts"],

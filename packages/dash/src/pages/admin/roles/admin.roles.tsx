@@ -16,6 +16,8 @@ import { usePermissions } from '@/api/permissions';
 import { RoleNamesRenderer } from '@/components/RolesRenderer';
 import { checkboxSelection, headerCheckboxSelection } from '@/components/checkboxSelection';
 import { MenuProps } from '@/components/MenuProps';
+import { PageContainer } from '@/components/PageContainer';
+import { PageHeader } from '@/components/PageHeader';
 
 
 /* eslint-disable-next-line */
@@ -159,9 +161,8 @@ export function AdminRoles(props: AdminRolesProps) {
   }, []);
 
   return (
-    <Box sx={{p:1}}>
-      <Typography variant='h4'>Roles</Typography>
-      <hr/>
+    <PageContainer>
+      <PageHeader title='Roles'/>
       <Stack direction={'row'} justifyContent='space-between' sx={{py:1}}>
         <Button variant='outlined' disabled={selectedRoles.length===0} onClick={console.log} size='small'>Change Parent</Button>
         <Button variant='outlined' disabled={selectedRoles.length===0} onClick={console.log} size='small'>Delete Selected</Button>
@@ -183,7 +184,7 @@ export function AdminRoles(props: AdminRolesProps) {
         >
         </AgGridReact>
       </Box>
-    </Box>
+    </PageContainer>
   );
 }
 
