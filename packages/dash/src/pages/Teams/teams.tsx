@@ -1,32 +1,21 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { IUser, IUserGroup } from 'sharedtypes';
-import BasicUserCard, { BasicUserCardTooltip } from '@/components/BasicUserCard';
-import { appstateDispatch } from '@/hooks/useAppState';
-import { Accordion, AccordionDetails, AccordionSummary, Autocomplete, Box, FormControlLabel, FormGroup, Switch, Tab, Tabs, Typography } from '@mui/material';
-import styles from './teams.module.scss';
+import React, { useMemo, useState } from 'react';
+import { IUser } from 'sharedtypes';
+import { Box, Tab, Tabs } from '@mui/material';
 import { useUser, useUserDataKeys, useUserTeam } from '@/api/users';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Row } from '@/components/Row';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { useNavigate } from 'react-router-dom';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import 'ag-grid-enterprise';
-import { AgGridColumnGroupProps, AgGridColumnProps, AgGridReact } from 'ag-grid-react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { ColDef, GetContextMenuItemsParams, MenuItemDef, RowNode, SideBarDef } from 'ag-grid-enterprise';
-import { displayNotification } from '@/hooks/useNotificationState';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 import { ColumnVisibleEvent } from 'ag-grid-community';
 import { PageContainer } from '@/components/PageContainer';
 import { GroupSelect } from '../../components/GroupSelect';
 import { UserGrid } from '@/components/UserGrid';
+import { displayNotification } from '@/hooks/useNotificationState';
 
 /* eslint-disable-next-line */
 export interface TeamsProps {}
@@ -137,7 +126,7 @@ export function Teams(_props: TeamsProps) {
           <FileUploadButton buttonContent={'Upload Data'} title='Upload Additional Data from excel' onUpload={onUserDataUpload} variant='outlined' />
         </Row>
         <Row spacing={1}>
-          <UserGrid users={teamMembers} custom_details={visibleDataKeys} onColumnVisible={onColumnVisible}/>
+          <UserGrid users={teamMembers} custom_details={datakeys} onColumnVisible={onColumnVisible}/>
         </Row>
       </TabPanel>
   </PageContainer>);

@@ -90,9 +90,9 @@ export class UsersController {
   }
   @Get('/datakeys')
   @OpenAPI({ summary: 'Get all allowed keys for user data' })
-  async getDataKeys() {
+  async getDataKeys(@CurrentUser() currentUser: UserEntity) {
     const result = new APIResponse<string[]>();
-    result.data = await UserDataEntity.getCustomUserDataKeys();
+    result.data = await UserDataEntity.getCustomUserDataKeys(currentUser.id);
     return result;
   }
 
@@ -208,7 +208,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
 `,
   })
   async uploadData(@UploadedFile('file') file: any, @Req() req: RequestWithUser) {
-    const writePermissions = req.permissions.filter(p => p.startsWith('user.write'));
+    const writePermissions = req.permissions.filter(p => p.startsWith('user.write.group.custom'));
     if (writePermissions.length === 0) throw new ForbiddenError('Insufficient permissions.');
 
     const AZURE_STORAGE_CONNECTION_STRING = process.env.AZCONNSTR;
@@ -265,7 +265,11 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       logger.debug(JSON.stringify(headers));
       logger.info(`File contains: ${worksheet.rowCount} rows`);
       updater(`processing: ${worksheet.rowCount} rows of user data`);
-      const { users: teamMembers } = await currentuser.loadOrg(currentuser.snapshot_date);
+      const groups = await UserGroupEntity.GetGroupsForUser(currentuser);
+      const { users: teamMembers } = await currentuser.loadOrg(
+        currentuser.snapshot_date,
+        groups.map(g => g.type + ':' + g.name),
+      );
       let updatedCount = 0;
       const errors: string[] = [];
       for await (const values of this.getUserDataValues(worksheet, headers)) {
@@ -278,7 +282,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
             errors.push(error_message);
             continue;
           }
-          const data = await UserDataEntity.Add(user.id, 'c-' + values.key, values.value, values.timestamp);
+          const data = await UserDataEntity.Add(user.id, `u-${currentuser.id}:` + values.key, values.value, values.timestamp);
           if (updatedCount === 1) {
             logger.debug(JSON.stringify(data.toJSON()));
           }
@@ -390,11 +394,12 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       const accountStats = clients.map(c => pdastats.account[c]).filter(s => s !== undefined);
       const teamStats = industries.map(c => pdastats.team[c]).filter(s => s !== undefined);
       result.data = [];
+      const canReadPSStats = currentUser.career_stage.startsWith('VP') || currentUser.career_stage.startsWith('Executive');
 
       const countStat = {
         name: 'Count',
         value: groupStats.totalCount,
-        all: pdastats.all.totalCount,
+        all: !canReadPSStats ? undefined : pdastats.all.totalCount,
         capability: cpStats.reduce((s, c) => s + c.totalCount, 0),
         industry: teamStats.reduce((s, c) => s + c.totalCount, 0),
         account: accountStats.reduce((s, c) => s + c.totalCount, 0),
@@ -404,7 +409,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       result.data.push({
         name: 'Directs',
         value: groupUsers.filter(u => u.supervisor_id === matchedUser.oid).length,
-        all: Math.trunc(pdastats.all.avgDirectsCount * 100) / 100,
+        all: !canReadPSStats ? undefined : Math.trunc(pdastats.all.avgDirectsCount * 100) / 100,
         capability: cpStats.length > 0 ? Math.trunc((cpStats.reduce((s, c) => s + c.avgDirectsCount, 0) / cpStats.length) * 100) / 100 : undefined,
         industry:
           teamStats.length > 0 ? Math.trunc((teamStats.reduce((s, c) => s + c.avgDirectsCount, 0) / teamStats.length) * 100) / 100 : undefined,
@@ -418,7 +423,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       result.data.push({
         name: 'Leverage',
         value: groupStats.cs_map,
-        all: pdastats.all.cs_map,
+        all: !canReadPSStats ? undefined : pdastats.all.cs_map,
         // capability: cpStats.cs_map,
         // industry: teamStats.cs_map,
         // account: accountStats.cs_map,
@@ -428,7 +433,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       result.data.push({
         name: 'FTE %',
         value: groupStats.fteCount / groupUsers.length,
-        all: pdastats.all.fteCount / pdastats.all.totalCount,
+        all: !canReadPSStats ? undefined : pdastats.all.fteCount / pdastats.all.totalCount,
         capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.fteCount, 0) / countStat.capability : undefined,
         industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.fteCount, 0) / countStat.industry : undefined,
         account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.fteCount, 0) / countStat.account : undefined,
@@ -437,7 +442,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       result.data.push({
         name: 'Diversity %',
         value: groupStats.diversityCount / groupUsers.length,
-        all: pdastats.all.diversityCount / pdastats.all.totalCount,
+        all: !canReadPSStats ? undefined : pdastats.all.diversityCount / pdastats.all.totalCount,
         capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.capability : undefined,
         industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.industry : undefined,
         account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.account : undefined,
@@ -446,7 +451,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       result.data.push({
         name: 'PS Exp',
         value: groupStats.totalExp / groupUsers.length,
-        all: pdastats.all.totalExp / pdastats.all.totalCount,
+        all: !canReadPSStats ? undefined : pdastats.all.totalExp / pdastats.all.totalCount,
         capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.totalExp, 0) / countStat.capability : undefined,
         industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.totalExp, 0) / countStat.industry : undefined,
         account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.totalExp, 0) / countStat.account : undefined,
@@ -455,7 +460,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       result.data.push({
         name: 'TiT Exp',
         value: groupStats.titleExp / groupUsers.length,
-        all: pdastats.all.titleExp / pdastats.all.totalCount,
+        all: !canReadPSStats ? undefined : pdastats.all.titleExp / pdastats.all.totalCount,
         capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.titleExp, 0) / countStat.capability : undefined,
         industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.titleExp, 0) / countStat.industry : undefined,
         account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.titleExp, 0) / countStat.account : undefined,

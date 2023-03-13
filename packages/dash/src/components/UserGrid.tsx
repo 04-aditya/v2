@@ -188,7 +188,8 @@ export function UserGrid(props: UserGridProps) {
 
     const coldefs = [...standardColumns];
     for(const key of props.custom_details) {
-      coldefs.push({field: key, valueGetter: params => {
+      const fparts = key.split(':');
+      coldefs.push({field: fparts[1], valueGetter: params => {
         if (!params.data) return null;
         if (!params.data.custom_details) return null;
         const kpi = params.data.custom_details[`${key}`];

@@ -83,8 +83,10 @@ export class UserDataEntity extends BaseEntity implements IUserData {
     return data;
   }
 
-  static async getCustomUserDataKeys() {
-    const data = await AppDataSource.query(`select distinct(key) from psuserdata where key like 'c-%';`);
+  static async getCustomUserDataKeys(userId?: string | number) {
+    const data = await AppDataSource.query(
+      `select distinct(key) from psuserdata where key like 'c-%'` + (userId ? `OR key like 'u-${userId}%'` : '') + ';',
+    );
     return data.map(d => d.key);
   }
 
@@ -105,6 +107,11 @@ export class UserDataEntity extends BaseEntity implements IUserData {
         result[d.key] = d.value;
       }
     });
+    // if (keys.includes('c-xe_tga') && data.length > 0) {
+    //   console.log(query);
+    //   console.log(result);
+    //   console.log(data);
+    // }
     return result;
   }
 }

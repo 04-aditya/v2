@@ -17,7 +17,7 @@ const defaultPermissions = [
 
   { name: 'user.write.self.custom', description: 'permission to write custom userdetails data of self' },
   { name: 'user.write.org.custom', description: 'permission to write custom userdetails data for org users' },
-  { name: 'user.write.org.custom', description: 'permission to write all userdetails data of their org' },
+  { name: 'user.write.group.custom', description: 'permission to write custom userdetails data of uers in their group' },
 
   { name: 'user.write.all.all', description: 'permission to write all userdetails data of all' },
 
@@ -37,7 +37,7 @@ const defaultRoles = [
   {
     name: 'default',
     description: 'default role. every new user will start with this role.',
-    permissions: ['user.read.self.basic', 'user.read.org.basic', 'permissions.read.self', 'roles.read.self'],
+    permissions: ['user.read.self.basic', 'user.read.org.basic', 'user.write.group.custom', 'permissions.read.self', 'roles.read.self'],
   },
   {
     name: 'user.admin',
