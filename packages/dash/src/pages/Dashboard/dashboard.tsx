@@ -251,7 +251,7 @@ export function Dashboard() {
       <TabPanel value={tabValue} index={4} idprefix={'Finance'}>
           <Row flexWrap={'wrap'} sx={{my:1}} justifyContent='flex-start'>
             <StatWidget title='Billability' sx={{m:0.5}} >{'N/A'}</StatWidget>
-            <StatWidget title='Yeild' sx={{m:0.5}} >{'N/A'}</StatWidget>
+            <StatWidget title='Yield' sx={{m:0.5}} >{'N/A'}</StatWidget>
             <StatWidget title='Sales Time' sx={{m:0.5}} >{'N/A'}</StatWidget>
           </Row>
       </TabPanel>

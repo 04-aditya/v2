@@ -38,10 +38,11 @@ class App {
       .then(async () => {
         await bootstrapDB();
         this.app.listen(this.port, () => {
-          logger.info(`==================================`);
-          logger.info(`======= ENV: ${this.env} =========`);
-          logger.info(`🚀 PSNI listening on the port ${this.port}`);
-          logger.info(`==================================`);
+          logger.debug(`==================================`);
+          logger.debug(`======= ENV: ${this.env} =========`);
+          logger.debug(`🚀 PSNI listening on the port ${this.port}`);
+          logger.debug(`==================================`);
+          logger.info(`Started PSNI server at ${new Date().toISOString()}`);
         });
       })
       .catch(error => {

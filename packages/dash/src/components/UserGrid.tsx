@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { IUser } from "sharedtypes";
 import { Box } from "@mui/material";
-import { ColDef, ColumnVisibleEvent, SideBarDef, GetContextMenuItemsParams, MenuItemDef, RowNode } from "ag-grid-community";
+import { ColDef, ColumnVisibleEvent, SideBarDef, GetContextMenuItemsParams, MenuItemDef, RowNode, ColGroupDef, IRowNode } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useNavigate } from "react-router-dom";
 import { BasicUserCardTooltip } from "./BasicUserCard";
 import { RegionRenderer } from "./RegionRenderer";
+import 'ag-grid-enterprise';
+import { isDate, parseISO } from "date-fns";
 
 const standardColumns: ColDef<IUser>[] = [
   { field: 'csid', enableRowGroup: false, tooltipField: 'csid',},
@@ -23,14 +25,14 @@ const standardColumns: ColDef<IUser>[] = [
 
 export interface UserGridProps {
   users: IUser[];
-  onColumnVisible: (event: ColumnVisibleEvent<IUser>) => void;
+  onColumnVisible?: (event: ColumnVisibleEvent<IUser>) => void;
   custom_details?: string[];
 }
 export function UserGrid(props: UserGridProps) {
   const navigate = useNavigate();
   const gridStyle = useMemo(() => ({height: '75vh', width: '100%'}), []);
   const gridRef = useRef<AgGridReact<IUser>>(null);
-  const [columnDefs, setColumnDefs] = useState<ColDef<IUser>[]>(standardColumns);
+  const [columnDefs, setColumnDefs] = useState<(ColDef<IUser> | ColGroupDef)[]>(standardColumns);
   // possible options: 'never', 'always', 'onlyWhenGrouping'
   const rowGroupPanelShow = 'always';
   // display each row grouping in a separate group column
@@ -56,6 +58,37 @@ export function UserGrid(props: UserGridProps) {
       // cellRendererParams: {
       //   suppressCount: true,
       // },
+    };
+  }, []);
+  const columnTypes = useMemo<{[key: string]: ColDef;}>(() => {
+    return {
+      numberColumn: { width: 130, filter: 'agNumberColumnFilter' },
+      nonEditableColumn: { editable: false },
+      dateColumn: {
+        // specify we want to use the date filter
+        filter: 'agDateColumnFilter',
+        // add extra parameters for the date filter
+        filterParams: {
+          // provide comparator function
+          comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
+            // In the example application, dates are stored as dd/mm/yyyy
+            // We create a Date object for comparison against the filter date
+            const dateParts = cellValue.split('/');
+            const day = Number(dateParts[0]);
+            const month = Number(dateParts[1]) - 1;
+            const year = Number(dateParts[2]);
+            const cellDate = new Date(year, month, day);
+            // Now that both parameters are Date objects, we can compare
+            if (cellDate < filterLocalDateAtMidnight) {
+              return -1;
+            } else if (cellDate > filterLocalDateAtMidnight) {
+              return 1;
+            } else {
+              return 0;
+            }
+          },
+        },
+      },
     };
   }, []);
 
@@ -126,7 +159,7 @@ export function UserGrid(props: UserGridProps) {
         name: `Email ${params.node.allChildrenCount} people in this group`,
         action: () => {
           if (!params.node) return;
-          const emails = params.node.allLeafChildren.map((node:RowNode<IUser>) => node.data?.email).join(';');
+          const emails = params.node.allLeafChildren.map((value:IRowNode<IUser>) => value.data?.email).join(';');
           window.open(`mailto://${emails}`);
         },
         icon: "<img src='/assets/icons8-mail-24.png' width='16'/>",
@@ -180,7 +213,7 @@ export function UserGrid(props: UserGridProps) {
       }
     }
     return menuItems;
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (!props.custom_details)
@@ -189,17 +222,39 @@ export function UserGrid(props: UserGridProps) {
     const coldefs = [...standardColumns];
     for(const key of props.custom_details) {
       const fparts = key.split(':');
-      coldefs.push({field: fparts[1], valueGetter: params => {
-        if (!params.data) return null;
-        if (!params.data.custom_details) return null;
-        const kpi = params.data.custom_details[`${key}`];
-        if (!kpi) return null;
-        return kpi.value;
-      },
-      enableRowGroup: true, colId: `details-${key}`, initialHide: true });
+      const sample = props.users.find(u => u.custom_details && u.custom_details[key]);
+      if (sample?.custom_details && sample?.custom_details[key]?.details) {
+        const children: ColDef[] = [];
+        Object.keys(sample.custom_details[key].details).forEach(k => {
+          // const val:any = sample.custom_details?sample.custom_details[key].details[k]:undefined;
+          const isdate = k.toLowerCase().indexOf('date')!==-1;
+          children.push({
+            field: k,
+            valueGetter: params => {
+              if (!params.data) return null;
+              if (!params.data.custom_details) return null;
+              const kpi = params.data.custom_details[`${key}`];
+              if (!kpi || !kpi.details[k]) return '';
+              return isdate? parseISO(kpi.details[k]) : kpi.details[k];
+            },
+            type: isdate ? ['dateColumn', 'nonEditableColumn'] : ['nonEditableColumn'],
+            enableRowGroup: true, colId: `details-${key}-${k}`
+          });
+        });
+        coldefs.push({field: fparts[1], colId: `details-${key}`, children, initialHide: true } as ColGroupDef);
+      } else {
+        coldefs.push({field: fparts[1], valueGetter: params => {
+          if (!params.data) return null;
+          if (!params.data.custom_details) return null;
+          const kpi = params.data.custom_details[`${key}`];
+          if (!kpi) return '';
+          return kpi.value;
+        },
+        enableRowGroup: true, colId: `details-${key}`, initialHide: true });
+      }
     }
     setColumnDefs(coldefs);
-  },[props.custom_details]);
+  },[props.custom_details, props.users]);
 
   const onColumnVisible = (event: ColumnVisibleEvent<IUser>) => {
     if (props.onColumnVisible) {
@@ -211,15 +266,17 @@ export function UserGrid(props: UserGridProps) {
   <Box className="ag-theme-alpine" sx={gridStyle}>
     <AgGridReact<IUser> ref={gridRef}
       statusBar={statusBar}
-      rowData={props.users}
+      columnTypes={columnTypes}
       columnDefs={columnDefs}
       defaultColDef={defaultColDef}
       autoGroupColumnDef={autoGroupColumnDef}
 
-      animateRows={true}
+      rowData={props.users}
 
+      animateRows={true}
       rowSelection={'multiple'}
       rowGroupPanelShow={rowGroupPanelShow}
+      enableRangeSelection={true}
 
       groupSelectsChildren={true}
       groupDisplayType={groupDisplayType}
@@ -228,7 +285,6 @@ export function UserGrid(props: UserGridProps) {
       tooltipHideDelay={2000}
       sideBar={sideBar}
 
-      enableRangeSelection={true}
       allowContextMenuWithControlKey={true}
       getContextMenuItems={getContextMenuItems}
 

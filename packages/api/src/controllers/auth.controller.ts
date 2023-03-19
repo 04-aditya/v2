@@ -23,8 +23,7 @@ import sgMail from '@sendgrid/mail';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS } from '@config';
 import { Like } from 'typeorm';
-import { UserRoleEntity } from '@/entities/userrole.entity';
-import { IUserRole } from '@/../../shared/types/src';
+import { IUserRole } from '@sharedtypes';
 
 const REFRESHTOKENCOOKIE = 'rt';
 
@@ -78,8 +77,14 @@ export class AuthController {
       logger.info('skipped mail');
       logger.info(msg);
     } else {
-      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-      sgMail.send(msg);
+      try {
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        sgMail.send(msg);
+      } catch (ex) {
+        logger.error('Unable to send mail');
+        logger.error(ex.toString());
+        throw new HttpException(500, 'Unable to send mail');
+      }
     }
 
     await user.save();
@@ -89,7 +94,7 @@ export class AuthController {
 
   @Get('/refreshtoken')
   async refreshToken(@Res() res: Response, @CookieParam(REFRESHTOKENCOOKIE) cRT?: string) {
-    logger.info('cookie: ' + cRT);
+    logger.debug('cookie: ' + cRT);
     const userRepo = AppDataSource.getRepository(UserEntity);
     if (!cRT) throw new HttpException(401, 'Unauthenticated');
 
@@ -139,7 +144,7 @@ export class AuthController {
     for await (const role of foundUser.roles) {
       roleMap.set(role.name, { id: role.id, name: role.name, permissions: role.permissions });
       const includedRoles = await role.loadChildren();
-      includedRoles.forEach(prole => {
+      includedRoles.forEach((prole: IUserRole) => {
         roleMap.set(prole.name, { id: prole.id, name: prole.name, permissions: prole.permissions });
       });
     }

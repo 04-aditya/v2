@@ -1,6 +1,8 @@
 import React from 'react';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import styles from './App.module.scss';
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import { Route, Routes, Link, RouteMatch } from 'react-router-dom';
 import AppLayout from './AppLayout';

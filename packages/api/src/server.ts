@@ -8,6 +8,7 @@ import { QApiController } from '@controllers/qapi.controller';
 import { RolesController } from '@controllers/roles.controller';
 import { PermissionsController } from '@controllers/permissions.controller';
 import { UserGroupController } from './controllers/usergroup.controller';
+import { StatsController } from './controllers/stats.controller';
 
 validateEnv();
 
@@ -20,5 +21,6 @@ const app = new App([
   RolesController,
   PermissionsController,
   UserGroupController,
+  StatsController,
 ]);
 app.listen();

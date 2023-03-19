@@ -9,6 +9,7 @@ import { UserPATEntity } from '@/entities/userpat.entity';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import { TeamMemberEntity } from '@/entities/teammember.entity';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
+import { ConfigEntity } from '@/entities/config.entity';
 
 console.log(join(__dirname));
 export const AppDataSource = new DataSource({
@@ -21,7 +22,7 @@ export const AppDataSource = new DataSource({
   synchronize: true,
   poolSize: 10,
   logging: Boolean(process.env.DB_LOG),
-  entities: [UserEntity, UserRoleEntity, PermissionEntity, UserPATEntity, UserDataEntity, TeamMemberEntity, UserGroupEntity],
+  entities: [UserEntity, UserRoleEntity, PermissionEntity, UserPATEntity, UserDataEntity, TeamMemberEntity, UserGroupEntity, ConfigEntity],
   // migrations: [join(__dirname, '../**/*.migration{.ts,.js}')],
   // subscribers: [join(__dirname, '../**/*.subscriber{.ts,.js}')],
   cache: {

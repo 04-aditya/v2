@@ -599,7 +599,7 @@ export class UserEntity extends BaseEntity implements IUser {
     });
 
     let mpcount = 0;
-    for (const [key, value] of supervisor_map) {
+    for (const [, value] of supervisor_map) {
       avgDirectsCount += value.length;
       mpcount++;
     }

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IPermission } from '@/../../shared/types/src';
 import { Box, Button, Chip, IconButton, Typography } from '@mui/material';
-import { AgGridColumnProps, AgGridReact } from 'ag-grid-react';
+import { AgGridReact } from 'ag-grid-react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-import { SelectionChangedEvent } from 'ag-grid-community';
+import { ColDef, SelectionChangedEvent } from 'ag-grid-community';
 import { appstateDispatch } from '@/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/api/permissions';
@@ -26,7 +26,7 @@ export function AdminPerms(props: AdminPermsProps) {
   const {data: permissions, mutation, invalidateCache} = usePermissions();
   const [selectedPerms, setSelectedPerms] = useState<IPermission[]>([]);
   const gridRef = useRef<AgGridReact<IPermission>>();
-  const [columnDefs] = useState<Array<AgGridColumnProps>>([
+  const [columnDefs] = useState<Array<ColDef>>([
       {
         field: 'name', floatingFilter: false, flex:0, editable: true,
         checkboxSelection: checkboxSelection,

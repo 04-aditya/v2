@@ -31,6 +31,8 @@ const defaultPermissions = [
 
   { name: 'usergroup.read.all', description: 'permission to read all usergroup data' },
   { name: 'usergroup.write.all', description: 'permission to write all usergroup data' },
+
+  { name: 'stats.write.all', description: 'permission to write all stat config items data' },
 ];
 
 const defaultRoles = [
@@ -55,7 +57,7 @@ const defaultRoles = [
     name: 'admin',
     description: 'master admin role.',
     includedRoleNames: ['default', 'user.admin', 'usergroup.admin'],
-    permissions: ['roles.read.all', 'roles.write.all', 'permissions.read.all', 'permissions.write.all'],
+    permissions: ['roles.read.all', 'roles.write.all', 'permissions.read.all', 'permissions.write.all', 'stats.write.all'],
   },
 ];
 

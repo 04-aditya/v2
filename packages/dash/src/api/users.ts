@@ -47,12 +47,13 @@ export const useUser = (id : number|string = 'me') => {
 }
 
 
-export const useAllUsers = () => {
+export const useAllUsers = (custom_details_keys: string[]=[],) => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY,'all'];
+  const customkeys = custom_details_keys.sort((a,b) => a.localeCompare(b)).join(',');
+  const keys = [CACHEKEY,'all',customkeys];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${ADMINAPI}/users`);
+    const res = await axios.get(`${ADMINAPI}/users?custom_details=${customkeys}`);
     return res.data.data as IUser[];
   },{
     enabled: !!axios,
@@ -67,9 +68,10 @@ export const useAllUsers = () => {
 export const useUserTeam = (id: number|string = 'me', custom_details_keys: string[]=[], usergroups=['org:all'],) => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY, id, 'team', custom_details_keys.sort((a,b) => a.localeCompare(b)).join(','), usergroups.join(',')];
+  const customkeys = custom_details_keys.sort((a,b) => a.localeCompare(b)).join(',');
+  const keys = [CACHEKEY, id, 'team', customkeys, usergroups.join(',')];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${USERAPI}/${id}/team?custom_details=${custom_details_keys.join(',')}&usergroup=${usergroups.join(',')}`);
+    const res = await axios.get(`${USERAPI}/${id}/team?custom_details=${customkeys}&usergroup=${usergroups.join(',')}`);
     return res.data.data as IUser[];
   },{
     enabled: !!axios,

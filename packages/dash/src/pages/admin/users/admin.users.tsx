@@ -4,17 +4,14 @@ import { Box, Button, TextField, Typography } from '@mui/material';
 import styles from './admin.users.module.scss';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 import 'ag-grid-enterprise';
-import { AgGridColumnProps, AgGridReact } from 'ag-grid-react';
-
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
+import {AgGridReact } from 'ag-grid-react';
 
 import PivotTableUI from 'react-pivottable/PivotTableUI';
 import 'react-pivottable/pivottable.css';
 import TableRenderers from 'react-pivottable/TableRenderers';
 import Plot from 'react-plotly.js';
 import createPlotlyRenderers from 'react-pivottable/PlotlyRenderers';
-import { SelectionChangedEvent } from 'ag-grid-community';
+import { ColDef, ColGroupDef, SelectionChangedEvent } from 'ag-grid-community';
 import { displayNotification } from '@/hooks/useNotificationState';
 import { appstateDispatch } from '@/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -62,7 +59,7 @@ export function AdminUsers(props: AdminUsersProps) {
   const [selectedUsers, setSelectedUsers] = useState<IUser[]>([]);
   const [pstate, setPState] = useState<any>({});
   const gridRef = useRef<AgGridReact<IUser>>();
-  const [columnDefs] = useState<Array<AgGridColumnProps>>([
+  const [columnDefs] = useState<Array<ColDef|ColGroupDef>>([
       {
         field: 'oid', floatingFilter: false, flex:0,
         checkboxSelection: checkboxSelection,

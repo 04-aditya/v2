@@ -9,3 +9,5 @@ export * from './interfaces/teammember.interface';
 export * from './interfaces/usergroup.interface';
 export * from './interfaces/client.interface';
 export * from './interfaces/industry.interface';
+export * from './interfaces/stats.interface';
+export * from './interfaces/config.interface';
