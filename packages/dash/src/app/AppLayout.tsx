@@ -147,7 +147,7 @@ const AppLayout = ()=>{
       <Outlet/>
     </section>
   </div>
-  <footer><Typography variant='subtitle2' sx={{color:'#555'}}>Buit on <em>{process.env['NX_BUILD_DATE']}</em>&nbsp; &nbsp; Version: <em>{process.env['NX_BUILD_VERSION']}</em></Typography> </footer>
+  <footer><Typography variant='subtitle2' sx={{color:'#555'}}>Built on <em>{process.env['NX_BUILD_DATE']}</em>&nbsp; &nbsp; Version: <em>{process.env['NX_BUILD_VERSION']}</em></Typography> </footer>
   </ThemeProvider>
 }
 

@@ -1,4 +1,4 @@
-import { IConfigItem, IPermission } from '@sharedtypes';
+import { ConfigType, IConfigItem } from '@sharedtypes';
 import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity({ name: 'config' })
@@ -10,8 +10,13 @@ export class ConfigEntity extends BaseEntity implements IConfigItem {
   @Column({ unique: true })
   name: string;
 
-  @Column({ nullable: false })
-  type: string;
+  @Column({
+    type: 'enum',
+    enum: ConfigType,
+    default: ConfigType.JSON,
+    nullable: false,
+  })
+  type: ConfigType;
 
   @Column({ type: 'jsonb', default: {} })
   details: Record<string, any>;

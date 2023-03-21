@@ -1,19 +1,21 @@
 import React, { useMemo, useState } from 'react';
-import { IUser } from 'sharedtypes';
-import { Box, Tab, Tabs } from '@mui/material';
-import { useUser, useUserDataKeys, useUserTeam } from '@/api/users';
 import { useParams } from 'react-router-dom';
-import { Row } from '@/components/Row';
-import { TabPanel, a11yProps } from '@/components/TabPanel';
-import 'ag-grid-enterprise';
+import { IUser } from 'sharedtypes';
+import { useUser, useUserDataKeys, useUserTeam } from '@/api/users';
 
+import 'ag-grid-enterprise';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
+import { ColumnVisibleEvent } from 'ag-grid-community';
+
+import { Box, Tab, Tabs } from '@mui/material';
+
+import { Row } from '@/components/Row';
+import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
-import { ColumnVisibleEvent } from 'ag-grid-community';
 import { PageContainer } from '@/components/PageContainer';
-import { GroupSelect } from '../../components/GroupSelect';
+import { GroupSelect } from '@/components/GroupSelect';
 import { UserGrid } from '@/components/UserGrid';
 import { displayNotification } from '@/hooks/useNotificationState';
 

@@ -24,6 +24,7 @@ import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS } from '@config';
 import { Like } from 'typeorm';
 import { IUserRole } from '@sharedtypes';
+import { UserDataEntity } from '@/entities/userdata.entity';
 
 const REFRESHTOKENCOOKIE = 'rt';
 
@@ -114,6 +115,7 @@ export class AuthController {
       } catch (err) {
         throw new HttpError(401);
       }
+      throw new ForbiddenError();
     }
     const existingTokens = (foundUser?.refreshTokens || '').split(',');
     const newRefreshTokenArray = existingTokens.filter(rt => rt !== cRT);
@@ -205,6 +207,7 @@ export class AuthController {
 
     // Saving refreshToken with current user
     user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
+    await UserDataEntity.Add(user.id, 'c-:login', { value: new Date().toISOString() }, new Date());
     await user.save();
     // Creates Secure Cookie with refresh token
     res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });

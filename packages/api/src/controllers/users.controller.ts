@@ -23,7 +23,7 @@ import {
 import { OpenAPI } from 'routing-controllers-openapi';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
-import { IUser, APIResponse, IPermission, IUserPAT, IUserData } from '@sharedtypes';
+import { IUser, APIResponse, IPermission, IUserPAT, IUserData, IStatType } from '@sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserPATEntity } from '@/entities/userpat.entity';
@@ -37,20 +37,14 @@ import AsyncTask, { stringFn } from '@/utils/asyncTask';
 import Excel from 'exceljs';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
 
-interface IStatType {
-  group: string;
-  name: string;
-  type: string;
-}
-
 const StatTypes: ReadonlyArray<IStatType> = [
-  { group: 'people', name: 'Count', type: 'number' },
-  { group: 'people', name: 'Directs', type: 'number' },
-  { group: 'people', name: 'Leverage', type: 'array' },
-  { group: 'people', name: 'FTE %', type: 'number' },
-  { group: 'people', name: 'Diversity %', type: 'number' },
-  { group: 'people', name: 'PS Exp', type: 'number' },
-  { group: 'people', name: 'TiT Exp', type: 'number' },
+  { group: 'people', name: 'Count', type: 'number', expression: '', aggregation: 'count' },
+  { group: 'people', name: 'Directs', type: 'number', expression: '', aggregation: 'count' },
+  { group: 'people', name: 'Leverage', type: 'array', expression: '$..career_stage', aggregation: 'count' },
+  { group: 'people', name: 'FTE %', type: 'number', expression: '', aggregation: 'percent' },
+  { group: 'people', name: 'Diversity %', type: 'number', expression: '', aggregation: 'percent' },
+  { group: 'people', name: 'PS Exp', type: 'number', expression: '', aggregation: 'avg' },
+  { group: 'people', name: 'TiT Exp', type: 'number', expression: '', aggregation: 'avg' },
 ] as const;
 
 @JsonController('/api/users')

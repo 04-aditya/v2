@@ -1,23 +1,24 @@
-import { Box, Button, Divider, FormControl, FormControlLabel, FormHelperText, Grid, Input, InputLabel, Tab, Tabs, TextField, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Divider, FormControl, FormControlLabel, FormHelperText, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, Tab, Tabs, TextField, Typography } from '@mui/material'
 import * as React from 'react'
 import { PageHeader } from '@/components/PageHeader';
 import { PageContainer } from '@/components/PageContainer';
 import { useStatTypes } from '@/api/stats';
 import ButtonPopover from '@/components/ButtonPopover';
 import { Row } from '@/components/Row';
-import { IStatType } from 'sharedtypes';
+import { IStatType, IUser } from 'sharedtypes';
 import { Stack } from '@mui/system';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import * as jp from 'jsonpath';
 import { useAllUsers } from '@/api/users';
 import 'ag-grid-enterprise';
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef } from 'ag-grid-community';
 
 import evaluate from 'static-eval';
 import * as esprima from 'esprima';
+import { ColDef } from 'ag-grid-enterprise';
 
 export default function AdminStats() {
+  const {data:users, isLoading} = useAllUsers();
   const {data: statTypes, invalidateCache, mutation} = useStatTypes();
   const [stat, setStat] = React.useState<IStatType>({} as IStatType);
 
@@ -34,23 +35,25 @@ export default function AdminStats() {
     <PageHeader title='Manage Stat Types' subtitle='This page is under construction' />
     <Row spacing={1}>
       <ButtonPopover buttonContent='Add' variant='contained'>
-        <StatEditor value={stat} onChange={handleOnStatChange}/>
+        { isLoading ? <CircularProgress/> : <StatEditor users={users||[]} value={stat} onChange={handleOnStatChange}/>}
       </ButtonPopover>
     </Row>
   </PageContainer>
 }
-function StatEditor(props: {value:IStatType, onChange:(newValue:IStatType)=>void}) {
-  const {data:users, isLoading} = useAllUsers();
+function StatEditor(props: {users:IUser[], value:IStatType, onChange:(newValue:IStatType)=>void}) {
   const [tabValue, setTabValue] = React.useState(0);
   const [rowData, setRowData] = React.useState<Array<any>>([]);
   const gridStyle = React.useMemo(() => ({height: 300, width: '100%'}), []);
   const [columnDefs, setColumnDefs] = React.useState<ColDef[]>([]);
 
   const [fieldList, setFieldList] = React.useState<string>('');
+  const [statGroup, setStatGroup] = React.useState<string>('');
   const [statName, setStatName] = React.useState<string>('');
   const [statType, setStatType] = React.useState<string>('');
   const [statExp, setStatExp] = React.useState<string>('*');
   const [statDesc, setStatDesc] = React.useState<string>();
+  const [statAgg, setStatAgg] = React.useState('count');
+  const [computedValues, setComputedValues] = React.useState<any>();
 
   const defaultColDef = React.useMemo<ColDef>(() => {
     return {
@@ -68,26 +71,56 @@ function StatEditor(props: {value:IStatType, onChange:(newValue:IStatType)=>void
   }, []);
 
   React.useEffect(()=>{
+    setStatGroup(props.value.group);
     setStatName(props.value.name);
     setStatType(props.value.type);
     setStatExp(props.value.expression);
+    setStatAgg(props.value.aggregation)
     setStatDesc(props.value.description);
   }, [props.value]);
 
-  React.useEffect(()=>{
-    if (isLoading || !users || statExp==='') return;
-    setFieldList(Object.keys(users[0]).join(', '));
+  const updateSample = ()=>{
+    if (!props.users || statExp==='') return;
+    setFieldList(Object.keys(props.users[0]).join(', '));
 
 
     try {
       const colDefs = new Array<ColDef>();
       // const ast = esprima.parseScript(statExp).body[0].expression;
       // evaluate(ast,{})
-      const data = jp.query(users, '*');
+      const data = jp.query(props.users, statExp);
       const datatype = typeof data[0];
       console.log(datatype);
+      console.log(data.length);
+      if (statAgg==='count') {
+        setComputedValues({value: data.length});
+      } else if (statAgg === 'percent') {
+        setComputedValues({value: data.length/props.users.length});
+      }
       if (datatype==='string' || datatype==='number') {
         colDefs.push({valueGetter: `data`, headerName: statExp});
+        if (datatype==='string') {
+          if (statAgg.startsWith('distinct') || statAgg.startsWith('group')) {
+            const distinctSet = new Set<string>([...data]);
+            const distinctValues: string[] = []
+            distinctSet.forEach(val=>distinctValues.push(val));
+            if (statAgg==='group-count') {
+              setComputedValues({value: [...distinctValues].map((val:string)=>({name: val, count: data.filter((d:string)=>d===val).length}))});
+            } else if (statAgg==='distinct') {
+              setComputedValues({value: [...distinctValues]});
+            }
+          }
+        } else if (datatype === 'number') {
+          if (statAgg.startsWith('sum')) {
+            setComputedValues({value: data.reduce((a:number, b:number)=>a+b, 0)});
+          } else if (statAgg.startsWith('avg')) {
+            setComputedValues({value: data.reduce((a:number, b:number)=>a+b, 0)/data.length});
+          } else if (statAgg.startsWith('min')) {
+            setComputedValues({value: Math.min(...data)});
+          } else if (statAgg.startsWith('max')) {
+            setComputedValues({value: Math.max(...data)});
+          }
+        }
       } else {
         const keys = Object.keys(data[0])
         console.log(keys);
@@ -110,7 +143,11 @@ function StatEditor(props: {value:IStatType, onChange:(newValue:IStatType)=>void
     } catch (ex) {
       console.error(ex);
     }
-  }, [users, isLoading, statExp]);
+  };
+
+  const handleStatAggChange = (event: SelectChangeEvent) => {
+    setStatAgg(event.target.value);
+  };
 
   const handleStatNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setStatName(event.target.value);
@@ -119,7 +156,7 @@ function StatEditor(props: {value:IStatType, onChange:(newValue:IStatType)=>void
     setStatType(event.target.value);
   }
   const handleStatExpChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setStatExp(event.target.value);
+    setStatExp(event.target.value.trim());
   }
   const handleStatDescChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setStatDesc(event.target.value);
@@ -130,9 +167,11 @@ function StatEditor(props: {value:IStatType, onChange:(newValue:IStatType)=>void
 
   const onSubmit = () => {
     props.onChange({
+      group: statGroup,
       name: statName,
       type: statType,
       expression: statExp,
+      aggregation: statAgg,
       description: statDesc
     })
   }
@@ -144,26 +183,45 @@ function StatEditor(props: {value:IStatType, onChange:(newValue:IStatType)=>void
     <Grid container spacing={1} sx={{ mt: 1 }}>
       <Grid item xs={6}>
         <Stack spacing={1} sx={{ mt: 1 }} direction={'column'}>
-          <TextField fullWidth size="small"
-            id="stat-name-input"
+          <TextField id="stat-group-input"
+            fullWidth size="small"
+            label="Group"
+            defaultValue="people"
+            value={statName}
+            onChange={handleStatNameChange} />
+          <TextField id="stat-name-input"
+            fullWidth size="small"
             label="Name"
             defaultValue="NewStat"
             value={statName}
             onChange={handleStatNameChange} />
-          <TextField fullWidth size="small"
-            id="stat-type-input"
+          <TextField id="stat-type-input"
+            fullWidth size="small"
             label="type"
             defaultValue="NewStat"
             value={statType}
             onChange={handleStatTypeChange} />
-          <TextField fullWidth size="small"
-            id="stat-exp-input"
+          <TextField id="stat-exp-input"
+            fullWidth size="small"
             label="Expression"
             multiline
-            rows={3}
+            rows={2}
             defaultValue="*"
             value={statExp}
             onChange={handleStatExpChange} />
+          <Select
+            label="Aggregation"
+            value={statAgg}
+            onChange={handleStatAggChange} >
+            <MenuItem value={'count'}>Count</MenuItem>
+            <MenuItem value={'sum'}>Sum</MenuItem>
+            <MenuItem value={'avg'}>Avg</MenuItem>
+            <MenuItem value={'min'}>Min</MenuItem>
+            <MenuItem value={'max'}>Max</MenuItem>
+            <MenuItem value={'percent'}>Percent</MenuItem>
+            <MenuItem value={'distinct'}>Distinct</MenuItem>
+            <MenuItem value={'group-count'}>Group(Count)</MenuItem>
+          </Select>
           <TextField fullWidth size="small"
             id="stat-desc-input"
             label="Description"
@@ -171,10 +229,11 @@ function StatEditor(props: {value:IStatType, onChange:(newValue:IStatType)=>void
             rows={3}
             value={statDesc}
             onChange={handleStatDescChange} />
-            <Divider sx={{my:1}}/>
-            <Row spacing={1} sx={{ justifyContent:'flex-end' }}>
-              <Button onClick={onSubmit}>Add</Button>
-            </Row>
+          <Divider sx={{my:1}}/>
+          <Row spacing={1} sx={{ justifyContent:'flex-end' }}>
+            <Button onClick={updateSample} color='inherit'>Preview</Button>
+            <Button onClick={onSubmit}>Add</Button>
+          </Row>
         </Stack>
       </Grid>
       <Grid item xs={6}>
@@ -187,11 +246,16 @@ function StatEditor(props: {value:IStatType, onChange:(newValue:IStatType)=>void
           <Typography paragraph>
             {fieldList}
           </Typography>
+          <Typography variant='h6'>Computed Value</Typography>
+          <Typography paragraph>
+            {JSON.stringify(computedValues)}
+          </Typography>
         </TabPanel>
         <TabPanel value={tabValue} index={1} idprefix={'sample'}>
           <Typography paragraph>
             {fieldList}
           </Typography>
+          <Row></Row>
           <Box className="ag-theme-alpine" sx={gridStyle}>
             <AgGridReact
               rowData={rowData}

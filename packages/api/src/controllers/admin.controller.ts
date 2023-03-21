@@ -12,7 +12,7 @@ import { UserDataEntity } from '@/entities/userdata.entity';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
 import { format, parse as parseDate, addYears } from 'date-fns';
-import { Get, Post, UseBefore, JsonController, Authorized, CurrentUser, BodyParam, UploadedFile, Req } from 'routing-controllers';
+import { Get, Post, UseBefore, JsonController, Authorized, CurrentUser, BodyParam, UploadedFile, Req, QueryParam } from 'routing-controllers';
 
 @JsonController('/api/admin')
 @UseBefore(authMiddleware)
@@ -27,6 +27,27 @@ export class AdminController {
     const matchedUsers: UserEntity[] = await AppDataSource.getRepository(UserEntity).find({ relations: { roles: true } });
     console.log(`fetched ${matchedUsers.length} users.`);
     result.data = matchedUsers.map(u => u.toJSON('all'));
+    return result;
+  }
+
+  @Get('/datakeys')
+  @OpenAPI({ summary: 'Get all allowed keys for user data' })
+  async getDataKeys() {
+    const result = new APIResponse<string[]>();
+    const data = await AppDataSource.query(`SELECT distinct(key) FROM psuserdata WHERE key LIKE 'c-%' OR key LIKE 'u-%';`);
+    result.data = data.map((d: any) => d.key) as string[];
+    return result;
+  }
+
+  @Get('/customdata')
+  @OpenAPI({ summary: 'Get custom data for the specified keys' })
+  @Authorized(['user.read.all.all'])
+  async getCustomData(@QueryParam('keys') keylist: string) {
+    const keys = keylist.split(',').map(k => k.trim());
+    logger.debug(keys);
+    const result = new APIResponse<string[]>();
+    const data = await AppDataSource.query(`SELECT * FROM psuserdata WHERE key = ANY($1)`, [keys]);
+    result.data = data;
     return result;
   }
 

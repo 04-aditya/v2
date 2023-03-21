@@ -119,6 +119,42 @@ export const useUserDataKeys = () => {
   return {...query, invalidateCache};
 }
 
+export const useAllDataKeys = () => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = ['alldatakeys'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${ADMINAPI}/datakeys`);
+    const result = res.data as APIResponse<string[]>;
+    return result.data;
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 60 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+export const useAllCustomData = (fields: string) => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const fieldlist = fields.split(',').map(f=>f.trim()).sort((a,b)=>a.localeCompare(b)).join(',');
+  const keys = ['customdata', fieldlist];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${ADMINAPI}/customdata?keys=${fieldlist}`);
+    const result = res.data;
+    return result.data;
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 60 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
 export const useUserStats = (id: number|string = 'me', types = ['all'], usergroup=['org:Team'], snapshot_date?: string|Date) => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();

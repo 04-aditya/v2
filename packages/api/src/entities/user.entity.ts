@@ -203,14 +203,27 @@ export class UserEntity extends BaseEntity implements IUser {
     const userids = await AppDataSource.getRepository(UserEntity).query(
       `
       WITH RECURSIVE cte AS (
-        select userid, CAST(value::jsonb->'oid' as integer) as oid, CAST(value::jsonb->'csid' as integer) as csid, CAST(value::jsonb->'supervisor_id' as integer) as supervisor_id from psuserdata where key='supervisor_id' AND (CAST(value::jsonb->'supervisor_id' as INTEGER)=$1) AND timestamp = $2
+        select userid,
+          value::jsonb->'oid' as oid,
+          value::jsonb->'csid' as csid,
+          value::jsonb->'supervisor_id' as supervisor_id
+        from psuserdata
+        where key='supervisor_id' AND
+              (value::jsonb->'supervisor_id'='${this.oid}'::jsonb)
+              AND
+              timestamp = $1
         UNION ALL
-        SELECT p.userid,CAST(p.value::jsonb->'oid' as INTEGER) as oid, CAST(p.value::jsonb->'csid' as INTEGER) as csid, CAST(p.value::jsonb->'supervisor_id' as INTEGER) as supervisor_id FROM psuserdata p
-        INNER JOIN cte c ON c.oid = CAST(p.value::jsonb->'supervisor_id' as INTEGER)
-        WHERE p.key='supervisor_id' and p.timestamp = $2
+        SELECT
+          p.userid,
+          p.value::jsonb->'oid' as oid,
+          p.value::jsonb->'csid' as csid,
+          p.value::jsonb->'supervisor_id' as supervisor_id
+        FROM psuserdata p
+        INNER JOIN cte c ON c.oid = p.value::jsonb->'supervisor_id'
+        WHERE p.key='supervisor_id' and p.timestamp = $1
       ) SELECT * FROM cte;
       `,
-      [this.oid, reqdate],
+      [reqdate],
     );
     await cache.set(CACHEKEY, JSON.stringify(userids), 60000);
     //.then(v => {
@@ -381,7 +394,7 @@ export class UserEntity extends BaseEntity implements IUser {
     return jwt.sign({ username: this.id }, REFRESH_TOKEN_SECRET, { expiresIn });
   }
 
-  createAccessToken(expiresIn = '1h', patid?: string) {
+  createAccessToken(expiresIn = '2h', patid?: string) {
     return jwt.sign(
       {
         UserInfo: {
@@ -533,7 +546,7 @@ export class UserEntity extends BaseEntity implements IUser {
         return dates.map(d => parseISO(d));
       }
     }
-    const ss: Date[] = (await AppDataSource.query(`select distinct timestamp from psuserdata where key='supervisor_id' order by timestamp desc`)).map(
+    const ss: Date[] = (await AppDataSource.query(`SELECT DISTINCT timestamp FROM psuserdata WHERE key='supervisor_id' ORDER BY timestamp DESC`)).map(
       (s: any) => s.timestamp,
     );
     cache.set(`snapshot_dates`, JSON.stringify(ss.map((d: Date) => d.toISOString())), 60000);

@@ -62,6 +62,9 @@ const AdminCraftPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}>
 const AdminStats = React.lazy(() => import('@/pages/admin/manage/stats'))
 const AdminStatsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminStats/></React.Suspense>
 
+const AdminDataFields = React.lazy(() => import('@/pages/admin/manage/fields'))
+const AdminDataFieldsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminDataFields/></React.Suspense>
+
 const AdminCache = React.lazy(() => import('@/pages/admin/manage/cache'))
 const AdminCachePage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><AdminCache/></React.Suspense>
 
@@ -108,6 +111,7 @@ const routeMap:RouteMap ={
           {path:'crafts', element:<AdminCraftPage/>},
           {path:'capabilities', element:<AdminCapabilityPage/>},
           {path:'stats', element:<AdminStatsPage/>},
+          {path:'fields', element:<AdminDataFields/>},
           {path:'cache', element:<AdminCachePage/>},
         ]}
       ]
