@@ -207,7 +207,7 @@ export class AuthController {
 
     // Saving refreshToken with current user
     user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
-    await UserDataEntity.Add(user.id, 'c-:login', { value: new Date().toISOString() }, new Date());
+    await UserDataEntity.Add(user.id, 's-:login', { value: new Date().toISOString() }, new Date());
     await user.save();
     // Creates Secure Cookie with refresh token
     res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });

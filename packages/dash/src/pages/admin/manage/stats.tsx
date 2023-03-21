@@ -15,7 +15,7 @@ import { AgGridReact } from 'ag-grid-react';
 
 import evaluate from 'static-eval';
 import * as esprima from 'esprima';
-import { ColDef } from 'ag-grid-enterprise';
+import { ColDef, ModuleRegistry } from 'ag-grid-enterprise'
 
 export default function AdminStats() {
   const {data:users, isLoading} = useAllUsers();

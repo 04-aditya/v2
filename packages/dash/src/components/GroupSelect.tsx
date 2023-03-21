@@ -36,7 +36,7 @@ export function GroupSelect(props: GroupSelectProps) {
   return <AutocompleteCheckbox loading={isLoading}
     options={groups || []}
     isOptionEqualToValue={(option: any, value: any) => option.name === value.name && option.type === value.type}
-    getOptionLabel={g => g.name}
+    getOptionLabel={g => g.name + '(' + g.type + ')'}
     value={selectedUserGroups}
     onChange={handleSelectedUserGroupsChange} style={{ width: 300 }} />;
 }

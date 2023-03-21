@@ -12,7 +12,7 @@ import { UserDataEntity } from '@/entities/userdata.entity';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
 import { format, parse as parseDate, addYears } from 'date-fns';
-import { Get, Post, UseBefore, JsonController, Authorized, CurrentUser, BodyParam, UploadedFile, Req, QueryParam } from 'routing-controllers';
+import { Get, Post, UseBefore, JsonController, Authorized, CurrentUser, BodyParam, UploadedFile, Req, QueryParam, Param } from 'routing-controllers';
 
 @JsonController('/api/admin')
 @UseBefore(authMiddleware)
@@ -34,19 +34,27 @@ export class AdminController {
   @OpenAPI({ summary: 'Get all allowed keys for user data' })
   async getDataKeys() {
     const result = new APIResponse<string[]>();
-    const data = await AppDataSource.query(`SELECT distinct(key) FROM psuserdata WHERE key LIKE 'c-%' OR key LIKE 'u-%';`);
+    const data = await AppDataSource.query(`SELECT distinct(key) FROM psuserdata WHERE key LIKE 's-%' OR key LIKE 'c-%' OR key LIKE 'u-%';`);
     result.data = data.map((d: any) => d.key) as string[];
     return result;
+  }
+
+  @Post('/datakeys/:key')
+  @OpenAPI({ summary: 'Get all allowed keys for user data' })
+  @Authorized(['user.write.all.all'])
+  async updateDataKeys(@Param('key') key: string, @BodyParam('newkey') value: string) {
+    //update key
+    await AppDataSource.query(`UPDATE psuserdata SET key = $1 WHERE key = $2`, [value, key]);
+    return { message: 'ok' };
   }
 
   @Get('/customdata')
   @OpenAPI({ summary: 'Get custom data for the specified keys' })
   @Authorized(['user.read.all.all'])
-  async getCustomData(@QueryParam('keys') keylist: string) {
+  async getCustomData(@QueryParam('keys') keylist: string, @QueryParam('limit') limit = 25) {
     const keys = keylist.split(',').map(k => k.trim());
-    logger.debug(keys);
     const result = new APIResponse<string[]>();
-    const data = await AppDataSource.query(`SELECT * FROM psuserdata WHERE key = ANY($1)`, [keys]);
+    const data = await AppDataSource.query(`SELECT * FROM psuserdata WHERE key = ANY($1) limit ${limit}`, [keys]);
     result.data = data;
     return result;
   }

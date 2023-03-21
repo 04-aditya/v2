@@ -139,7 +139,7 @@ export class UsersController {
 
     const custom_keys = (custom_details_keys || '')
       .split(',')
-      .map(k => k.trim().toLowerCase())
+      .map(k => k.trim())
       .filter(k => k !== '');
 
     const { reqdate, dates } = await this.getRequestedDate(snapshot_date);

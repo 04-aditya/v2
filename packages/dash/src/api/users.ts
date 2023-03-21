@@ -131,10 +131,14 @@ export const useAllDataKeys = () => {
     enabled: !!axios,
     staleTime:  60 * 60 * 1000 // 60 minute
   });
+  const mutation = useMutation(async (data: {key: string, newkey: string}) => {
+    const res = await axios.post(`${ADMINAPI}/datakeys/${data.key}`, {newkey: data.newkey});
+    return res.data.data;
+  });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);
   }
-  return {...query, invalidateCache};
+  return {...query, mutation, invalidateCache};
 }
 export const useAllCustomData = (fields: string) => {
   const queryClient = useQueryClient();

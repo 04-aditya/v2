@@ -107,11 +107,6 @@ export class UserDataEntity extends BaseEntity implements IUserData {
         result[d.key] = d.value;
       }
     });
-    // if (keys.includes('c-xe_tga') && data.length > 0) {
-    //   console.log(query);
-    //   console.log(result);
-    //   console.log(data);
-    // }
     return result;
   }
 }

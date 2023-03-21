@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Box, Divider, Typography } from '@mui/material'
+import { Box, Button, Divider, Typography } from '@mui/material'
 import { PageHeader } from '@/components/PageHeader';
 import { PageContainer } from '@/components/PageContainer';
 import { useAllCustomData, useAllDataKeys, useUser } from '@/api/users';
@@ -7,6 +7,8 @@ import { AgGridReact } from 'ag-grid-react';
 import { ColDef, ICellRendererParams } from 'ag-grid-enterprise';
 import BasicUserCard from '@/components/BasicUserCard';
 import { getUserName } from '@/../../shared/types/src';
+import { Row } from '@/components/Row';
+import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 
 const FieldDetailCellRenderer = ({ data }: ICellRendererParams) => {
   const gridStyle = React.useMemo(() => ({height:200, width: '100%'}), []);
@@ -37,15 +39,15 @@ const FieldDetailCellRenderer = ({ data }: ICellRendererParams) => {
 }
 
 export default function AdminDataFields() {
-  const {data: allkeys} = useAllDataKeys();
+  const {data: allkeys, mutation, invalidateCache} = useAllDataKeys();
   const [gridApi, setGridApi] = React.useState<any>(null);
   const [rowData, setRowData] = React.useState<any>(null);
-  const [selectedRows, setSelectedRows] = React.useState<any>();
+  const [selectedRows, setSelectedRows] = React.useState<any>([]);
   const gridStyle = React.useMemo(() => ({height: '75vh', width: '100%'}), []);
 
   const coldef: ColDef[] = React.useMemo(() => {
     return [
-      {field: 'id', editable: false, cellRenderer: 'agGroupCellRenderer'},
+      {field: 'id', editable: false, cellRenderer: 'agGroupCellRenderer', checkboxSelection: true},
       { field: 'type', editable: true, filter: 'agTextColumnFilter'},
       { field: 'usergroup', editable: true, filter: 'agTextColumnFilter'},
       { field: 'key', editable: true, filter: 'agTextColumnFilter'},
@@ -60,7 +62,7 @@ export default function AdminDataFields() {
         rows.push({
           id:k,
           type:prefix[0],
-          userId:prefix[1],
+          usergroup:[prefix[1]],
           key:kparts[1],
         })
       })
@@ -74,9 +76,28 @@ export default function AdminDataFields() {
     setSelectedRows(event.api.getSelectedRows());
   }
 
+  const onSave = async () => {
+    console.log('save');
+    try {
+      const key = selectedRows[0].id;
+      const newkey = selectedRows[0].type+'-'+selectedRows[0].usergroup+':'+selectedRows[0].key;
+      if (key!==newkey) {
+        console.log('updating the key', key, newkey);
+        const res = await mutation.mutateAsync({key, newkey});
+        console.log(res);
+        invalidateCache();
+      }
+    } catch( ex) {
+      console.error(ex);
+    }
+  }
+
   return <PageContainer>
     <PageHeader title='Manage Data Fields' subtitle='This page is under construction.'/>
-    <Divider sx={{mx:1}}/>
+    <Divider sx={{my:1}}/>
+    <Row sx={{mb:1}}>
+      <Button size='small' variant='outlined' disabled={selectedRows.length===0} onClick={onSave}>save</Button>
+    </Row>
     <Box className="ag-theme-alpine" sx={gridStyle}>
       <AgGridReact masterDetail={true}
         columnDefs={coldef}
