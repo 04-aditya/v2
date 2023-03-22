@@ -1,7 +1,7 @@
 import { AppDataSource } from '@/databases';
 import { logger } from '@/utils/logger';
 import { IUserData } from '@sharedtypes';
-import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan } from 'typeorm';
+import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan, Any } from 'typeorm';
 import { UserEntity } from './user.entity';
 
 @Entity({ name: 'psuserdata' })
@@ -67,12 +67,12 @@ export class UserDataEntity extends BaseEntity implements IUserData {
     });
     return data;
   }
-  static async GetSeries(userid: number, key: string, minDate: Date, maxDate: Date = new Date(), cache: boolean | number = true) {
+  static async GetSeries(userid: number[], keys: string[], minDate: Date, maxDate: Date = new Date(), cache: boolean | number = true) {
     const repo = AppDataSource.getRepository(UserDataEntity);
-    const data = await repo.findOne({
+    const data: UserDataEntity[] = await repo.find({
       where: {
-        userid,
-        key,
+        userid: Any(userid),
+        key: Any(keys),
         timestamp: In([minDate, maxDate]),
       },
       order: {

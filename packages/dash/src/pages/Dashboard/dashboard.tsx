@@ -1,4 +1,4 @@
-import { Box, CircularProgress, FormControl, FormHelperText, Grid, IconButton, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, Tab, Tabs, Typography } from '@mui/material';
+import { Avatar, Box, Button, Card, CardHeader, CircularProgress, Divider, FormControl, FormHelperText, Grid, Grow, IconButton, InputLabel, MenuItem, MenuList, Paper, Popper, Select, SelectChangeEvent, Tab, Tabs, Tooltip, Typography } from '@mui/material';
 import { Route, Link, Outlet, useParams,useSearchParams, useNavigate } from 'react-router-dom';
 import { appstateDispatch } from '@/hooks/useAppState';
 import styles from './dashboard.module.scss';
@@ -8,8 +8,12 @@ import { NumberStatWidget, PercentStatWidget, PieStatWidget, StatContainer, Stat
 import { Row } from '@/components/Row';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { format, parse as parseDate } from 'date-fns';
-import BasicUserCard from '@/components/BasicUserCard';
+import ButtonGroup from '@mui/material/ButtonGroup';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
 import { Stack } from '@mui/system';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import SchoolIcon from '@mui/icons-material/School';
 import Skeleton from '@mui/material/Skeleton';
 import EmailIcon from '@mui/icons-material/Email';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -146,9 +150,12 @@ export function Dashboard() {
   const {data:teamMembers} = useUserTeam(userId,[],['org:Directs']);
   const navigate = useNavigate();
   const [snapshot_date, setSnapshotDate] = React.useState<string>('Last');
-  const {data: snapshot_dates} = useUserSnapshotDates();
+  const {data: snapshot_dates=[]} = useUserSnapshotDates();
   const [tabValue, setTabValue] = React.useState(0);
   const [pageError, setPageError] = React.useState<string|undefined>();
+  const [openSnapshotDate, setOpenSnapshotDate] = React.useState(false);
+  const anchorSnapshotDateRef = React.useRef<HTMLDivElement>(null);
+  const [selectedSnapshotDateIndex, setSelectedSnapshotDateIndex] = React.useState(0);
 
   const handleSnapshotDateChange = (event: SelectChangeEvent) => {
     setSnapshotDate(event.target.value);
@@ -176,34 +183,129 @@ export function Dashboard() {
     setTabValue(newValue);
   };
 
+  const handleMenuItemClick = (
+    event: React.MouseEvent<HTMLLIElement, MouseEvent>,
+    index: number,
+  ) => {
+    setSelectedSnapshotDateIndex(index);
+    setSnapshotDate(snapshot_dates[index].toISOString());
+    setOpenSnapshotDate(false);
+  };
+
+  const handleSnapshotDateToggle = () => {
+    setOpenSnapshotDate((prevOpen) => !prevOpen);
+  };
+
+  const handleClose = (event: Event) => {
+    if (
+      anchorSnapshotDateRef.current &&
+      anchorSnapshotDateRef.current.contains(event.target as HTMLElement)
+    ) {
+      return;
+    }
+
+    setOpenSnapshotDate(false);
+  };
   return (
     <PageContainer title={title} error={pageError}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <BasicUserCard user={user} sx={{m:1}}/>
-        <Row spacing={1}>
-          <FormControl sx={{ m: 1, minWidth: 150 }} size='small'>
-            <InputLabel id="snapshotdate-selector-label">Snapshot Date</InputLabel>
-            <Select
-              labelId="snapshotdate-selector-label"
-              id="snapshotdate-selector"
-              value={snapshot_date}
-              label="Snapshot Date"
-              onChange={handleSnapshotDateChange}
-            >
-              <MenuItem value="Last">
-                <em>Last</em>
-              </MenuItem>
-              {snapshot_dates?.map(d=>d?<MenuItem key={d.toString()} value={d.toISOString()}>{format(d,'MMM dd')}</MenuItem>:null)}
-            </Select>
-          </FormControl>
-        </Row>
-        <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs" sx={{mx:1}}>
-          <Tab label="People" {...a11yProps('People', 0)} />
-          <Tab label="Learning" {...a11yProps('Learning', 1)} />
-          <Tab label="Hiring" {...a11yProps('Hiring', 2)} />
-          <Tab label="Delivery" {...a11yProps('Delivery', 3)} />
-          <Tab label="Finance" {...a11yProps('Finance', 4)} />
-        </Tabs>
+        {/* <BasicUserCard user={user} sx={{m:1}}/> */}
+        <Card sx={{width: '100%', borderBottomLeftRadius:0, borderBottomRightRadius:0, borderBottom:'1px solid lightgray'}} elevation={0}>
+          <CardHeader sx={{}}
+            title={user?<Row><span>{getUserName(user)}</span><IconButton size="small" aria-label='email' LinkComponent='a' href={`mailto:${user.email}`} ><EmailIcon fontSize='small' /></IconButton></Row>:<Skeleton variant='text' width={'36ch'} height='24'/>}
+            subheader={<><Row spacing={1}>
+              {user?<Typography variant='caption'>{user.business_title??''}</Typography>:<Skeleton variant="rectangular" width={30} height={24}/>}
+              {user?<Avatar alt="cabability" sx={{width: 16, height: 16 , fontSize:12}}>{user.capability?user.capability[0]:''}</Avatar>:<Skeleton variant='circular' width={16} height={16}/>}
+              {user?<Typography variant='caption'>{user.craft??''}</Typography>:<Skeleton variant='text' width='16ch'/>}
+              <SchoolIcon sx={{width:16, height:16}}/>
+            </Row>
+            <Divider sx={{my:1}}/>
+            <Row sx={{justifyContent:'space-between', mt:1, mb:-2}}>
+              <Row>
+              <React.Fragment>
+                <Typography variant='caption'>as of:&nbsp;</Typography>
+                <ButtonGroup variant="outlined" size={'small'} ref={anchorSnapshotDateRef} aria-label="snapshot date">
+                  <Button >{snapshot_dates.length>1?format(snapshot_dates[selectedSnapshotDateIndex], 'MMM dd'):'Last'}</Button>
+                  <Button
+                    size="small"
+                    aria-controls={openSnapshotDate ? 'snapshot-date-menu' : undefined}
+                    aria-expanded={openSnapshotDate ? 'true' : undefined}
+                    aria-label="select merge strategy"
+                    aria-haspopup="menu"
+                    onClick={handleSnapshotDateToggle}
+                  >
+                    <ArrowDropDownIcon />
+                  </Button>
+                </ButtonGroup>
+                <Popper
+                  sx={{
+                    zIndex: 1,
+                  }}
+                  open={openSnapshotDate}
+                  anchorEl={anchorSnapshotDateRef.current}
+                  role={undefined}
+                  transition
+                  disablePortal
+                >
+                  {({ TransitionProps, placement }) => (
+                    <Grow
+                      {...TransitionProps}
+                      style={{
+                        transformOrigin:
+                          placement === 'bottom' ? 'center top' : 'center bottom',
+                      }}
+                    >
+                      <Paper>
+                        <ClickAwayListener onClickAway={handleClose}>
+                          <MenuList id="split-button-menu" autoFocusItem>
+                            <MenuItem onClick={()=>{
+                              setSelectedSnapshotDateIndex(0);
+                              setSnapshotDate('Last');
+                            }} ><em>Last</em></MenuItem>
+                            {(snapshot_dates||new Array<Date>()).map((option:Date, index) => (
+                              <MenuItem
+                                key={option.toISOString()}
+                                disabled={index === -2}
+                                selected={index === selectedSnapshotDateIndex}
+                                onClick={(event) => handleMenuItemClick(event, index)}
+                              >
+                                {format(option,'MMM dd, yyyy')}
+                              </MenuItem>
+                            ))}
+                          </MenuList>
+                        </ClickAwayListener>
+                      </Paper>
+                    </Grow>
+                  )}
+                </Popper>
+              </React.Fragment>
+                {/* <FormControl sx={{ mr: 1, minWidth: 150 }} size='small'>
+                  <InputLabel id="snapshotdate-selector-label">Snapshot Date</InputLabel>
+                  <Select
+                    labelId="snapshotdate-selector-label"
+                    id="snapshotdate-selector"
+                    value={snapshot_date}
+                    label="Snapshot Date"
+                    onChange={handleSnapshotDateChange}
+                  >
+                    <MenuItem value="Last">
+                      <em>Last</em>
+                    </MenuItem>
+                    {snapshot_dates?.map(d=>d?<MenuItem key={d.toString()} value={d.toISOString()}>{format(d,'MMM dd')}</MenuItem>:null)}
+                  </Select>
+                </FormControl> */}
+              </Row>
+              <Tabs value={tabValue} onChange={handleChange} aria-label="statistics tabs" sx={{}} >
+                <Tab label="People" {...a11yProps('People', 0)} />
+                <Tab label="Learning" {...a11yProps('Learning', 1)} />
+                <Tab label="Hiring" {...a11yProps('Hiring', 2)} />
+                <Tab label="Delivery" {...a11yProps('Delivery', 3)} />
+                <Tab label="Finance" {...a11yProps('Finance', 4)} />
+              </Tabs>
+            </Row>
+            </>}
+          />
+        </Card>
       </Box>
       <TabPanel value={tabValue} index={0} idprefix={'People'}>
         <PeopleStats snapshot_date={snapshot_date} size='large' userId={userId}/>

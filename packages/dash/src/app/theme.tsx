@@ -23,7 +23,7 @@ let theme = createTheme({
     divider: '#e0e0e0',
     background:{
       paper: '#fff',
-      default:'#F4F5FA',
+      default: '#EEEEEE', //'#F4F5FA',
     }
   },
 });

@@ -119,6 +119,44 @@ export class UsersController {
     return result;
   }
 
+  @Get('/:id/customdata')
+  async getUserData(
+    @Param('id') userId: string,
+    @QueryParam('custom_details') custom_details_keys: string,
+    @CurrentUser() currentUser: UserEntity,
+    @Req() req: RequestWithUser,
+    @QueryParam('minDate') minDate: Date,
+    @QueryParam('maxDate') maxDate?: Date,
+    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+    @QueryParam('usergroups') usergroups?: string,
+  ) {
+    const result = new APIResponse<IUserData[]>();
+    if (userId === '-1') return result;
+
+    const matchedUser = await this.getUser(userId, currentUser);
+    if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) throw new HttpError(403, 'Insufficient permissions.');
+
+    const custom_keys = (custom_details_keys || '')
+      .split(',')
+      .map(k => k.trim())
+      .filter(k => k !== '');
+    if (usergroups) {
+      const groups = usergroups.split(',').map(g => g.trim());
+      const { users } = await matchedUser.loadOrg(maxDate || new Date(), groups);
+      const custom_data = await UserDataEntity.GetSeries(
+        users.map(u => u.id),
+        custom_keys,
+        minDate,
+        maxDate,
+      );
+      result.data = custom_data.map(d => d.toJSON());
+    } else {
+      const custom_data = await UserDataEntity.GetSeries([matchedUser.id], custom_keys, minDate, maxDate);
+      result.data = custom_data.map(d => d.toJSON());
+    }
+    return result;
+  }
+
   @Get('/:id/team')
   @OpenAPI({ summary: 'Return teams of the user matched by the `id` on give snapshot_date`' })
   @Authorized(['user.read.org'])
@@ -126,7 +164,7 @@ export class UsersController {
     @Param('id') userId: string,
     @Req() req: RequestWithUser,
     // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-    @QueryParam('usergroup') usergroup: string = 'org:Team',
+    @QueryParam('usergroups') usergroups: string = 'org:Team',
     @QueryParam('custom_details') custom_details_keys?: string,
     @QueryParam('snapshot_date') snapshot_date?: string,
     @CurrentUser() currentUser?: UserEntity,
@@ -144,7 +182,7 @@ export class UsersController {
 
     const { reqdate, dates } = await this.getRequestedDate(snapshot_date);
 
-    const groups = usergroup.split(',').map(g => g.trim());
+    const groups = usergroups.split(',').map(g => g.trim());
     const { users: teamMembers } = await matchedUser.loadOrg(reqdate, groups);
 
     if (reqdate.getTime() !== dates[0].getTime()) {
