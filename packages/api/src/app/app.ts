@@ -114,7 +114,7 @@ class App {
     const storage = getMetadataArgsStorage();
     const spec = routingControllersToSpec(storage, routingControllersOptions, {
       components: {
-        schemas,
+        //schemas: { ...schemas },
         securitySchemes: {
           bearerAuth: {
             type: 'http',

@@ -21,7 +21,7 @@ import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import sgMail from '@sendgrid/mail';
 import jwt from 'jsonwebtoken';
-import { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS } from '@config';
+import { REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS } from '@config';
 import { Like } from 'typeorm';
 import { IUserRole } from '@sharedtypes';
 import { UserDataEntity } from '@/entities/userdata.entity';
