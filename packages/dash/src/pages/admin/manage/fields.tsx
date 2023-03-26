@@ -2,18 +2,18 @@ import * as React from 'react'
 import { Box, Button, Divider, Typography } from '@mui/material'
 import { PageHeader } from '@/components/PageHeader';
 import { PageContainer } from '@/components/PageContainer';
-import { useAllCustomData, useAllDataKeys, useUser } from '@/api/users';
+import { useAllUserData, useAllDataKeys, useUser } from '@/api/users';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, ICellRendererParams } from 'ag-grid-enterprise';
 import BasicUserCard from '@/components/BasicUserCard';
 import { getUserName } from '@/../../shared/types/src';
-import { Row } from '@/components/Row';
+import { Row } from '@/components/RowColumn';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
 
 const FieldDetailCellRenderer = ({ data }: ICellRendererParams) => {
   const gridStyle = React.useMemo(() => ({height:200, width: '100%'}), []);
   const {data: user} = useUser(data.userId);
-  const {data: uploadedData} = useAllCustomData(data.id);
+  const {data: uploadedData} = useAllUserData(data.id);
   const colDefs: ColDef[] = React.useMemo(()=>{
     return [
       {field: 'userid',},
@@ -49,7 +49,8 @@ export default function AdminDataFields() {
     return [
       {field: 'id', editable: false, cellRenderer: 'agGroupCellRenderer', checkboxSelection: true},
       { field: 'type', editable: true, filter: 'agTextColumnFilter'},
-      { field: 'usergroup', editable: true, filter: 'agTextColumnFilter'},
+      { field: 'uploadedby', editable: true, filter: 'agTextColumnFilter'},
+      { field: 'usergroups', editable: true, filter: 'agTextColumnFilter'},
       { field: 'key', editable: true, filter: 'agTextColumnFilter'},
     ];
   },[]);
@@ -62,7 +63,8 @@ export default function AdminDataFields() {
         rows.push({
           id:k,
           type:prefix[0],
-          usergroup:[prefix[1]],
+          uploadedby:prefix[1]||'system',
+          usergroups:prefix[2]||'all',
           key:kparts[1],
         })
       })
@@ -80,7 +82,10 @@ export default function AdminDataFields() {
     console.log('save');
     try {
       const key = selectedRows[0].id;
-      const newkey = selectedRows[0].type+'-'+selectedRows[0].usergroup+':'+selectedRows[0].key;
+      const newkey = selectedRows[0].type+'-'
+        +selectedRows[0].uploadedby+'-'
+        +selectedRows[0].usergroups
+        +':'+selectedRows[0].key;
       if (key!==newkey) {
         console.log('updating the key', key, newkey);
         const res = await mutation.mutateAsync({key, newkey});

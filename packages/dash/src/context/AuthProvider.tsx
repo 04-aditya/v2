@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useState } from "react";
 import {IUser} from 'sharedtypes';
 
@@ -14,7 +15,7 @@ interface IAuthContext {
 const AuthContext = createContext<IAuthContext>({auth: {}, setAuth:()=>{ console.log('default setAuth')}});
 
 export const AuthProvider = ({ children }:{children:React.ReactNode}) => {
-
+    const queryClient = useQueryClient();
     let authSession:IAuth = {};
     try {
       authSession = JSON.parse(window.sessionStorage.getItem('auth')||'{}') as IAuth;
@@ -26,7 +27,9 @@ export const AuthProvider = ({ children }:{children:React.ReactNode}) => {
 
     const setAuth = (auth:IAuth) => {
       window.sessionStorage.setItem('auth', JSON.stringify(auth));
-      console.log(window.sessionStorage.getItem('auth'));
+      // console.log(window.sessionStorage.getItem('auth'));
+      console.debug('Reseting the user cache');
+      queryClient.invalidateQueries(['users','me']);
       setAuthInternal(auth);
     }
 

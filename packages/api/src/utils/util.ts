@@ -19,7 +19,7 @@ export const isEmpty = (value: string | number | object): boolean => {
 };
 
 export function groupBy<T>(list: T[], keyGetter: (u: T) => string) {
-  const map = new Map();
+  const map = new Map<string, T[]>();
   list.forEach(item => {
     const key = keyGetter(item);
     const collection = map.get(key);

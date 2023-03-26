@@ -11,13 +11,13 @@ import 'react-pivottable/pivottable.css';
 import TableRenderers from 'react-pivottable/TableRenderers';
 import Plot from 'react-plotly.js';
 import createPlotlyRenderers from 'react-pivottable/PlotlyRenderers';
-import { ColDef, ColGroupDef, SelectionChangedEvent } from 'ag-grid-community';
+import { ColDef, ColGroupDef, ColumnVisibleEvent, SelectionChangedEvent } from 'ag-grid-community';
 import { displayNotification } from '@/hooks/useNotificationState';
 import { appstateDispatch } from '@/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { RolesRenderer } from '@/components/RolesRenderer';
-import { Row } from '@/components/Row';
+import { Row } from '@/components/RowColumn';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import { BasicUserCardTooltip } from '@/components/BasicUserCard';
 
@@ -28,7 +28,9 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { PageContainer } from '@/components/PageContainer';
 import { PageHeader } from '@/components/PageHeader';
 import { UserGrid } from '@/components/UserGrid';
-import { useAllDataKeys } from '@/api/users';
+import { useAllDataKeys, useAllUsers } from '@/api/users';
+import { AxiosResponse } from 'axios';
+import { useQuery } from '@tanstack/react-query';
 
 // create Plotly renderers via dependency injection
 const PlotlyRenderers = createPlotlyRenderers(Plot);
@@ -40,34 +42,16 @@ export function AdminUsers() {
   const navigate = useNavigate();
   const axios = useAxiosPrivate();
   const {data: allcustomkeys} = useAllDataKeys();
+  const [visibleDataKeys, setVisibleDataKeys] = useState<string[]>([]);
   const [uploadDateValue, setUploadDateValue] = useState<Dayjs | null>(
     dayjs(new Date()),
   );
-  const [users, setUsers] = useState<Array<IUser>>([]);
+  const {data:users=[], isLoading} = useAllUsers(visibleDataKeys);
   const [selectedUsers, setSelectedUsers] = useState<IUser[]>([]);
 
   useEffect(() => {
     appstateDispatch({type:'title', data:'Users (Admin) - PSNext'});
   }, []);
-
-  useEffect(()=>{
-    (async ()=>{
-      try {
-        const ar = await axios.get(`${ADMINAPI}/users`)
-        setUsers(ar.data.data);
-      } catch(err: any) {
-        setUsers([]);
-        if (err.response?.status===403) {
-          navigate('/login',{
-            state:{from: location.pathname}
-          });
-          return;
-        }
-        console.error(err);
-      }
-    })();
-  }, []);
-
 
   const handleUploadDateChange = (newValue: Dayjs | null) => {
     setUploadDateValue(newValue);
@@ -103,8 +87,21 @@ export function AdminUsers() {
     }
   }
 
+  const onColumnVisible = (event: ColumnVisibleEvent<IUser>) => {
+    // console.log(event);
+    if (!(event.visible && event.column)) return;
+    if (!event.column.getColId().startsWith('data-')) return;
+
+    // load data for the key if not loaded
+    const key = event.column.getColId().substring(5); //remove 'data-'
+    setVisibleDataKeys((prev) => {
+      if (prev.includes(key)) return prev;
+      return [...prev, key];
+    });
+  }
+
   return (
-    <PageContainer>
+    <PageContainer isBusy={isLoading}>
       <PageHeader title='Users' />
       <Row>
         {/* <Button variant='outlined' disabled={selectedUsers.length===0} onClick={refreshSelectedUsers}>Refresh Data</Button> */}
@@ -118,7 +115,7 @@ export function AdminUsers() {
           </LocalizationProvider>
         </FileUploadButton>
       </Row>
-      <UserGrid users={users}/>
+      <UserGrid users={users} datakeys={allcustomkeys} onColumnVisible={onColumnVisible}/>
 {/*
       <PivotTableUI
         data={users}

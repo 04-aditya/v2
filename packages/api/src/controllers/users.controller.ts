@@ -119,10 +119,10 @@ export class UsersController {
     return result;
   }
 
-  @Get('/:id/customdata')
+  @Get('/:id/data')
   async getUserData(
     @Param('id') userId: string,
-    @QueryParam('custom_details') custom_details_keys: string,
+    @QueryParam('datakeys') data_keys: string,
     @CurrentUser() currentUser: UserEntity,
     @Req() req: RequestWithUser,
     @QueryParam('minDate') minDate: Date,
@@ -130,30 +130,27 @@ export class UsersController {
     // eslint-disable-next-line @typescript-eslint/no-inferrable-types
     @QueryParam('usergroups') usergroups?: string,
   ) {
-    const result = new APIResponse<IUserData[]>();
+    const result = new APIResponse<Map<string, IUserData[]>>();
     if (userId === '-1') return result;
 
     const matchedUser = await this.getUser(userId, currentUser);
     if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) throw new HttpError(403, 'Insufficient permissions.');
 
-    const custom_keys = (custom_details_keys || '')
+    const keys = (data_keys || '')
       .split(',')
       .map(k => k.trim())
       .filter(k => k !== '');
+    let userList = [matchedUser.id];
     if (usergroups) {
       const groups = usergroups.split(',').map(g => g.trim());
       const { users } = await matchedUser.loadOrg(maxDate || new Date(), groups);
-      const custom_data = await UserDataEntity.GetSeries(
-        users.map(u => u.id),
-        custom_keys,
-        minDate,
-        maxDate,
-      );
-      result.data = custom_data.map(d => d.toJSON());
-    } else {
-      const custom_data = await UserDataEntity.GetSeries([matchedUser.id], custom_keys, minDate, maxDate);
-      result.data = custom_data.map(d => d.toJSON());
+      userList = users.map(u => u.id);
     }
+    const dataList = await UserDataEntity.GetSeries(userList, keys, minDate, maxDate);
+    result.data = groupBy(
+      dataList.map(d => d.toJSON()),
+      u => `${u.userid}`,
+    );
     return result;
   }
 
@@ -165,7 +162,7 @@ export class UsersController {
     @Req() req: RequestWithUser,
     // eslint-disable-next-line @typescript-eslint/no-inferrable-types
     @QueryParam('usergroups') usergroups: string = 'org:Team',
-    @QueryParam('custom_details') custom_details_keys?: string,
+    @QueryParam('datakeys') datakeys?: string,
     @QueryParam('snapshot_date') snapshot_date?: string,
     @CurrentUser() currentUser?: UserEntity,
   ) {
@@ -175,7 +172,7 @@ export class UsersController {
     const matchedUser = await this.getUser(userId, currentUser);
     if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) throw new HttpError(403, 'Insufficient permissions.');
 
-    const custom_keys = (custom_details_keys || '')
+    const keys = (datakeys || '')
       .split(',')
       .map(k => k.trim())
       .filter(k => k !== '');
@@ -191,20 +188,20 @@ export class UsersController {
           if (u.snapshot_date.getTime() === reqdate.getTime()) return resolve(u);
           UserDataEntity.getUserData(u.id, reqdate).then(data => {
             UserEntity.merge(u, data);
-            if (!custom_details_keys) return resolve(u);
-            UserDataEntity.getUserData(u.id, reqdate, custom_keys).then(data => {
-              u.custom_details = data;
+            if (!keys) return resolve(u);
+            UserDataEntity.getUserData(u.id, reqdate, keys).then(data => {
+              u.data = data;
               resolve(u);
             });
           });
         });
       });
       await Promise.all(dataworkers);
-    } else if (custom_details_keys) {
+    } else if (keys) {
       const dataworkers = teamMembers.map(u => {
         return new Promise(resolve => {
-          UserDataEntity.getUserData(u.id, reqdate, custom_keys).then(data => {
-            u.custom_details = data;
+          UserDataEntity.getUserData(u.id, reqdate, keys).then(data => {
+            u.data = data;
             resolve(u);
           });
         });

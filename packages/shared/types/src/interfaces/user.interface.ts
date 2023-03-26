@@ -36,7 +36,7 @@ export interface IUser {
 
   pats?: IUserPAT[];
 
-  custom_details?: Record<string, any>;
+  data?: Record<string, any>;
 }
 
 

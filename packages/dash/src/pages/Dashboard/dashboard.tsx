@@ -5,7 +5,7 @@ import styles from './dashboard.module.scss';
 import React, { useEffect, useMemo } from 'react';
 import { useUser, useUserSnapshotDates, useUserTeam, useUserStats, useUserGroups } from '@/api/users';
 import { NumberStatWidget, PercentStatWidget, PieStatWidget, StatContainer, StatWidget } from '@/components/StatWidget';
-import { Row } from '@/components/Row';
+import { Row } from '@/components/RowColumn';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { format, parse as parseDate } from 'date-fns';
 import ButtonGroup from '@mui/material/ButtonGroup';

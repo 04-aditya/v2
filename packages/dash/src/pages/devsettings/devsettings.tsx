@@ -19,7 +19,7 @@ import { formatDistanceToNow, parseJSON } from 'date-fns';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { ClipCopyButton } from '@/components/ClipCopyButton';
 import GppMaybeIcon from '@mui/icons-material/GppMaybe';
-import { Row } from '@/components/Row';
+import { Row } from '@/components/RowColumn';
 import { addDays } from 'date-fns';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 

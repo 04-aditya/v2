@@ -1,6 +1,6 @@
 import useAxiosPrivate from "../hooks/useAxiosPrivate";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { APIResponse, IPermission, IStatsData, IUser, IUserPAT } from "sharedtypes";
+import { APIResponse, IPermission, IStatsData, IUser, IUserData, IUserPAT } from "sharedtypes";
 
 
 const USERAPI = '/api/users';
@@ -8,16 +8,57 @@ const ADMINAPI = '/api/admin';
 
 const CACHEKEY = 'users';
 
-export const useUserPermissions = (id = 'me') => {
+
+export const useAllUsers = (data_keys: string[]=[],) => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY, id, 'permissions'];
+  const datakeys = data_keys.sort((a,b) => a.localeCompare(b)).join(',');
+  const keys = [CACHEKEY,'all',datakeys];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${USERAPI}/${id}/permissions`)
-    return res.data.data as IPermission[];
+    const res = await axios.get(`${ADMINAPI}/users?datakeys=${datakeys}`);
+    return res.data.data as IUser[];
   },{
     enabled: !!axios,
-    staleTime:  5 * 60 * 1000 // 5 minute
+    staleTime:  30 * 60 * 1000 // 5 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+export const useAllDataKeys = () => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = ['alldatakeys'];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${ADMINAPI}/datakeys`);
+    const result = res.data as APIResponse<string[]>;
+    return result.data;
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 60 minute
+  });
+  const mutation = useMutation(async (data: {key: string, newkey: string}) => {
+    const res = await axios.post(`${ADMINAPI}/datakeys/${data.key}`, {newkey: data.newkey});
+    return res.data.data;
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, mutation, invalidateCache};
+}
+export const useAllUserData = (fields: string, limit = 20) => {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const fieldlist = fields.split(',').map(f=>f.trim()).sort((a,b)=>a.localeCompare(b)).join(',');
+  const keys = ['customdata', fieldlist];
+  const query = useQuery(keys, async ()=>{
+    const res = await axios.get(`${ADMINAPI}/userdata?keys=${fieldlist}&limit=${limit}`);
+    const result = res.data;
+    return result.data;
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 60 minute
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);
@@ -47,17 +88,17 @@ export const useUser = (id : number|string = 'me') => {
 }
 
 
-export const useAllUsers = (custom_details_keys: string[]=[],) => {
+export const useUserTeam = (id: number|string = 'me', data_keys: string[]=[], usergroups=['org:Team'],) => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const customkeys = custom_details_keys.sort((a,b) => a.localeCompare(b)).join(',');
-  const keys = [CACHEKEY,'all',customkeys];
+  const datakeys = data_keys.sort((a,b) => a.localeCompare(b)).join(',');
+  const keys = [CACHEKEY, id, 'team', datakeys, usergroups.join(',')];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${ADMINAPI}/users?custom_details=${customkeys}`);
+    const res = await axios.get(`${USERAPI}/${id}/team?datakeys=${datakeys}&usergroups=${usergroups.join(',')}`);
     return res.data.data as IUser[];
   },{
     enabled: !!axios,
-    staleTime:  30 * 60 * 1000 // 5 minute
+    staleTime:  5 * 60 * 1000 // 5 minute
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);
@@ -65,14 +106,13 @@ export const useAllUsers = (custom_details_keys: string[]=[],) => {
   return {...query, invalidateCache};
 }
 
-export const useUserTeam = (id: number|string = 'me', custom_details_keys: string[]=[], usergroups=['org:all'],) => {
+export const useUserPermissions = (id = 'me') => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const customkeys = custom_details_keys.sort((a,b) => a.localeCompare(b)).join(',');
-  const keys = [CACHEKEY, id, 'team', customkeys, usergroups.join(',')];
+  const keys = [CACHEKEY, id, 'permissions'];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${USERAPI}/${id}/team?custom_details=${customkeys}&usergroup=${usergroups.join(',')}`);
-    return res.data.data as IUser[];
+    const res = await axios.get(`${USERAPI}/${id}/permissions`)
+    return res.data.data as IPermission[];
   },{
     enabled: !!axios,
     staleTime:  5 * 60 * 1000 // 5 minute
@@ -119,39 +159,25 @@ export const useUserDataKeys = () => {
   return {...query, invalidateCache};
 }
 
-export const useAllDataKeys = () => {
+interface useUserDataOptions {
+  id: number|string;
+  data_keys: string[];
+  usergroups: string[];
+  minDate?: Date;
+  maxDate?: Date;
+};
+
+export const useUserData = ({id='me', data_keys=[], usergroups=[], minDate, maxDate}: useUserDataOptions) => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = ['alldatakeys'];
+  const datakeys = data_keys.sort((a,b) => a.localeCompare(b)).join(',');
+  const keys = [CACHEKEY, id, 'data', datakeys, usergroups.join(',')];
   const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${ADMINAPI}/datakeys`);
-    const result = res.data as APIResponse<string[]>;
-    return result.data;
+    const res = await axios.get(`${USERAPI}/${id}/data?datakeys=${datakeys}&usergroups=${usergroups.join(',')}&minDate=${minDate?.toISOString()}&maxDate=${maxDate?.toISOString()}`);
+    return res.data.data as Map<string, IUserData[]>;
   },{
     enabled: !!axios,
-    staleTime:  60 * 60 * 1000 // 60 minute
-  });
-  const mutation = useMutation(async (data: {key: string, newkey: string}) => {
-    const res = await axios.post(`${ADMINAPI}/datakeys/${data.key}`, {newkey: data.newkey});
-    return res.data.data;
-  });
-  const invalidateCache = ()=>{
-    queryClient.invalidateQueries(keys);
-  }
-  return {...query, mutation, invalidateCache};
-}
-export const useAllCustomData = (fields: string) => {
-  const queryClient = useQueryClient();
-  const axios = useAxiosPrivate();
-  const fieldlist = fields.split(',').map(f=>f.trim()).sort((a,b)=>a.localeCompare(b)).join(',');
-  const keys = ['customdata', fieldlist];
-  const query = useQuery(keys, async ()=>{
-    const res = await axios.get(`${ADMINAPI}/customdata?keys=${fieldlist}`);
-    const result = res.data;
-    return result.data;
-  },{
-    enabled: !!axios,
-    staleTime:  60 * 60 * 1000 // 60 minute
+    staleTime:  5 * 60 * 1000 // 5 minute
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);

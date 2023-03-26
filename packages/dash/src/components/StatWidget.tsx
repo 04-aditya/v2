@@ -1,6 +1,6 @@
 import React, { ReactNode, useCallback } from 'react';
 import { Box, BoxProps, Card, CardContent, CardHeader, CircularProgress, CircularProgressProps, Paper, Tooltip, Typography } from "@mui/material";
-import { Row } from "./Row";
+import { Row } from "./RowColumn";
 import { styled } from '@mui/material/styles';
 import Badge from '@mui/material/Badge';
 import Avatar from '@mui/material/Avatar';

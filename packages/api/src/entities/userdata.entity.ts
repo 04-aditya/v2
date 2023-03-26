@@ -90,17 +90,17 @@ export class UserDataEntity extends BaseEntity implements IUserData {
     return data.map(d => d.key);
   }
 
-  static async getUserData(id: number, timestamp: Date, keys?: string[]) {
+  static async getUserData(userId: number, timestamp: Date, keys?: string[]) {
     if (!keys) keys = UserEntity.UserDataMap.default;
 
     if (keys.length === 0) return {};
 
     const query = keys
-      .map(k => `(SELECT * FROM psuserdata WHERE key='${k}' AND userid=$1 AND timestamp<=$2 ORDER BY timestamp DESC LIMIT 1)`)
+      .map(key => `(SELECT * FROM psuserdata WHERE key='${key}' AND userid=$1 AND timestamp<=$2 ORDER BY timestamp DESC LIMIT 1)`)
       .join(' UNION ALL ');
-    const data = await AppDataSource.query(query, [id, timestamp]);
+    const data = await AppDataSource.query(query, [userId, timestamp]);
     const result: any = {};
-    data.forEach(d => {
+    data.forEach((d: { key: string; value: { supervisor_id: any } }) => {
       if (d.key === 'supervisor_id') {
         result[d.key] = d.value.supervisor_id;
       } else {

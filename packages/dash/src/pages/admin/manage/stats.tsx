@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { PageContainer } from '@/components/PageContainer';
 import { useStatTypes } from '@/api/stats';
 import ButtonPopover from '@/components/ButtonPopover';
-import { Row } from '@/components/Row';
+import { Row } from '@/components/RowColumn';
 import { IStatType, IUser } from 'sharedtypes';
 import { Stack } from '@mui/system';
 import { TabPanel, a11yProps } from '@/components/TabPanel';

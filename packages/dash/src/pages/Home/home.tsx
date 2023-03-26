@@ -5,7 +5,7 @@ import { appstateDispatch } from '@/hooks/useAppState';
 import styles from './home.module.scss';
 import { useEffect } from 'react';
 import { useUser } from '@/api/users';
-import { Row } from '@/components/Row';
+import { Row } from '@/components/RowColumn';
 
 /* eslint-disable-next-line */
 export interface HomeProps {}

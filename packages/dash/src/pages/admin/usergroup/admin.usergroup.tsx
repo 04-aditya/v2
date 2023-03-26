@@ -9,7 +9,7 @@ import { ITeamMember, IUserGroup } from 'sharedtypes';
 import 'ag-grid-enterprise';
 import { ColDef } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
-import { Row } from '@/components/Row';
+import { Row } from '@/components/RowColumn';
 
 
 interface UserGroupPanelProps {

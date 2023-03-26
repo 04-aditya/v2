@@ -131,6 +131,9 @@ class App {
       },
     });
 
+    this.app.use('/openapi.json', (_req, res) => {
+      res.json(spec);
+    });
     this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(spec));
   }
 

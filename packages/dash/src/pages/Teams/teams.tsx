@@ -10,7 +10,7 @@ import { ColumnVisibleEvent } from 'ag-grid-community';
 
 import { Box, Tab, Tabs } from '@mui/material';
 
-import { Row } from '@/components/Row';
+import { Row } from '@/components/RowColumn';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import useAxiosPrivate from '@/hooks/useAxiosPrivate';
@@ -49,10 +49,10 @@ export function Teams(_props: TeamsProps) {
   const onColumnVisible = (event: ColumnVisibleEvent<IUser>) => {
     // console.log(event);
     if (!(event.visible && event.column)) return;
-    if (!event.column.getColId().startsWith('details-')) return;
+    if (!event.column.getColId().startsWith('data-')) return;
 
     // load data for the key if not loaded
-    const key = event.column.getColId().substring(8);
+    const key = event.column.getColId().substring(5); //remove 'data-'
     setVisibleDataKeys((prev) => {
       if (prev.includes(key)) return prev;
       return [...prev, key];
@@ -128,7 +128,7 @@ export function Teams(_props: TeamsProps) {
           <FileUploadButton buttonContent={'Upload Data'} title='Upload Additional Data from excel' onUpload={onUserDataUpload} variant='outlined' />
         </Row>
         <Row spacing={1}>
-          <UserGrid users={teamMembers} custom_details={datakeys} onColumnVisible={onColumnVisible}/>
+          <UserGrid users={teamMembers} datakeys={datakeys} onColumnVisible={onColumnVisible}/>
         </Row>
       </TabPanel>
   </PageContainer>);

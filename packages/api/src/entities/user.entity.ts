@@ -164,7 +164,7 @@ export class UserEntity extends BaseEntity implements IUser {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  custom_details?: Record<string, any> = {};
+  data?: Record<string, any> = {};
 
   @AfterUpdate()
   public handleAfterUpdate() {
@@ -375,7 +375,7 @@ export class UserEntity extends BaseEntity implements IUser {
       csid: this.csid,
       email: this.email,
       roles: this.roles?.map(r => r.toJSON()),
-      custom_details: this.custom_details,
+      data: this.data,
     };
     let fields = this.fieldMap[fieldSet];
     if (!fields) {

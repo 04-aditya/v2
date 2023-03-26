@@ -48,7 +48,7 @@ export class AdminController {
     return { message: 'ok' };
   }
 
-  @Get('/customdata')
+  @Get('/userdata')
   @OpenAPI({ summary: 'Get custom data for the specified keys' })
   @Authorized(['user.read.all.all'])
   async getCustomData(@QueryParam('keys') keylist: string, @QueryParam('limit') limit = 25) {

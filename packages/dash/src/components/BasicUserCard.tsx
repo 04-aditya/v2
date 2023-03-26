@@ -8,7 +8,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SchoolIcon from '@mui/icons-material/School';
 import Skeleton from '@mui/material/Skeleton';
 import EmailIcon from '@mui/icons-material/Email';
-import { Row } from './Row';
+import { Row } from './RowColumn';
 import { CardContent, Divider, ListItemIcon, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';

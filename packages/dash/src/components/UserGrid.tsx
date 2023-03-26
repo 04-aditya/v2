@@ -1,32 +1,82 @@
+import React from 'react';
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { IUser } from "sharedtypes";
-import { Box } from "@mui/material";
-import { ColDef, ColumnVisibleEvent, SideBarDef, GetContextMenuItemsParams, MenuItemDef, RowNode, ColGroupDef, IRowNode } from "ag-grid-community";
+import { Box, MenuItem, Select } from "@mui/material";
+import { ColDef, ColumnVisibleEvent, SideBarDef, GetContextMenuItemsParams, MenuItemDef, ColGroupDef, IRowNode, IToolPanelParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useNavigate } from "react-router-dom";
 import { BasicUserCardTooltip } from "./BasicUserCard";
 import { RegionRenderer } from "./RegionRenderer";
 import 'ag-grid-enterprise';
 import { isDate, parseISO } from "date-fns";
+import { Typography } from '@mui/material';
+import { Stack } from '@mui/system';
+import { Avatar } from '@mui/material';
+import { Row } from './RowColumn';
+import { Divider } from '@mui/material';
 
+const DataPanel = (props: IToolPanelParams<IUser>) => {
+  const {api, columnApi, } = props;
+  return (
+    <Box sx={{p:1}}>
+      <Typography variant="h6">Data Panel</Typography>
+      <Stack spacing={1} direction={'column'}>
+      {(columnApi?.getColumns()||[]).map((col) => {
+        const colId = col.getColId();
+        if (!colId.startsWith('data-')) return null;
+        const colDef = col.getColDef();
+        const datakey = colId.replace('data-', '');
+        const fparts = datakey.split(':');
+        const uparts = fparts[0].split('-');
+        const children = (colDef as ColGroupDef).children||[];
+        return <Box key={colId}>
+          <Row><span className='ag-column-select-column-label'>{fparts[1]}</span><Avatar alt="dataclass" sx={{width: 16, height: 16 , fontSize:12}}>{uparts[0][0]}</Avatar></Row>
+          <Row><Select size='small' value='last' variant='standard'>
+                  <MenuItem value="last">Last</MenuItem>
+                  <MenuItem value="current_month">Current Month</MenuItem>
+                  <MenuItem value="current_quarter">Current Quarter</MenuItem>
+                  <MenuItem value="current_halfyear">Current Half Year</MenuItem>
+                  <MenuItem value="current_year">Current Year</MenuItem>
+                </Select></Row>
+          {children?<Stack spacing={1} sx={{ml:2}}>
+            {children.map((child:ColDef) => {
+              return <>
+                <Row key={child.colId}><span className='ag-column-select-column-label'>{child.headerName}</span></Row>
+                <Select>
+                  <MenuItem value="last">Last</MenuItem>
+                  <MenuItem value="current_month">Current Month</MenuItem>
+                  <MenuItem value="current_quarter">Current Quarter</MenuItem>
+                  <MenuItem value="current_halfyear">Current Half Year</MenuItem>
+                  <MenuItem value="current_year">Current Year</MenuItem>
+                </Select>
+              </>
+            })}
+          </Stack>:null}
+          <Divider sx={{my:1}}/>
+        </Box>
+      })}
+      </Stack>
+    </Box>
+  );
+}
 const standardColumns: ColDef<IUser>[] = [
-  { field: 'csid', enableRowGroup: false, tooltipField: 'csid',},
+  { field: 'csid', enableRowGroup: false, tooltipField: 'csid', headerTooltip:'Career Settings ID'},
   { field: 'email', enableRowGroup: false, tooltipField: 'email', },
   { field: 'name', valueGetter: 'data.first_name + " " + data.last_name', enableRowGroup: false, colId: 'name', tooltipField: 'first_name', tooltipComponent: BasicUserCardTooltip },
   { field: 'title', valueGetter:'data.business_title', enableRowGroup: true, colId: 'title', tooltipField: 'business_title', },
   { field: 'Career Stage', valueGetter:'data.career_stage', enableRowGroup: true, colId: 'career_stage', tooltipField: 'career_stage', filter: 'agSetColumnFilter'},
   { field: 'Supervisor', valueGetter:'data.supervisor_name', enableRowGroup: true, colId: 'supervisor_name', tooltipField: 'supervisor_name', },
   { field: 'Current Region', valueGetter:'data.current_region', enableRowGroup: true, colId: 'current_region', tooltipField: 'current_region', filter: 'agSetColumnFilter', cellRenderer: RegionRenderer, },
-  { field: 'account', enableRowGroup: true, tooltipField: 'account', },
-  { field: 'capability', enableRowGroup: true, tooltipField: 'capability', filter: 'agSetColumnFilter' },
-  { field: 'craft', enableRowGroup: true, tooltipField: 'craft', filter: 'agSetColumnFilter'},
-  { field: 'team', enableRowGroup: true, tooltipField: 'team', filter: 'agSetColumnFilter'},
+  { field: 'account', enableRowGroup: true, tooltipField: 'account', headerTooltip: 'Client / Account Name' },
+  { field: 'capability', enableRowGroup: true, tooltipField: 'capability', filter: 'agSetColumnFilter', headerTooltip:'hrms2'},
+  { field: 'craft', enableRowGroup: true, tooltipField: 'craft', filter: 'agSetColumnFilter', headerTooltip:'hrms3'},
+  { field: 'team', enableRowGroup: true, tooltipField: 'team', filter: 'agSetColumnFilter', headerName: 'Industry', headerTooltip: 'Industry/Team' },
 ];
 
 export interface UserGridProps {
   users: IUser[];
   onColumnVisible?: (event: ColumnVisibleEvent<IUser>) => void;
-  custom_details?: string[];
+  datakeys?: string[];
 }
 export function UserGrid(props: UserGridProps) {
   const navigate = useNavigate();
@@ -126,7 +176,17 @@ export function UserGrid(props: UserGridProps) {
             minWidth: 180,
             maxWidth: 400,
             width: 250,
-        }
+        },
+        {
+            id: 'data',
+            labelDefault: 'Data',
+            labelKey: 'aggregation',
+            iconKey: 'menuValue',
+            toolPanel: DataPanel,
+            minWidth: 180,
+            maxWidth: 400,
+            width: 250,
+        },
     ],
     position: 'right',
   };
@@ -216,45 +276,68 @@ export function UserGrid(props: UserGridProps) {
   }, [navigate]);
 
   useEffect(() => {
-    if (!props.custom_details)
+    if (!props.datakeys)
       return setColumnDefs(standardColumns);
 
+      (window as any).users = props.users;
+
     const coldefs = [...standardColumns];
-    for(const key of props.custom_details) {
+    for(const key of props.datakeys) {
       const fparts = key.split(':');
-      const sample = props.users.find(u => u.custom_details && u.custom_details[key]);
-      if (sample?.custom_details && sample?.custom_details[key]?.details) {
+      const kparts: string[] = fparts[0].split('-');
+      const headerName = `${fparts[1]} (${kparts[0]})`;
+      const headerTooltip = (kparts[1]!=='' ? `uploaded by user ${kparts[1]}` : fparts[1]);
+      const sample = props.users.find(u => u.data && u.data[key]);
+      console.log(sample);
+      if (sample?.data && sample?.data[key]?.details) {
+        const headerName = `${fparts[1]} (${kparts[0]}) - group`;
         const children: ColDef[] = [];
-        Object.keys(sample.custom_details[key].details).forEach(k => {
+        children.push({
+          field: `${fparts[1]}`,
+          valueGetter: ({data:user}) => {
+            if (!user) return null;
+            if (!user.data) return null;
+            const kpi = user.data[key];
+            if (!kpi || !kpi.value) return '';
+            return kpi.value;
+          },
+          enableRowGroup: true, colId: `subdata-${key}-value`
+        });
+        Object.keys(sample.data[key].details).forEach(k => {
           // const val:any = sample.custom_details?sample.custom_details[key].details[k]:undefined;
           const isdate = k.toLowerCase().indexOf('date')!==-1;
           children.push({
             field: k,
-            valueGetter: params => {
-              if (!params.data) return null;
-              if (!params.data.custom_details) return null;
-              const kpi = params.data.custom_details[`${key}`];
+            valueGetter: ({data:user}) => {
+              if (!user) return null;
+              if (!user.data) return null;
+              const kpi = user.data[key];
               if (!kpi || !kpi.details[k]) return '';
               return isdate? parseISO(kpi.details[k]) : kpi.details[k];
             },
             type: isdate ? ['dateColumn', 'nonEditableColumn'] : ['nonEditableColumn'],
-            enableRowGroup: true, colId: `details-${key}-${k}`
+            enableRowGroup: true, colId: `subdata-${key}-${k}`
           });
         });
-        coldefs.push({field: fparts[1], colId: `details-${key}`, children, initialHide: true } as ColGroupDef);
+        coldefs.push({field: fparts[1], colId: `data-${key}`, initialHide: true,
+          children, headerName, headerTooltip,
+        } as ColGroupDef);
       } else {
-        coldefs.push({field: fparts[1], valueGetter: params => {
-          if (!params.data) return null;
-          if (!params.data.custom_details) return null;
-          const kpi = params.data.custom_details[`${key}`];
-          if (!kpi) return '';
-          return kpi.value;
-        },
-        enableRowGroup: true, colId: `details-${key}`, initialHide: true });
+        coldefs.push({field: fparts[1], colId: `data-${key}`, initialHide: true, enableRowGroup: true,
+          valueGetter: ({data:user}) => {
+            if (!user) return null;
+            if (!user.data) return null;
+            const kpi = user.data[`${key}`];
+            if (!kpi) return '';
+            return kpi.value;
+          },
+          sortable: true, resizable: true,
+          headerName, headerTooltip,
+        });
       }
     }
     setColumnDefs(coldefs);
-  },[props.custom_details, props.users]);
+  },[props.datakeys, props.users]);
 
   const onColumnVisible = (event: ColumnVisibleEvent<IUser>) => {
     if (props.onColumnVisible) {
