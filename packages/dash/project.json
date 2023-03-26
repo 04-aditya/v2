@@ -19,7 +19,8 @@
         "assets": ["packages/dash/src/favicon.ico", "packages/dash/src/assets"],
         "styles": ["packages/dash/src/styles.scss"],
         "scripts": [],
-        "webpackConfig": "@nrwl/react/plugins/webpack"
+        "webpackConfig": "packages/dash/webpack.config.js",
+        "isolatedConfig": true
       },
       "configurations": {
         "development": {
