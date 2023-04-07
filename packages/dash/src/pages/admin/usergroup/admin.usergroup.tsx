@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { SxProps, Box, Accordion, AccordionDetails, AccordionSummary, Typography, TextField } from "@mui/material";
-import { useGroups } from '@/api/groups';
-import useAxiosPrivate from '@/hooks/useAxiosPrivate';
+import { useGroups } from 'psnapi/groups';
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { UserRenderer } from '@/components/UserRenderer';

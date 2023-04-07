@@ -1,0 +1,125 @@
+{
+  "name": "chat",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/chat/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "compiler": "swc",
+        "outputPath": "dist/packages/chat",
+        "index": "packages/chat/src/index.html",
+        "baseHref": "/",
+        "main": "packages/chat/src/main.tsx",
+        "tsConfig": "packages/chat/tsconfig.app.json",
+        "assets": ["packages/chat/src/favicon.ico", "packages/chat/src/assets"],
+        "styles": ["packages/chat/src/styles.css"],
+        "scripts": [],
+        "isolatedConfig": true,
+        "webpackConfig": "packages/chat/webpack.config.js"
+      },
+      "configurations": {
+        "development": {
+          "extractLicenses": false,
+          "optimization": false,
+          "sourceMap": true,
+          "vendorChunk": true
+        },
+        "production": {
+          "fileReplacements": [
+            {
+              "replace": "packages/chat/src/environments/environment.ts",
+              "with": "packages/chat/src/environments/environment.prod.ts"
+            }
+          ],
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": false,
+          "namedChunks": false,
+          "extractLicenses": true,
+          "vendorChunk": false
+        }
+      }
+    },
+    "serve": {
+      "executor": "@nrwl/webpack:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "chat:build",
+        "hmr": true
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "chat:build:development"
+        },
+        "production": {
+          "buildTarget": "chat:build:production",
+          "hmr": false
+        }
+      }
+    },
+    "build-docker": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          {
+            "command": "docker build -f packages/chat/Dockerfile -t psnextv2_chat .",
+            "forwardAllArgs": false
+          },
+          "docker tag psnextv2_chat {args.registry}/psnextv2-chat-{args.branch}:{args.sha}",
+          "docker tag psnextv2_chat {args.registry}/psnextv2-chat-{args.branch}:latest",
+          "docker push {args.registry}/psnextv2-chat-{args.branch}:{args.sha}",
+          "docker push {args.registry}/psnextv2-chat-{args.branch}:latest"
+        ],
+        "parallel": false,
+        "forwardAllArgs": false
+      }
+    },
+    "build-k8s-manifests": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "find ./packages/chat/k8s -name kustomization.yaml -type f -exec sed -i 's/BRANCH/{args.branch}/g' {} \\;",
+          "find ./packages/chat/k8s -name kustomization.yaml -type f -exec sed -i 's/PROJECTID/{args.projectid}/g' {} \\;",
+          "find ./packages/chat/k8s -name kustomization.yaml -type f -exec sed -i 's/REGISTRY/{args.registry}/g' {} \\;",
+          "find ./packages/chat/k8s -name kustomization.yaml -type f -exec sed -i 's/TAG/{args.sha}/g' {} \\;",
+          {
+            "command": "cp -r ./packages/chat/k8s/ ./manifests/chat/",
+            "forwardAllArgs": false
+          },
+          {
+            "command": "kubectl kustomize ./manifests/chat/k8s",
+            "forwardAllArgs": false
+          }
+        ],
+        "parallel": false,
+        "forwardAllArgs": false
+      }
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/chat/**/*.{ts,tsx,js,jsx}"]
+      }
+    },
+    "test": {
+      "executor": "@nrwl/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/chat/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    }
+  },
+  "tags": ["chat"]
+}

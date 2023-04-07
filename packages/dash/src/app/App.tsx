@@ -4,11 +4,9 @@ import styles from './App.module.scss';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-import { Route, Routes, Link, RouteMatch } from 'react-router-dom';
-import AppLayout from './AppLayout';
-import { Typography } from '@mui/material';
-import RequireAuth from '../components/RequireAuth';
-import { AuthProvider } from '@/context/AuthProvider';
+import { Route, Routes } from 'react-router-dom';
+import RequireAuth from 'sharedui/components/RequireAuth';
+import { AuthProvider } from 'sharedui/context/AuthProvider';
 import routemap, { RouteMap } from './Routes';
 import {
   QueryClient,

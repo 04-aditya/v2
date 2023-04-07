@@ -1,4 +1,4 @@
-import { appstateDispatch } from "@/hooks/useAppState";
+import { appstateDispatch } from "sharedui/hooks/useAppState";
 import { useEffect } from "react";
 import UserGroupList from "./admin.usergroup";
 

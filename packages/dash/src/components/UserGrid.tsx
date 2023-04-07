@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
-import { IUser } from "sharedtypes";
-import { Box, MenuItem, Select } from "@mui/material";
+import { IUser, IUserData } from "sharedtypes";
+import { Box, IconButton, MenuItem, Select } from "@mui/material";
 import { ColDef, ColumnVisibleEvent, SideBarDef, GetContextMenuItemsParams, MenuItemDef, ColGroupDef, IRowNode, IToolPanelParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useNavigate } from "react-router-dom";
@@ -14,9 +14,47 @@ import { Stack } from '@mui/system';
 import { Avatar } from '@mui/material';
 import { Row } from './RowColumn';
 import { Divider } from '@mui/material';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 
 const DataPanel = (props: IToolPanelParams<IUser>) => {
   const {api, columnApi, } = props;
+  const axios = useAxiosPrivate();
+  const [dataStore, setDataStore] = useState<Map<string, Map<string, IUserData[]>>>(new Map<string, Map<string, IUserData[]>>());
+
+  const onLoadData = (datakey: string) => {
+    return async ()=>{
+      try {
+        const res = await axios.get(`/api/users/me/data?datakeys=${datakey}&minDate=2023-01-01`);
+        setDataStore(d => {
+          const mappedData = res.data.data;
+          console.log(res.data);
+          const data = mappedData[datakey];
+          console.log(data);
+          api.forEachNode((node) => {
+            const user = node.data;
+            if (user?.data) {
+              const userdata = data[user.id+''];
+              if (userdata) {
+                user.data[datakey] = userdata ? userdata.length : null;
+                console.log(user.data[datakey]);
+                node.setData({...user});
+              }
+            }
+          });
+          // if (data) {
+          //   d.set(datakey, data);
+          // } else {
+          //   d.delete(datakey);
+          // }
+          // console.log(data);
+          return {...d};
+        });
+      } catch (ex) {
+        console.error(ex);
+      }
+    }
+  }
   return (
     <Box sx={{p:1}}>
       <Typography variant="h6">Data Panel</Typography>
@@ -30,7 +68,13 @@ const DataPanel = (props: IToolPanelParams<IUser>) => {
         const uparts = fparts[0].split('-');
         const children = (colDef as ColGroupDef).children||[];
         return <Box key={colId}>
-          <Row><span className='ag-column-select-column-label'>{fparts[1]}</span><Avatar alt="dataclass" sx={{width: 16, height: 16 , fontSize:12}}>{uparts[0][0]}</Avatar></Row>
+          <Row>
+              <IconButton sx={{color:'inherit'}} aria-label="load data" size='small' onClick={onLoadData(colId.substring(5))}>
+                <CloudDownloadIcon fontSize='small'/>
+              </IconButton>
+              <span className='ag-column-select-column-label'>{fparts[1]}</span>
+              <Avatar alt="dataclass" sx={{width: 16, height: 16 , fontSize:12}}>{uparts[0][0]}</Avatar>
+          </Row>
           <Row><Select size='small' value='last' variant='standard'>
                   <MenuItem value="last">Last</MenuItem>
                   <MenuItem value="current_month">Current Month</MenuItem>
@@ -288,7 +332,7 @@ export function UserGrid(props: UserGridProps) {
       const headerName = `${fparts[1]} (${kparts[0]})`;
       const headerTooltip = (kparts[1]!=='' ? `uploaded by user ${kparts[1]}` : fparts[1]);
       const sample = props.users.find(u => u.data && u.data[key]);
-      console.log(sample);
+      //console.log(sample);
       if (sample?.data && sample?.data[key]?.details) {
         const headerName = `${fparts[1]} (${kparts[0]}) - group`;
         const children: ColDef[] = [];
@@ -325,11 +369,12 @@ export function UserGrid(props: UserGridProps) {
       } else {
         coldefs.push({field: fparts[1], colId: `data-${key}`, initialHide: true, enableRowGroup: true,
           valueGetter: ({data:user}) => {
+            // console.log(user, key);
             if (!user) return null;
             if (!user.data) return null;
             const kpi = user.data[`${key}`];
             if (!kpi) return '';
-            return kpi.value;
+            return kpi.value||kpi;
           },
           sortable: true, resizable: true,
           headerName, headerTooltip,

@@ -1,7 +1,7 @@
 import { AppDataSource } from '@/databases';
 import { logger } from '@/utils/logger';
 import { IUserData } from '@sharedtypes';
-import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan, Any } from 'typeorm';
+import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan, Any, Between } from 'typeorm';
 import { UserEntity } from './user.entity';
 
 @Entity({ name: 'psuserdata' })
@@ -73,7 +73,7 @@ export class UserDataEntity extends BaseEntity implements IUserData {
       where: {
         userid: Any(userid),
         key: Any(keys),
-        timestamp: In([minDate, maxDate]),
+        timestamp: Between(minDate, maxDate),
       },
       order: {
         timestamp: 'DESC',

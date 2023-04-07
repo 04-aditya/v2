@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { appstateDispatch } from '@/hooks/useAppState';
+import { appstateDispatch } from 'sharedui/hooks/useAppState';
 import { Typography } from '@mui/material';
 import styles from './dashboard.module.scss';
 

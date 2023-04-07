@@ -130,7 +130,8 @@ export class UsersController {
     // eslint-disable-next-line @typescript-eslint/no-inferrable-types
     @QueryParam('usergroups') usergroups?: string,
   ) {
-    const result = new APIResponse<Map<string, IUserData[]>>();
+    const result = new APIResponse<Map<string, Map<string, IUserData[]>>>();
+    result.data = new Map<string, Map<string, IUserData[]>>([]);
     if (userId === '-1') return result;
 
     const matchedUser = await this.getUser(userId, currentUser);
@@ -146,11 +147,18 @@ export class UsersController {
       const { users } = await matchedUser.loadOrg(maxDate || new Date(), groups);
       userList = users.map(u => u.id);
     }
+    console.log(data_keys, userList, minDate, maxDate);
     const dataList = await UserDataEntity.GetSeries(userList, keys, minDate, maxDate);
-    result.data = groupBy(
+    const dataMap = groupBy(
       dataList.map(d => d.toJSON()),
-      u => `${u.userid}`,
+      d => d.key,
     );
+    dataMap.forEach((v, k) => {
+      result.data.set(
+        k,
+        groupBy(v, u => `${u.userid}`),
+      );
+    });
     return result;
   }
 

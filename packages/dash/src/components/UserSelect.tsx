@@ -12,7 +12,7 @@ import { useTheme, styled } from '@mui/material/styles';
 import { VariableSizeList, ListChildComponentProps } from 'react-window';
 import Typography from '@mui/material/Typography';
 import { string } from 'yup';
-import { useAllUsers } from '@/api/users';
+import { useAllUsers } from 'psnapi/users';
 
 
 const LISTBOX_PADDING = 8; // px

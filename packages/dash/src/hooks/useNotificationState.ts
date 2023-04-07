@@ -1,7 +1,7 @@
 import React from 'react';
 import { AxiosInstance, AxiosResponse } from 'axios';
 import { createStore } from 'react-hooks-global-state';
-import useAxiosPrivate from './useAxiosPrivate';
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 
 let nid=1;
 export class NotificationInfo {

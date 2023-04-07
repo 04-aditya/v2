@@ -1,14 +1,14 @@
 import * as React from 'react'
 import { Box, Button, Divider, Typography } from '@mui/material'
-import { PageHeader } from '@/components/PageHeader';
-import { PageContainer } from '@/components/PageContainer';
-import { useAllUserData, useAllDataKeys, useUser } from '@/api/users';
+import { PageHeader } from 'sharedui/components/PageHeader';
+import { PageContainer } from 'sharedui/components/PageContainer';
+import { useAllUserData, useAllDataKeys, useUser } from 'psnapi/users';
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef, ICellRendererParams } from 'ag-grid-enterprise';
 import BasicUserCard from '@/components/BasicUserCard';
 import { getUserName } from '@/../../shared/types/src';
 import { Row } from '@/components/RowColumn';
-import useAxiosPrivate from '@/hooks/useAxiosPrivate';
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 
 const FieldDetailCellRenderer = ({ data }: ICellRendererParams) => {
   const gridStyle = React.useMemo(() => ({height:200, width: '100%'}), []);

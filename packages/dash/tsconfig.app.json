@@ -8,7 +8,9 @@
     "paths": {
       "@/*": ["*"],
       "@hooks/*": ["hooks/*"],
-      "sharedtypes": ["../../shared/types/src/index.ts"]
+      "sharedtypes": ["../../shared/types/src/index.ts"],
+      "sharedui/*": ["../../shared/ui/src/*"],
+      "psnapi/*": ["../../shared/psnapi/src/*"]
     }
   },
   "files": [
@@ -29,5 +31,5 @@
     "**/*.spec.jsx",
     "**/*.test.jsx"
   ],
-  "include": ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"]
+  "include": ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx", "../shared/ui/src/hooks/useRefreshToken.js", "../shared/psnapi/src/useAxiosPrivate.js", "../shared/psnapi/src/axios.ts"]
 }

@@ -1,9 +1,9 @@
 import { Avatar, Box, Button, Card, CardHeader, CircularProgress, Divider, FormControl, FormHelperText, Grid, Grow, IconButton, InputLabel, MenuItem, MenuList, Paper, Popper, Select, SelectChangeEvent, Tab, Tabs, Tooltip, Typography } from '@mui/material';
 import { Route, Link, Outlet, useParams,useSearchParams, useNavigate } from 'react-router-dom';
-import { appstateDispatch } from '@/hooks/useAppState';
+import { appstateDispatch } from 'sharedui/hooks/useAppState';
 import styles from './dashboard.module.scss';
 import React, { useEffect, useMemo } from 'react';
-import { useUser, useUserSnapshotDates, useUserTeam, useUserStats, useUserGroups } from '@/api/users';
+import { useUser, useUserSnapshotDates, useUserTeam, useUserStats, useUserGroups } from 'psnapi/users';
 import { NumberStatWidget, PercentStatWidget, PieStatWidget, StatContainer, StatWidget } from '@/components/StatWidget';
 import { Row } from '@/components/RowColumn';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
@@ -19,11 +19,11 @@ import EmailIcon from '@mui/icons-material/Email';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { getUserName, IStatsData } from 'sharedtypes';
-import useAxiosPrivate from '@/hooks/useAxiosPrivate';
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { displayNotification } from '@/hooks/useNotificationState';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import ButtonPopover from '@/components/ButtonPopover';
-import { PageContainer } from '@/components/PageContainer';
+import { PageContainer } from 'sharedui/components/PageContainer';
 
 
 type PeopleStatsProps = {

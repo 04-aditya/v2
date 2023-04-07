@@ -1,6 +1,6 @@
 import { Checkbox, Chip, FormControl, IconButton, InputLabel, ListItemText, MenuItem, OutlinedInput, Paper, Select, SelectChangeEvent, Stack } from '@mui/material';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { useRoles } from '@/api/roles';
+import { useRoles } from 'psnapi/roles';
 import { ICellRendererParams } from 'ag-grid-community';
 import { useState } from 'react';
 import ButtonPopover from './ButtonPopover';

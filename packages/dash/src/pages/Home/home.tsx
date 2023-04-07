@@ -1,10 +1,10 @@
 import { Box, Container, Typography } from '@mui/material';
 import { Route, Link, Outlet, useParams } from 'react-router-dom';
-import { appstateDispatch } from '@/hooks/useAppState';
+import { appstateDispatch } from 'sharedui/hooks/useAppState';
 
 import styles from './home.module.scss';
 import { useEffect } from 'react';
-import { useUser } from '@/api/users';
+import { useUser } from 'psnapi/users';
 import { Row } from '@/components/RowColumn';
 
 /* eslint-disable-next-line */

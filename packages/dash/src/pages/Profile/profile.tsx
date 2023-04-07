@@ -3,8 +3,8 @@ import styles from './profile.module.scss';
 import { IUser } from 'sharedtypes';
 import BasicUserCard from '@/components/BasicUserCard';
 import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '@mui/material';
-import { appstateDispatch } from '@/hooks/useAppState';
-import { useUser, useUserTeam } from '@/api/users';
+import { appstateDispatch } from 'sharedui/hooks/useAppState';
+import { useUser, useUserTeam } from 'psnapi/users';
 import { useParams } from 'react-router-dom';
 /* eslint-disable-next-line */
 export interface ProfileProps {}

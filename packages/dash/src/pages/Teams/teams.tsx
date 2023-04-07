@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { IUser } from 'sharedtypes';
-import { useUser, useUserDataKeys, useUserTeam } from '@/api/users';
+import { useUser, useUserDataKeys, useUserTeam } from 'psnapi/users';
 
 import 'ag-grid-enterprise';
 import 'ag-grid-community/styles/ag-grid.css';
@@ -10,11 +10,11 @@ import { ColumnVisibleEvent } from 'ag-grid-community';
 
 import { Box, Tab, Tabs } from '@mui/material';
 
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
+import { PageContainer } from 'sharedui/components/PageContainer';
 import { Row } from '@/components/RowColumn';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { FileUploadButton } from '@/components/FileUploadDialog';
-import useAxiosPrivate from '@/hooks/useAxiosPrivate';
-import { PageContainer } from '@/components/PageContainer';
 import { GroupSelect } from '@/components/GroupSelect';
 import { UserGrid } from '@/components/UserGrid';
 import { displayNotification } from '@/hooks/useNotificationState';

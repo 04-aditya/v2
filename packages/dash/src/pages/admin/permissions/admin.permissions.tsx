@@ -7,13 +7,13 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import { ColDef, SelectionChangedEvent } from 'ag-grid-community';
-import { appstateDispatch } from '@/hooks/useAppState';
+import { appstateDispatch } from 'sharedui/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { usePermissions } from '@/api/permissions';
-import useAxiosPrivate from '@/hooks/useAxiosPrivate';
+import { usePermissions } from 'psnapi/permissions';
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { checkboxSelection, headerCheckboxSelection } from '@/components/checkboxSelection';
-import { PageContainer } from '@/components/PageContainer';
-import { PageHeader } from '@/components/PageHeader';
+import { PageContainer } from 'sharedui/components/PageContainer';
+import { PageHeader } from 'sharedui/components/PageHeader';
 
 
 /* eslint-disable-next-line */

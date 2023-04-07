@@ -20,11 +20,27 @@ export class AdminController {
   @Get('/users')
   @OpenAPI({ summary: 'Return users matched by the query`' })
   @Authorized(['user.read.all.all'])
-  async listUsers(@CurrentUser() currentUser: UserEntity) {
+  async listUsers(@CurrentUser() currentUser: UserEntity, @QueryParam('datakeys') data_keys?: string) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
     const result = new APIResponse<IUser[]>();
     const matchedUsers: UserEntity[] = await AppDataSource.getRepository(UserEntity).find({ relations: { roles: true } });
+
+    const keys = (data_keys || '')
+      .split(',')
+      .map(k => k.trim())
+      .filter(k => k !== '');
+    if (keys.length > 0) {
+      const dataworkers = matchedUsers.map(u => {
+        return new Promise(resolve => {
+          UserDataEntity.getUserData(u.id, new Date(), keys).then(data => {
+            u.data = data;
+            resolve(u);
+          });
+        });
+      });
+      await Promise.all(dataworkers);
+    }
     console.log(`fetched ${matchedUsers.length} users.`);
     result.data = matchedUsers.map(u => u.toJSON('all'));
     return result;

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useUserGroups } from '@/api/users';
+import { useUserGroups } from 'psnapi/users';
 import AutocompleteCheckbox from '@/components/AutocompleteCheckbox';
 
 

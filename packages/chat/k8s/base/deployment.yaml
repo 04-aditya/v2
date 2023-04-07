@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dep
+  labels:
+    apptype: psniapp
+spec:
+  selector:
+    matchLabels:
+      apptype: psniapp
+  template:
+    metadata:
+      labels:
+        apptype: psniapp
+    spec:
+      containers:
+      - name: psni-chat-app
+        image: app-image
+        ports:
+        - containerPort: 80
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+

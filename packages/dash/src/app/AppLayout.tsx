@@ -27,12 +27,12 @@ import ListItemText from '@mui/material/ListItemText';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { theme } from './theme';
 import {notificationDispatch, useNotificationStore} from '@/hooks/useNotificationState';
-import {useAppStore} from '@/hooks/useAppState';
+import {useAppStore} from 'sharedui/hooks/useAppState';
 import { CircularProgress, ListItem, ListItemAvatar, Menu, MenuItem, useTheme } from '@mui/material';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import useAuth from '@/hooks/useAuth';
+import useAuth from 'sharedui/hooks/useAuth';
 
 interface AppBarProps extends MuiAppBarProps {
   open?: boolean;

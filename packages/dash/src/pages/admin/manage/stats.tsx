@@ -1,15 +1,15 @@
 import { Box, Button, CircularProgress, Divider, FormControl, FormControlLabel, FormHelperText, Grid, Input, InputLabel, MenuItem, Select, SelectChangeEvent, Tab, Tabs, TextField, Typography } from '@mui/material'
 import * as React from 'react'
-import { PageHeader } from '@/components/PageHeader';
-import { PageContainer } from '@/components/PageContainer';
-import { useStatTypes } from '@/api/stats';
+import { PageHeader } from 'sharedui/components/PageHeader';
+import { PageContainer } from 'sharedui/components/PageContainer';
+import { useStatTypes } from 'psnapi/stats';
 import ButtonPopover from '@/components/ButtonPopover';
 import { Row } from '@/components/RowColumn';
 import { IStatType, IUser } from 'sharedtypes';
 import { Stack } from '@mui/system';
 import { TabPanel, a11yProps } from '@/components/TabPanel';
 import * as jp from 'jsonpath';
-import { useAllUsers } from '@/api/users';
+import { useAllUsers } from 'psnapi/users';
 import 'ag-grid-enterprise';
 import { AgGridReact } from 'ag-grid-react';
 

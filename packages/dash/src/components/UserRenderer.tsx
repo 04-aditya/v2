@@ -4,7 +4,7 @@ import { Chip, Paper, Stack } from '@mui/material';
 import { ICellRendererParams } from 'ag-grid-community';
 import ButtonPopover from '@/components/ButtonPopover';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { useAllUsers } from '@/api/users';
+import { useAllUsers } from 'psnapi/users';
 import UserSelect from '@/components/UserSelect';
 
 export const UserRenderer = (params: ICellRendererParams<IUser>) => {

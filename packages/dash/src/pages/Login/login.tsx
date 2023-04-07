@@ -3,8 +3,8 @@ import { Alert, Box, Button, Card, CardActions, CardContent, CardMedia, Circular
 import { useNavigate, useLocation } from 'react-router-dom';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
-import useAuth from '@hooks/useAuth';
-import axios from '@/api/axios';
+import useAuth from 'sharedui/hooks/useAuth';
+import axios from 'psnapi/axios';
 import GenericDialog from '@/components/GenericDialog';
 
 const LOGIN_URL = '/auth/requestaccess';
@@ -53,10 +53,12 @@ export function Login(props: LoginProps) {
           withCredentials: true,
         }
       );
-      setBusy(false);
       showCodeEntry(true);
     } catch(ex) {
       console.error(ex);
+      setError('Invalid email. Please try again')
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -81,6 +83,9 @@ export function Login(props: LoginProps) {
       navigate(from, { replace: true });
     } catch(ex) {
       console.error(ex);
+      setError('Invalid code. Please try again')
+    } finally {
+      setBusy(false);
     }
   }
 

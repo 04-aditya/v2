@@ -7,17 +7,17 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import { ColDef, GetDataPath, ICellRendererParams, RowValueChangedEvent, SelectionChangedEvent } from 'ag-grid-community';
-import { appstateDispatch } from '@/hooks/useAppState';
+import { appstateDispatch } from 'sharedui/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useRoles } from '@/api/roles';
+import { useRoles } from 'psnapi/roles';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import ButtonPopover from '@/components/ButtonPopover';
-import { usePermissions } from '@/api/permissions';
+import { usePermissions } from 'psnapi/permissions';
 import { RoleNamesRenderer } from '@/components/RolesRenderer';
 import { checkboxSelection, headerCheckboxSelection } from '@/components/checkboxSelection';
 import { MenuProps } from '@/components/MenuProps';
-import { PageContainer } from '@/components/PageContainer';
-import { PageHeader } from '@/components/PageHeader';
+import { PageContainer } from 'sharedui/components/PageContainer';
+import { PageHeader } from 'sharedui/components/PageHeader';
 
 
 /* eslint-disable-next-line */
