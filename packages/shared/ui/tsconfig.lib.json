@@ -19,5 +19,5 @@
     "src/**/*.spec.jsx",
     "src/**/*.test.jsx"
   ],
-  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx", "../psnapi/src/useAxiosPrivate.js"]
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx", "../psnapi/src/useAxiosPrivate.ts", "../psnapi/src/useRefreshToken.ts", "../psnapi/src/useAuth.tsx", "../psnapi/src/RequireAuth.tsx"]
 }

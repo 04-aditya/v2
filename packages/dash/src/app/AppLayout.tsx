@@ -32,7 +32,8 @@ import { CircularProgress, ListItem, ListItemAvatar, Menu, MenuItem, useTheme } 
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import useAuth from 'sharedui/hooks/useAuth';
+import useAuth from 'psnapi/useAuth';
+import logo4light from 'sharedui/assets/PS_Logo_RGB_light.png';
 
 interface AppBarProps extends MuiAppBarProps {
   open?: boolean;
@@ -94,7 +95,7 @@ const AppLayout = ()=>{
   const {auth}= useAuth();
 
   const isAdmin = useMemo(()=>{
-    return auth.user?auth.user.roles.find(r=>r.name==='admin'):false;
+    return auth.user?auth.user.roles.find((r:any)=>r.name==='admin'):false;
   }, [auth.user]);
 
   return <ThemeProvider theme={theme}>
@@ -118,7 +119,7 @@ const AppLayout = ()=>{
         <MenuIcon />
       </IconButton> */}
       <Box sx={{pr:2, pt:1}}>
-        <img src='/assets/ps-logo.png' height={'32px'} alt='publicis sapient logo'/>
+        <img src={logo4light} height={'32px'} alt='publicis sapient logo'/>
       </Box>
       <Title/>
       <NotificationIcon/>

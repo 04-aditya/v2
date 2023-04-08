@@ -15,9 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@v2/shared/psnapi": ["packages/shared/psnapi/src/index.ts"],
       "sharedtypes": ["packages/shared/types/src/index.ts"],
-      "sharedui/*": ["packages/shared/ui/src/*"]
+      "sharedui/*": ["packages/shared/ui/src/*"],
+      "psnapi/*": ["packages/shared/psnapi/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp"]

@@ -9,6 +9,7 @@ import { RolesController } from '@controllers/roles.controller';
 import { PermissionsController } from '@controllers/permissions.controller';
 import { UserGroupController } from './controllers/usergroup.controller';
 import { StatsController } from './controllers/stats.controller';
+import { ChatController } from './controllers/chat.controller';
 
 validateEnv();
 
@@ -22,5 +23,6 @@ const app = new App([
   PermissionsController,
   UserGroupController,
   StatsController,
+  ChatController,
 ]);
 app.listen();

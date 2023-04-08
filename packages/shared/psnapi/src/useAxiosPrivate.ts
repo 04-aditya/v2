@@ -1,7 +1,7 @@
 import { axiosPrivate } from "./axios";
 import { useEffect } from "react";
-import useRefreshToken from "sharedui/hooks/useRefreshToken";
-import useAuth from "sharedui/hooks/useAuth";
+import useRefreshToken from "./useRefreshToken";
+import useAuth from "./useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const useAxiosPrivate = () => {

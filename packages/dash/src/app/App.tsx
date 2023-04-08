@@ -5,8 +5,8 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import { Route, Routes } from 'react-router-dom';
-import RequireAuth from 'sharedui/components/RequireAuth';
-import { AuthProvider } from 'sharedui/context/AuthProvider';
+import RequireAuth from 'psnapi/RequireAuth';
+import { AuthProvider } from 'psnapi/context/AuthProvider';
 import routemap, { RouteMap } from './Routes';
 import {
   QueryClient,

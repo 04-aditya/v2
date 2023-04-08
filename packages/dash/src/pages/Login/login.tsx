@@ -3,7 +3,7 @@ import { Alert, Box, Button, Card, CardActions, CardContent, CardMedia, Circular
 import { useNavigate, useLocation } from 'react-router-dom';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
-import useAuth from 'sharedui/hooks/useAuth';
+import useAuth from 'psnapi/useAuth';
 import axios from 'psnapi/axios';
 import GenericDialog from '@/components/GenericDialog';
 

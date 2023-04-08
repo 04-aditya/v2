@@ -1,1 +1,45 @@
 /* You can add global styles to this file, and also import other style files */
+@font-face {
+  font-family: 'Futura Next Book';
+  src: url('../../shared/ui/src/assets/FuturaNext/FuturaNext_Book.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Minion Pro';
+  src: url('../../shared/ui/src/assets/Minion/MinionPro-Regular.woff2') format('woff2');
+}
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+}
+
+
+.scrollbarv {
+	overflow-y: scroll;
+  overflow-x: hidden;
+	-webkit-overflow-scrolling: touch;
+}
+/* Works on Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #b4b4b4 #eeeeee;
+}
+
+/* Works on Chrome, Edge, and Safari */
+*::-webkit-scrollbar {
+  width: 0.5em;
+}
+
+*::-webkit-scrollbar-track {
+  background: #eeeeee;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #b4b4b4;
+  border-radius: 20px;
+  border: 1px solid #eeeeee;
+}

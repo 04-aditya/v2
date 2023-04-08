@@ -1,20 +1,19 @@
-import axios from '../../../psnapi/src/axios';
+import axios from './axios';
+import { IAuth } from './context/AuthProvider';
 import useAuth from './useAuth';
 
 const useRefreshToken = () => {
-    const { setAuth } = useAuth();
+    const { auth, setAuth } = useAuth();
 
     const refresh = async () => {
         const response = await axios.get('/auth/refreshtoken', {
             withCredentials: true
         });
-        setAuth((prev) => {
-            return {
-                ...prev,
+        setAuth({
+                ...auth,
                 roles: response.data.roles,
                 accessToken: response.data.accessToken
-            }
-        });
+            } as IAuth);
         return response.data.accessToken;
     }
     return refresh;
