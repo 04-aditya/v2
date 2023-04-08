@@ -87,7 +87,11 @@
           "find ./packages/chat/k8s -name kustomization.yaml -type f -exec sed -i 's/REGISTRY/{args.registry}/g' {} \\;",
           "find ./packages/chat/k8s -name kustomization.yaml -type f -exec sed -i 's/TAG/{args.sha}/g' {} \\;",
           {
-            "command": "cp -r ./packages/chat/k8s ./manifests/chat/k8s",
+            "command": "cp -r ./packages/chat/k8s/ ./manifests/chat/",
+            "forwardAllArgs": false
+          },
+          {
+            "command": "tree ./manifests/chat",
             "forwardAllArgs": false
           },
           {
