@@ -53,7 +53,7 @@ stages:
         npm i --legacy-peer-deps
       displayName: 'Install modules'
     - script: |
-        git fetch --depth=10
+        git fetch --depth=20
         git log --pretty=oneline
         echo NX_API_URL=$(APIURL) > ./packages/dash/.env.local
         echo NX_EMAILDOMAINS=$(EmailDomains) >> ./packages/dash/.env.local
