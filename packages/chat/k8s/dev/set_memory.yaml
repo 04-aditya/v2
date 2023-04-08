@@ -6,7 +6,7 @@ spec:
   template:
     spec:
       containers:
-      - name: psni-chat-app
+      - name: psni-dash-app
         resources:
           limits:
             memory: 512Mi
