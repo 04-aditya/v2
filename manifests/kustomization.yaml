@@ -4,3 +4,4 @@ bases:
 - ./buildtag.yaml
 - ./api/k8s
 - ./dash/k8s
+- ./chat/k8s
