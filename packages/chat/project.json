@@ -91,7 +91,7 @@
             "forwardAllArgs": false
           },
           {
-            "command": "cp -r ./packages/chat/k8s/ ./manifests/chat/k8s/",
+            "command": "cp -r ./packages/chat/k8s/ ./manifests/chat/",
             "forwardAllArgs": false
           },
           {
