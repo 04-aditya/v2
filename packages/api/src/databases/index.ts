@@ -10,8 +10,9 @@ import { UserDataEntity } from '@/entities/userdata.entity';
 import { TeamMemberEntity } from '@/entities/teammember.entity';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
 import { ConfigEntity } from '@/entities/config.entity';
+import { ChatSessionEntity } from '@/entities/chatsession.entity';
+import { ChatMessageEntity } from '@/entities/chatmessage.entity';
 
-console.log(join(__dirname));
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: DB_HOST,
@@ -22,7 +23,18 @@ export const AppDataSource = new DataSource({
   synchronize: true,
   poolSize: 10,
   logging: Boolean(process.env.DB_LOG),
-  entities: [UserEntity, UserRoleEntity, PermissionEntity, UserPATEntity, UserDataEntity, TeamMemberEntity, UserGroupEntity, ConfigEntity],
+  entities: [
+    UserEntity,
+    UserRoleEntity,
+    PermissionEntity,
+    UserPATEntity,
+    UserDataEntity,
+    TeamMemberEntity,
+    UserGroupEntity,
+    ConfigEntity,
+    ChatMessageEntity,
+    ChatSessionEntity,
+  ],
   // migrations: [join(__dirname, '../**/*.migration{.ts,.js}')],
   // subscribers: [join(__dirname, '../**/*.subscriber{.ts,.js}')],
   cache: {

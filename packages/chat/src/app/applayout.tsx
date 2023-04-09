@@ -1,5 +1,5 @@
 import React from "react";
-import { AppBar, Box, CssBaseline, Paper, TextField, ThemeProvider, Typography } from "@mui/material";
+import { AppBar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography } from "@mui/material";
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -13,6 +13,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import InfoIcon from '@mui/icons-material/Info';
+import AddCommentIcon from '@mui/icons-material/AddComment';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 
@@ -21,9 +22,11 @@ import logo4dark from 'sharedui/assets/PS_Logo_RGB_dark.png';
 import logo4light from 'sharedui/assets/PS_Logo_RGB_light.png';
 import logo from '../assets/appicon.svg'
 import { useTheme } from "sharedui/theme";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useChatHistory } from "../api/chat";
 import ForumIcon from '@mui/icons-material/Forum';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import {formatDistanceToNow, parseJSON} from 'date-fns';
 
 const drawerWidth = 220;
 
@@ -36,10 +39,21 @@ interface Props {
 }
 
 export default function AppLayout(props: Props) {
+  const navigate = useNavigate();
   const {colorMode, mode, theme} = useTheme();
   const { window } = props;
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const {data:history} = useChatHistory();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const isProfileMenuOpen = Boolean(anchorEl);
+
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -48,7 +62,7 @@ export default function AppLayout(props: Props) {
   const drawer = (
     <Box sx={{height:'100%', display:'flex', flexDirection:'column'}}>
       <Toolbar>
-        <img src={logo} height={48} alt={`${process.env['NX_APP_NAME']} logo`}/>
+        <img src={logo} height={48} alt={`${process.env['NX_APP_NAME']} logo`} onClick={()=>navigate('/')} style={{cursor: 'pointer'}}/>
         <Typography variant="h6" noWrap component="div" sx={{ml:2}}>
           {process.env['NX_APP_NAME']}
         </Typography>
@@ -60,22 +74,22 @@ export default function AppLayout(props: Props) {
       <Divider />
       */}
       <Box sx={{flexGrow:1, maxHeight:600,}} className="scrollbarv">
-        <List>
+        <List dense>
           <ListItem disablePadding>
-            <ListItemButton>
+            <ListItemButton onClick={()=>navigate('/')}>
               <ListItemIcon>
-                <InboxIcon />
+                <AddCommentIcon/>
               </ListItemIcon>
-              <ListItemText primary={'Chat History'} />
+              <ListItemText primary={'New Chat'} />
             </ListItemButton>
           </ListItem>
           {(history||[]).map((item, index) => (
             <ListItem key={index} disablePadding>
-              <ListItemButton>
+              <ListItemButton onClick={()=>navigate(`/chat/${item.id}`)}>
                 <ListItemIcon>
                   <ForumIcon color="primary" />
                 </ListItemIcon>
-                <ListItemText primary={item.name} />
+                <ListItemText primary={item.name} secondary={formatDistanceToNow(parseJSON(item.timestamp),{addSuffix:true})} />
               </ListItemButton>
             </ListItem>
           ))}
@@ -104,6 +118,27 @@ export default function AppLayout(props: Props) {
   );
 
   const container = window !== undefined ? () => window().document.body : undefined;
+  const menuId = 'primary-search-account-menu';
+  const renderProfileMenu = (
+    <Menu
+      anchorEl={anchorEl}
+      anchorOrigin={{
+        vertical: 'bottom',
+        horizontal: 'right',
+      }}
+      id={menuId}
+      keepMounted
+      transformOrigin={{
+        vertical: 'top',
+        horizontal: 'right',
+      }}
+      open={isProfileMenuOpen}
+      onClose={handleMenuClose}
+    >
+      <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
+      <MenuItem onClick={handleMenuClose}>My account</MenuItem>
+    </Menu>
+  );
 
   return <ThemeProvider theme={theme}>
     <CssBaseline/>
@@ -130,8 +165,23 @@ export default function AppLayout(props: Props) {
         <Typography variant="h6" noWrap component="div" sx={{display: { sm: 'none' }}}>
           {process.env['NX_APP_NAME']}
         </Typography>
+        <Box sx={{display:'flex', flexGrow:1, flexDirection:'row', justifyContent:'space-between'}}>
+          <Box/>
+          <IconButton
+            size="large"
+            edge="end"
+            aria-label="account of current user"
+            aria-controls={menuId}
+            aria-haspopup="true"
+            onClick={handleProfileMenuOpen}
+            color="inherit"
+          >
+            <AccountCircle />
+          </IconButton>
+        </Box>
       </Toolbar>
     </AppBar>
+    {renderProfileMenu}
     <Box
       component="nav"
       sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -169,13 +219,14 @@ export default function AppLayout(props: Props) {
     <Box
         component="main"
         sx={{ flexGrow: 1, p: 1, width: { sm: `calc(100% - ${drawerWidth}px)`, display:'flex',
-        flexDirection:'column', height:'100%' } }}
+        flexDirection:'column', height:'100%', overflow: 'hidden' } }}
       >
         <Toolbar />
-        <Box sx={{display:'flex', flexGrow:1, flexDirection:'column',m:1}} >
+        <Box sx={{display:'flex', flexGrow:1, flexDirection:'column',m:1, overflow: 'auto'}} >
           <Outlet/>
         </Box>
     </Box>
   </Box>
   </ThemeProvider>
 }
+

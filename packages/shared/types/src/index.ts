@@ -11,3 +11,4 @@ export * from './interfaces/client.interface';
 export * from './interfaces/industry.interface';
 export * from './interfaces/stats.interface';
 export * from './interfaces/config.interface';
+export * from './interfaces/chat.interface';

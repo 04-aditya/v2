@@ -1,4 +1,6 @@
 import { PaletteMode } from '@mui/material';
+import { Theme } from '@mui/material/styles';
+
 export const getDesignTokens = (mode: PaletteMode) => ({
   typography: {
     fontSize: 14,
@@ -8,6 +10,23 @@ export const getDesignTokens = (mode: PaletteMode) => ({
     },
     body2: {
       fontFamily: 'Minion Pro',
+    },
+  },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: (themeParam: Theme) => (mode === 'light'?`
+        *::-webkit-scrollbar-thumb {
+          background-color: #d6d6d6;
+          border-radius: 20px;
+          border: 1px solid #fff;
+        }
+      `:`
+        *::-webkit-scrollbar-thumb {
+          background-color: #4b4b4b;
+          border-radius: 20px;
+          border: 1px solid #333;
+        }
+      `),
     },
   },
   palette: {
