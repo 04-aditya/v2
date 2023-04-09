@@ -222,7 +222,7 @@ export default function AppLayout(props: Props) {
         flexDirection:'column', height:'100%', overflow: 'hidden' } }}
       >
         <Toolbar />
-        <Box sx={{display:'flex', flexGrow:1, flexDirection:'column',m:1, overflow: 'auto'}} >
+        <Box sx={{display:'flex', flexGrow:1, flexDirection:'column',p:1, overflow: 'auto'}} >
           <Outlet/>
         </Box>
     </Box>

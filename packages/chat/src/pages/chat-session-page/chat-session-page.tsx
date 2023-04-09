@@ -29,7 +29,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   }
 
   return (
-    <Paper elevation={4}
+    <Paper elevation={2}
       sx={theme=>({display:'flex', height:'100%', flexDirection:'column', justifyContent:'space-between', p:1,})}>
       {session?(
       <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
@@ -62,7 +62,7 @@ function MessageContent(props: { message:IChatMessage, mode:string}) {
     borderColor:(isUser?theme.palette.primary.light:theme.palette.secondary.light),
     backgroundColor: isUser?theme.palette.background.default:'transparent',
   })}>
-  <ReactMarkdown children={m.content}
+  <ReactMarkdown children={m.content} className='message-content'
     remarkPlugins={[gfm]}
     components={{
       code({node, inline, className, children, ...props}) {

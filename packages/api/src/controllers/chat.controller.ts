@@ -6,7 +6,20 @@ import authMiddleware from '@/middlewares/auth.middleware';
 import { logger } from '@/utils/logger';
 import axios, { AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
-import { JsonController, UseBefore, Get, Authorized, Post, Body, CurrentUser, Delete, BodyParam, HttpError, Param } from 'routing-controllers';
+import {
+  JsonController,
+  UseBefore,
+  Get,
+  Authorized,
+  Post,
+  Body,
+  CurrentUser,
+  Delete,
+  BodyParam,
+  HttpError,
+  Param,
+  QueryParam,
+} from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
 import { In } from 'typeorm';
 import { ChatSessionEntity } from '@/entities/chatsession.entity';
@@ -33,7 +46,7 @@ axiosRetry(openaiclient, {
 export class ChatController {
   @Get('/history')
   @OpenAPI({ summary: 'Return the chat history of the current user' })
-  async getChatHistory(@CurrentUser() currentUser: UserEntity) {
+  async getChatHistory(@CurrentUser() currentUser: UserEntity, @QueryParam('offset') offset = 0, @QueryParam('limit') limit = 20) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
     const result = new APIResponse<IChatSession[]>();
@@ -45,6 +58,11 @@ export class ChatController {
       where: {
         userid: currentUser.email,
       },
+      order: {
+        timestamp: 'desc',
+      },
+      limit,
+      offset,
     });
 
     sessions.forEach(s => result.data.push(s.toJSON()));
@@ -78,11 +96,13 @@ export class ChatController {
     @CurrentUser() currentUser: UserEntity,
     @BodyParam('message') message_param: string,
     @BodyParam('model') model_param?: string,
+    @BodyParam('assistant') assistant_param?: string,
     @BodyParam('model_version') model_version_param?: string,
     @BodyParam('parameters') parameters?: Record<string, unknown>,
   ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
+    const result = new APIResponse<IChatSession>();
     const repo = AppDataSource.getRepository(ChatSessionEntity);
 
     const message = message_param;
@@ -97,7 +117,7 @@ export class ChatController {
 
     const systemMessage = new ChatMessageEntity();
     systemMessage.role = 'system';
-    systemMessage.content = 'You are a helpful assistant.';
+    systemMessage.content = assistant_param || 'You are a helpful assistant.';
 
     const newMessage = new ChatMessageEntity();
     newMessage.content = message;
@@ -125,7 +145,8 @@ export class ChatController {
       session.messages = [systemMessage, newMessage, assistantMessage];
       session.options.usage = response.data.usage;
       await repo.save(session);
-      return session.toJSON();
+      result.data = session.toJSON();
+      return result;
     } catch (ex) {
       console.error(ex);
       const ar = ex as AxiosError;
@@ -147,6 +168,7 @@ export class ChatController {
   ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
+    const result = new APIResponse<IChatSession>();
     const repo = AppDataSource.getRepository(ChatSessionEntity);
 
     const message = message_param;
@@ -188,7 +210,8 @@ export class ChatController {
       session.messages.push(assistantMessage);
       session.options.usage = response.data.usage;
       await repo.save(session);
-      return session.toJSON();
+      result.data = session.toJSON();
+      return result;
     } catch (ex) {
       console.error(ex);
       const ar = ex as AxiosError;

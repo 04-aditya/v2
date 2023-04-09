@@ -20,11 +20,42 @@ export const getDesignTokens = (mode: PaletteMode) => ({
           border-radius: 20px;
           border: 1px solid #fff;
         }
+        .message-content table {
+          border: 1px solid lightgray;
+          border-radius: 4px;
+          padding: 4px;
+        }
+        .message-content th {
+          background-color: #d6d6d6;
+          color: #000;
+        }
+        .message-content tbody tr:nth-child(odd) {
+          background-color: #eeeeee;
+        }
+        .message-content td {
+          padding:4px
+        }
       `:`
         *::-webkit-scrollbar-thumb {
           background-color: #4b4b4b;
           border-radius: 20px;
           border: 1px solid #333;
+        }
+        .message-content table {
+          border: 1px solid #4b4b4b;
+          border-radius: 4px;
+          padding: 4px
+        }
+        .message-content th {
+          background-color: #4b4b4b;
+          color: #EEE;
+
+        }
+        .message-content tbody tr:nth-child(odd) {
+          background-color: #030303;
+        }
+        .message-content td {
+          padding:4px
         }
       `),
     },

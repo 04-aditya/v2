@@ -17,7 +17,6 @@ body {
   height: 100vh;
 }
 
-
 .scrollbarv {
 	overflow-y: scroll;
   overflow-x: hidden;
@@ -38,8 +37,8 @@ body {
   background: transparent;
 }
 
-*::-webkit-scrollbar-thumb {
+/* *::-webkit-scrollbar-thumb {
   background-color: #b4b4b4;
   border-radius: 20px;
   border: 1px solid #eeeeee;
-}
+} */

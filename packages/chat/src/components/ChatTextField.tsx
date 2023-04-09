@@ -1,7 +1,7 @@
 //import regeneratorRuntime from "regenerator-runtime";
 //import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { useState, ChangeEvent, useEffect } from 'react';
-import { Box, CircularProgress, Divider, FormControl, InputAdornment, InputBase, InputLabel, ListSubheader, MenuItem, Paper, Select, Stack, TextField, ToggleButton } from '@mui/material';
+import { Alert, Box, CircularProgress, Divider, FilledInput, FormControl, Grid, Input, InputAdornment, InputBase, InputLabel, ListSubheader, MenuItem, OutlinedInput, Paper, Select, Slider, Stack, TextField, ToggleButton } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 import IconButton from '@mui/material/IconButton';
@@ -11,7 +11,7 @@ import { AxiosError } from 'axios';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { useNavigate } from 'react-router-dom';
 import { IChatSession } from 'sharedtypes';
-import { useChatHistory } from '../api/chat';
+import { useChatHistory, useChatSession } from '../api/chat';
 import MicIcon from '@mui/icons-material/Mic';
 
 interface ChatTextFieldProps {
@@ -24,13 +24,16 @@ interface ChatTextFieldProps {
 export function ChatTextField(props: ChatTextFieldProps) {
   const {sessionid} = props;
   const axios = useAxiosPrivate();
-  const {invalidateCache} = useChatHistory();
+  const {data:chatsession, error, mutation} = useChatSession(sessionid||'');
   const [newMessage, setNewMessage] = useState<string>('');
   const [isBusy, setIsBusy] = useState(false);
   const [model, setModel] = useState('gpt35turbo-test');
-  const [assistant, setAssistant] = useState('AI Assistant');
+  const [assistant, setAssistant] = useState('You are a helpful AI assistant.');
   const [context, setContext] = useState('none');
   const [showOptions, setShowOptions] = useState(false);
+  const [showParameters, setShowParameters] = useState(false);
+  const [temperature, setTemperature] = useState(0);
+  const [max_tokens, setMaxTokens] = useState(400);
   // const {
   //   transcript,
   //   listening,
@@ -42,33 +45,40 @@ export function ChatTextField(props: ChatTextFieldProps) {
     setNewMessage(props.message||'');
   },[props.message]);
 
+  useEffect(()=>{
+    if (chatsession) {
+      if (chatsession.options?.model) {
+        setModel(chatsession.options.model as string);
+      }
+      setAssistant(chatsession.messages[0].content);
+    }
+  }, [chatsession])
+
   const handleNewMessageChange = (e: ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
   };
 
   const onSend = async () => {
-    try {
-      setIsBusy(true);
-      const res = await axios.post(`/api/chat/${sessionid||''}`, {
-        message: newMessage,
-        model,
-      });
-      if (res.status === 200) {
-        const newSession: IChatSession = res.data;
+    setIsBusy(true);
+    mutation.mutate({
+      model, assistant,
+      message: newMessage,
+      parameters: {
+        temperature,
+        max_tokens,
+      }
+    },{
+      onSuccess: (newSession:IChatSession)=>{
         setNewMessage('');
-        invalidateCache();
         if (props.onSuccess) {
           props.onSuccess(newSession);
         }
+        setIsBusy(false);
+      },
+      onError: (err)=>{
+        setIsBusy(false);
       }
-    } catch (ex) {
-      const ar = ex as AxiosError;
-      if (ar) {
-        console.error(ar.message);
-      }
-    } finally {
-      setIsBusy(false);
-    }
+    });
   };
 
   const handleMessageKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -84,18 +94,19 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const rowCount = newMessage.split('').filter(c => c === '\n').length + 1;
 
   return (<Box>
+    {error ? <Alert severity="error">{error.message}</Alert> : null}
     <Paper
       component="div"
       sx={theme=>({ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', backgroundColor: theme.palette.background.default })}
     >
       <IconButton sx={{ p: '10px' }} aria-label="settings" onClick={()=>setShowOptions(!showOptions)}>
-        <SettingsIcon />
+        <SettingsIcon color={showOptions?'primary':'inherit'}/>
       </IconButton>
       {/* {browserSupportsSpeechRecognition ? <IconButton sx={{ p: '10px' }} aria-label="settings"
         onClick={async ()=>{listening?SpeechRecognition.stopListening():SpeechRecognition.startListening()}}>
         <MicIcon color={listening?'success':'inherit'}/>
       </IconButton> : null} */}
-      <InputBase
+      <InputBase multiline rows={rowCount}
         sx={{ ml: 1, flex: 1 }}
         placeholder="Type your message here..."
         inputProps={{ 'aria-label': 'chat message box' }}
@@ -110,46 +121,71 @@ export function ChatTextField(props: ChatTextFieldProps) {
         <PsychologyAltIcon />
       </IconButton>)}
       <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
-      <IconButton sx={{ p: '10px' }} aria-label="directions">
-        <DisplaySettingsIcon />
+      <IconButton sx={{ p: '10px' }} aria-label="directions" onClick={()=>setShowParameters(!showParameters)}>
+        <DisplaySettingsIcon color={showParameters?'primary':'inherit'} />
       </IconButton>
     </Paper>
-    {showOptions && <Box sx={{display:'flex', flexDirection:'row'}}>
-      <FormControl sx={{ m: 1, minWidth: 180 }}>
-        <InputLabel htmlFor="model-select">Model</InputLabel>
-        <Select id="model-select" label="Model" size='small'
-          value={model}
-          onChange={(e)=>setModel(e.target.value as string)}
-        >
-          <MenuItem value="">
-            <em>None</em>
-          </MenuItem>
-          <ListSubheader>Standard</ListSubheader>
-          <MenuItem value={'gpt35turbo-test'}>GPT 3.5 Turbo</MenuItem>
-          <MenuItem value={'gpt4'} disabled>GPT 4</MenuItem>
-          <ListSubheader>Custom</ListSubheader>
-          <MenuItem value={'coe-test'} disabled>CoE Test</MenuItem>
-        </Select>
-      </FormControl>
-      <FormControl sx={{ m: 1, minWidth: 180, flexGrow:1 }}>
-        <InputLabel htmlFor="assistant-select">Act as</InputLabel>
-        <Select id="assistant-select" label="Act as" size='small'
-          value={assistant}
-          onChange={(e)=>setAssistant(e.target.value as string)}
-        >
-          <MenuItem value={'AI Assistant'}>AI Assistant</MenuItem>
-        </Select>
-      </FormControl>
-      <FormControl sx={{ m: 1, minWidth: 180 }}>
-        <InputLabel htmlFor="assistant-select">Additional Context</InputLabel>
-        <Select id="assistant-select" label="Additional Context" size='small'
-          value={context}
-          onChange={(e)=>setContext(e.target.value as string)}
-        >
-          <MenuItem value={'none'}>none</MenuItem>
-        </Select>
-      </FormControl>
-    </Box>}
+    {showOptions && <Grid container>
+      <Grid item xs={12} sm={4}>
+        <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
+          <InputLabel htmlFor="model-select">Model</InputLabel>
+          <Select id="model-select" label="Model" size='small'
+            value={model}
+            onChange={(e)=>setModel(e.target.value as string)}
+          >
+            <MenuItem value="">
+              <em>None</em>
+            </MenuItem>
+            <ListSubheader>Standard</ListSubheader>
+            <MenuItem value={'gpt35turbo-test'}>GPT 3.5 Turbo</MenuItem>
+            <MenuItem value={'gpt4'} disabled>GPT 4</MenuItem>
+            <ListSubheader>Custom</ListSubheader>
+            <MenuItem value={'coe-test'} disabled>CoE Test</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} sm={4}>
+        <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
+          <InputLabel htmlFor="assistant-select">Act as</InputLabel>
+          <Select id="assistant-select" label="Act as" size='small'
+            value={assistant}
+            onChange={(e)=>setAssistant(e.target.value as string)}
+          >
+            <MenuItem value={'You are a helpful AI assistant.'}>AI Assistant</MenuItem>
+            <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer.'}>Senior Software Engineer</MenuItem>
+            <MenuItem value={'You are a helpful AI assistant, acting as a senior product manager.'}>Senior Product Manager</MenuItem>
+            <MenuItem value={'You are a helpful AI assistant, acting as a senior experience or UX designer.'}>Senior Experience designer</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} sm={4}>
+        <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
+          <InputLabel htmlFor="assistant-select">Additional Context</InputLabel>
+          <Select id="assistant-select" label="Additional Context" size='small'
+            value={context}
+            onChange={(e)=>setContext(e.target.value as string)}
+          >
+            <MenuItem value={'none'}>none</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+    </Grid>}
+    {showParameters && <Grid container>
+      <Grid item xs={12} sm={6} sx={{p:1}}>
+        <TextField id="model-temperature" label="Temperature" size='small'
+          type='number' fullWidth
+          value={temperature}
+          onChange={(e)=>setTemperature(parseInt(e.target.value))}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} sx={{p:1}}>
+        <TextField id="max_tokens" label="Max Tokens" size='small'
+          type='number' fullWidth
+          value={max_tokens}
+          onChange={(e)=>setMaxTokens(parseInt(e.target.value))}
+        />
+      </Grid>
+    </Grid>}
   </Box>
   );
 }
