@@ -156,7 +156,8 @@ export default function LoginCard(props: LoginCardProps) {
               }}
             />
           )}
-          <Link>SSO</Link>
+          &nbsp;
+          <Button href='/auth/ssologin'>SSO</Button>
         </Box>
       </CardActions>
     </Card>

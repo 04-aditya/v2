@@ -239,7 +239,7 @@ export class AuthController {
     return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
   }
 
-  @Post('/ssologin')
+  @Get('/ssologin')
   async ssoLogin(@Req() req: Request, @Res() res: Response, @QueryParam('scopes') qscopes: string) {
     const state = base64URLEncode(crypto.randomBytes(16));
     const code_verifier = base64URLEncode(crypto.randomBytes(32));
@@ -279,7 +279,7 @@ export class AuthController {
     res.redirect(url);
   }
 
-  @Post('/callback')
+  @Get('/callback')
   async ssoCallback(@Req() req: Request, @Res() res: Response) {
     const { code, state, error, error_description } = req.query;
 

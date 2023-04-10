@@ -63,7 +63,7 @@ export default function AppLayout(props: Props) {
     <Box sx={{height:'100%', display:'flex', flexDirection:'column'}}>
       <Toolbar>
         <img src={logo} height={48} alt={`${process.env['NX_APP_NAME']} logo`} onClick={()=>navigate('/')} style={{cursor: 'pointer'}}/>
-        <Typography variant="h6" noWrap component="div" sx={{ml:2}}>
+        <Typography variant="h6" noWrap component="div" sx={{ml:2, cursor: 'pointer'}} onClick={()=>navigate('/')}>
           {process.env['NX_APP_NAME']}
         </Typography>
       </Toolbar>
@@ -162,7 +162,7 @@ export default function AppLayout(props: Props) {
         >
           <img src={logo} alt='menu' height={24}/>
         </IconButton>
-        <Typography variant="h6" noWrap component="div" sx={{display: { sm: 'none' }}}>
+        <Typography variant="h6" noWrap component="div" sx={{display: { sm: 'none' }, cursor: 'pointer'}}>
           {process.env['NX_APP_NAME']}
         </Typography>
         <Box sx={{display:'flex', flexGrow:1, flexDirection:'row', justifyContent:'space-between'}}>
@@ -222,7 +222,7 @@ export default function AppLayout(props: Props) {
         flexDirection:'column', height:'100%', overflow: 'hidden' } }}
       >
         <Toolbar />
-        <Box sx={{display:'flex', flexGrow:1, flexDirection:'column',p:1, overflow: 'auto'}} >
+        <Box sx={{display:'flex', flexGrow:1, flexDirection:'column',p:{xs:0, sm:1}, overflow: 'auto'}} >
           <Outlet/>
         </Box>
     </Box>

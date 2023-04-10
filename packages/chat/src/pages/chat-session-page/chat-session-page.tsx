@@ -66,7 +66,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
 
   return (
     <Paper elevation={2}
-      sx={theme=>({display:'flex', height:'100%', flexDirection:'column', justifyContent:'space-between', p:1,})}>
+      sx={theme=>({display:'flex', height:'100%', flexDirection:'column', justifyContent:'space-between', p:{xs:0, sm:1},})}>
       {session?(
       <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
         <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
@@ -94,7 +94,7 @@ function MessageContent(props: { message:IChatMessage}) {
   },[mode]);
 
   return <Box sx={(theme)=>({px:1, border:'0px solid gray', overflow:'auto',
-    ml: isUser?8:0, mr: isUser?0:8,
+    ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
     borderLeftWidth:isUser?'0px':'2px', borderRightWidth:isUser?'2px':'0px',
     borderColor:(isUser?theme.palette.primary.light:theme.palette.secondary.light),
     backgroundColor: isUser?theme.palette.background.default:'transparent',
@@ -135,13 +135,13 @@ function MessageItem(props: { message:IChatMessage }) {
   return (
     <div ref={ref}>
       {isUser?<Box key={m.id} sx={{display:'flex', flexGrow:1, flexDirection:'row-reverse', alignItems:'flex-start',}}>
-        <Avatar alt='user avatar' sx={{mt:2, width: 24, height: 24, background:'transparent'}}>
+        <Avatar alt='user avatar' sx={{mt:2, width: 24, height: 24, background:'transparent', display:{xs:'none', sm:'block'}}}>
           <PsychologyAltIcon color='primary'/>
         </Avatar>
         <MessageContent message={m} />
-      </Box>:<Box key={m.id} sx={{display:'flex', flexDirection:'row', alignItems:'flex-start',mb:1,}}>
-        <Avatar alt='bot avatar' sx={{mt:1, width: 24, height: 24, background:'transparent'}}>
-          <PsychologyIcon color='secondary'/>
+      </Box>:<Box key={m.id} sx={{display:'flex', flexDirection:'row', alignItems:'flex-start',mb:1}}>
+        <Avatar alt='bot avatar' sx={{mt:1, width: 24, height: 24, background:'transparent', display:{xs:'none', sm:'block'}}}>
+          <PsychologyIcon color='secondary' sx={{transform:'scale(-1,1)'}}/>
         </Avatar>
         <MessageContent message={m} />
       </Box>}

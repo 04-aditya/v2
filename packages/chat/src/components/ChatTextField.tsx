@@ -130,7 +130,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
         <DisplaySettingsIcon color={showParameters?'primary':'inherit'} />
       </IconButton>
     </Paper>
-    {showOptions && <Grid container sx={{ml:-1}}>
+    {showOptions && <Grid container sx={{ml:-1, mt:0.5}}>
       <Grid item xs={12} sm={3} sx={{pr:1}}>
         <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
           <InputLabel htmlFor="model-select">Model</InputLabel>
@@ -178,7 +178,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
         </FormControl>
       </Grid>
     </Grid>}
-    {showParameters && <Grid container>
+    {showParameters && <Grid container sx={{mt:0.5}}>
       <Grid item xs={12} sm={6} sx={{p:0.5}}>
         <TextField id="model-temperature" label="Temperature" size='small'
           type='number' fullWidth
