@@ -31,7 +31,7 @@ export class ChatSessionEntity extends BaseEntity implements IChatSession {
       name: this.name,
       timestamp: this.timestamp,
       options: this.options,
-      messages: (this.messages || []).map(m => m.toJSON()),
+      messages: (this.messages || []).map(m => m.toJSON()).sort((a, b) => a.id - b.id),
     };
   }
 }

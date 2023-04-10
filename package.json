@@ -2,6 +2,7 @@
   "name": "v2",
   "version": "0.0.0",
   "license": "MIT",
+  "proxy": "http://localhost:3000",
   "scripts": {
     "typeorm": "typeorm-ts-node-esm"
   },
@@ -138,6 +139,7 @@
     "ioredis": "^5.3.1",
     "jsonpath": "^1.1.1",
     "jsonwebtoken": "^9.0.0",
+    "langchain": "^0.0.51",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "multer-azure-blob-storage": "^1.2.0",

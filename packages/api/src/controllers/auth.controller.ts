@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import {
   Controller,
   Req,
@@ -13,6 +13,7 @@ import {
   UnauthorizedError,
   ForbiddenError,
   HttpError,
+  QueryParam,
 } from 'routing-controllers';
 
 import { logger } from '@/utils/logger';
@@ -21,10 +22,14 @@ import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import sgMail from '@sendgrid/mail';
 import jwt from 'jsonwebtoken';
-import { REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS } from '@config';
+import { REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS, CLID, OPENID_CONFIG_URL, CLIS } from '@config';
 import { Like } from 'typeorm';
 import { IUserRole } from '@sharedtypes';
 import { UserDataEntity } from '@/entities/userdata.entity';
+import crypto from 'crypto';
+import cache from '@/utils/cache';
+import axios from 'axios';
+import qs from 'qs';
 
 const REFRESHTOKENCOOKIE = 'rt';
 
@@ -39,6 +44,17 @@ function generateCODE(count: number): string {
   return CODE;
 }
 
+const base64URLEncode = str => str.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+const sha256 = buffer => crypto.createHash('sha256').update(buffer).digest();
+
+const getDomainRoot = host => {
+  const parts = host.split('.');
+  if (parts.length < 3) return;
+  return `${parts[1]}.${parts[2]}`;
+};
+
+let OAuthConfig;
 @Controller('/auth')
 export class AuthController {
   @Post('/requestaccess')
@@ -221,5 +237,119 @@ export class AuthController {
       });
     }
     return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
+  }
+
+  @Post('/ssologin')
+  async ssoLogin(@Req() req: Request, @Res() res: Response, @QueryParam('scopes') qscopes: string) {
+    const state = base64URLEncode(crypto.randomBytes(16));
+    const code_verifier = base64URLEncode(crypto.randomBytes(32));
+    cache.set(state, code_verifier);
+
+    const client_id = CLID;
+    const client_secret = CLIS;
+
+    try {
+      const or = await axios.get(OPENID_CONFIG_URL);
+      if (or.status !== 200) {
+        console.error(`unable to get openid configuration from ${OPENID_CONFIG_URL} \n ${or.status} - ${or.data}`);
+        throw new HttpError(500, `Unable to get openid configuration from ${OPENID_CONFIG_URL}`);
+      }
+
+      OAuthConfig = or.data;
+      logger.debug(`fetched openid config from ${OPENID_CONFIG_URL}`);
+    } catch (ex) {
+      logger.error(`unable to get openid configuration from ${OPENID_CONFIG_URL} \n ${ex}`);
+      throw new HttpError(500, `Unable to get openid configuration from ${OPENID_CONFIG_URL}`);
+    }
+    const scopes = [...(qscopes || '').split(','), ...OAuthConfig.scopes_supported].join('%20');
+    logger.info(`login for scopes: ${scopes}`);
+
+    res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true, domain: DOMAIN });
+    const code_challenge = base64URLEncode(sha256(code_verifier));
+    const url = [
+      `${OAuthConfig.authorization_endpoint}?`,
+      `client_id=${client_id}&`,
+      `scope=${scopes}&`,
+      `response_type=code&`,
+      `redirect_uri=${req.protocol + '://' + req.headers['host'] + '/auth/callback'}&`,
+      `code_challenge=${code_challenge}&`,
+      `code_challenge_method=S256&`,
+      `state=${state}`,
+    ].join('');
+    res.redirect(url);
+  }
+
+  @Post('/callback')
+  async ssoCallback(@Req() req: Request, @Res() res: Response) {
+    const { code, state, error, error_description } = req.query;
+
+    if (error) {
+      logger.error({ error, error_description });
+      return res.json({ error, error_description });
+    }
+    try {
+      const code_verifier = await cache.get(state as string);
+      cache.del(state as string);
+      const redirect_uri = `${req.protocol + '://' + req.headers.host + '/auth/callback'}`;
+      const tokenResponse = await axios.post(
+        `${OAuthConfig.token_endpoint}`,
+        qs.stringify({
+          grant_type: 'authorization_code',
+          client_id: CLID,
+          redirect_uri,
+          client_secret: CLIS,
+          code_verifier,
+          code,
+        }),
+      );
+
+      if (tokenResponse.status !== 200) {
+        console.error({ status: tokenResponse.status, data: tokenResponse.data });
+        return res.status(tokenResponse.status).json({ error: 'Invalid response from the selected login provider.' });
+      }
+
+      const tokenData = tokenResponse.data;
+
+      const userInfoResponse = await axios.get(OAuthConfig.userinfo_endpoint, {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+        },
+      });
+
+      if (userInfoResponse.status !== 200) {
+        console.error({ status: userInfoResponse.status, data: userInfoResponse.data });
+        return res.redirect('/');
+      }
+
+      // let user = await AppDataSource.getRepository(UserEntity).findOne({
+      //   where: { email },
+      // });
+      // if (!user) {
+      //   user = await UserEntity.CreateUser(email, true);
+      // }
+
+      // const sessionId = "ac."+base64URLEncode(sha256(crypto.randomBytes(32)));
+
+      // res.cookie(SSID_COOKIE_NAME, sessionId, {
+      //   signed: true,
+      //   maxAge: config.sessionTimeout,
+      //   secure: true,
+      //   httpOnly: true,
+      //   domain: getDomainRoot(req.headers.host)
+      // });
+      // cache.set(sessionId, {
+      //   id: sessionId,
+      //   expiresAt: Date.now()+(tokenData.expires_in-1)*1000,
+      //   tokenData,
+      //   userInfo: userInfoResponse.data,
+      //   ua: req.headers['user-agent'],
+      //   authorization_endpoint: OAuthConfig.authorization_endpoint,
+      // }, {ttl: config.sessionTimeout});
+      const returnUrl = '/';
+      return res.redirect(returnUrl);
+    } catch (ex) {
+      console.error(ex);
+      return res.status(500).json({ error: 'Unable to authenticate.' });
+    }
   }
 }

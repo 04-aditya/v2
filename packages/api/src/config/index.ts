@@ -22,4 +22,5 @@ export const {
   CLIS,
   TID,
   PDAAPI,
+  OPENID_CONFIG_URL,
 } = process.env;

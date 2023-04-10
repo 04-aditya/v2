@@ -7,6 +7,9 @@ export class ChatMessageEntity extends BaseEntity implements IChatMessage {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ default: 0 })
+  index: number;
+
   @Column({ nullable: false })
   role: 'user' | 'system' | 'assistant';
 
@@ -21,6 +24,7 @@ export class ChatMessageEntity extends BaseEntity implements IChatMessage {
       id: this.id,
       role: this.role,
       content: this.content,
+      index: this.index,
     };
   }
 }

@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Card, CardActions, CardContent, CardHeader, CardProps, CircularProgress, Divider, InputAdornment, Stack, TextField } from "@mui/material";
+import { Alert, Box, Button, Card, CardActions, CardContent, CardHeader, CardProps, CircularProgress, Divider, InputAdornment, Link, Stack, TextField } from "@mui/material";
 import axios from "psnapi/axios";
 import useAuth from "psnapi/useAuth";
 import { useState, useRef, useEffect, ChangeEvent } from "react";
@@ -138,7 +138,7 @@ export default function LoginCard(props: LoginCardProps) {
         />}
         {error !== '' ? <Alert severity="error">{error}</Alert> : null}
       </CardContent>
-      <CardActions><Box sx={{position: 'relative' }}>
+      <CardActions><Box sx={{position: 'relative'}}>
           {codeEntry? (
             <Button size="small" onClick={onVerifyCode} disabled={busy}>Verify</Button>
           ):(
@@ -156,6 +156,7 @@ export default function LoginCard(props: LoginCardProps) {
               }}
             />
           )}
+          <Link>SSO</Link>
         </Box>
       </CardActions>
     </Card>

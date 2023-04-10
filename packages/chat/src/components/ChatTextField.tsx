@@ -34,6 +34,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const [showParameters, setShowParameters] = useState(false);
   const [temperature, setTemperature] = useState(0);
   const [max_tokens, setMaxTokens] = useState(400);
+  const [errorMessage, setErrorMessage] = useState<string>();
   // const {
   //   transcript,
   //   listening,
@@ -60,6 +61,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
 
   const onSend = async () => {
     setIsBusy(true);
+    setErrorMessage(undefined);
     mutation.mutate({
       model, assistant,
       message: newMessage,
@@ -76,6 +78,8 @@ export function ChatTextField(props: ChatTextFieldProps) {
         setIsBusy(false);
       },
       onError: (err)=>{
+        const res:any = (err as AxiosError).response?.data;
+        setErrorMessage(res?.message || 'Unable to send message. Please try again!');
         setIsBusy(false);
       }
     });
@@ -94,7 +98,8 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const rowCount = newMessage.split('').filter(c => c === '\n').length + 1;
 
   return (<Box>
-    {error ? <Alert severity="error">{error.message}</Alert> : null}
+    {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
+    {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
     <Paper
       component="div"
       sx={theme=>({ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', backgroundColor: theme.palette.background.default })}
@@ -125,8 +130,8 @@ export function ChatTextField(props: ChatTextFieldProps) {
         <DisplaySettingsIcon color={showParameters?'primary':'inherit'} />
       </IconButton>
     </Paper>
-    {showOptions && <Grid container>
-      <Grid item xs={12} sm={4}>
+    {showOptions && <Grid container sx={{ml:-1}}>
+      <Grid item xs={12} sm={3} sx={{pr:1}}>
         <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
           <InputLabel htmlFor="model-select">Model</InputLabel>
           <Select id="model-select" label="Model" size='small'
@@ -140,11 +145,11 @@ export function ChatTextField(props: ChatTextFieldProps) {
             <MenuItem value={'gpt35turbo-test'}>GPT 3.5 Turbo</MenuItem>
             <MenuItem value={'gpt4'} disabled>GPT 4</MenuItem>
             <ListSubheader>Custom</ListSubheader>
-            <MenuItem value={'coe-test'} disabled>CoE Test</MenuItem>
+            <MenuItem value={'psbodhi'}>PS Bodhi</MenuItem>
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={12} sm={4}>
+      <Grid item xs={12} sm={6} sx={{pr:1}}>
         <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
           <InputLabel htmlFor="assistant-select">Act as</InputLabel>
           <Select id="assistant-select" label="Act as" size='small'
@@ -152,13 +157,16 @@ export function ChatTextField(props: ChatTextFieldProps) {
             onChange={(e)=>setAssistant(e.target.value as string)}
           >
             <MenuItem value={'You are a helpful AI assistant.'}>AI Assistant</MenuItem>
+            <Divider/>
             <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer.'}>Senior Software Engineer</MenuItem>
             <MenuItem value={'You are a helpful AI assistant, acting as a senior product manager.'}>Senior Product Manager</MenuItem>
             <MenuItem value={'You are a helpful AI assistant, acting as a senior experience or UX designer.'}>Senior Experience designer</MenuItem>
+            <Divider/>
+            <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer. when reviewing the code you look for exception handling, security issues, performance problems, and readability of code.'}>AI Reviewer</MenuItem>
           </Select>
         </FormControl>
       </Grid>
-      <Grid item xs={12} sm={4}>
+      <Grid item xs={12} sm={3}>
         <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
           <InputLabel htmlFor="assistant-select">Additional Context</InputLabel>
           <Select id="assistant-select" label="Additional Context" size='small'
@@ -171,14 +179,14 @@ export function ChatTextField(props: ChatTextFieldProps) {
       </Grid>
     </Grid>}
     {showParameters && <Grid container>
-      <Grid item xs={12} sm={6} sx={{p:1}}>
+      <Grid item xs={12} sm={6} sx={{p:0.5}}>
         <TextField id="model-temperature" label="Temperature" size='small'
           type='number' fullWidth
           value={temperature}
           onChange={(e)=>setTemperature(parseInt(e.target.value))}
         />
       </Grid>
-      <Grid item xs={12} sm={6} sx={{p:1}}>
+      <Grid item xs={12} sm={6} sx={{p:0.5}}>
         <TextField id="max_tokens" label="Max Tokens" size='small'
           type='number' fullWidth
           value={max_tokens}

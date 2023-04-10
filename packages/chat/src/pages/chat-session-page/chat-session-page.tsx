@@ -13,18 +13,54 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 import { useTheme } from 'sharedui/theme';
-import { PaletteMode } from '@mui/material';
-import ContextSelect from '../../components/ContextSelect';
-
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
 
 export function ChatSessionPage(props: ChatSessionPageProps) {
-  const {mode} = useTheme();
   const { chatId } = useParams();
   const {data:session, invalidateCache} = useChatSession(chatId||'');
+  const [messages, setMessages] = useState<IChatMessage[]>([]);
+  const [typeMode, setTypeMode] = useState(false);
+
+  useEffect(() => {
+    if (session && session.messages) {
+      if (session.messages.length>2 && typeMode) {
+        const msgs = session.messages.slice(1,-1);
+        const lastmsg = session.messages[session.messages.length-1];
+        console.log(lastmsg.content);
+        const words = lastmsg.content.split(' ');
+        //merge consecutive spaces into one word
+        for (let i=0; i<words.length-1; i++) {
+          if (words[i].trim()==='' && words[i+1].trim()==='') {
+            words[i]+=words[i+1];
+            words.splice(i,1);
+            i--;
+          }
+        }
+        console.log(words);
+        lastmsg.content='';
+        setMessages([...msgs,lastmsg]);
+        const intervalHandle = setInterval(()=>{
+          if (words.length>0) {
+            const word=words.shift();
+            lastmsg.content += word + ' ';
+            setMessages([...msgs,lastmsg]);
+            return;
+          }
+          clearInterval(intervalHandle);
+          setTypeMode(false);
+        }, 100);
+        return ()=>clearInterval(intervalHandle);
+      } else {
+        setMessages(session.messages);
+      }
+    } else {
+      setMessages([]);
+    }
+  }, [session]);
 
   const handleSessionUpdate = (session: IChatSession) => {
+    setTypeMode(true);
     invalidateCache();
   }
 
@@ -36,7 +72,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
         <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
         </Toolbar>
         <Box sx={{flexGrow:1,}} className="scrollbarv">
-          {session?.messages.map((m,idx)=>idx>0?<MessageItem message={m} mode={mode}/>:null)}
+          {messages.map((m,idx)=><MessageItem message={m}/>)}
         </Box>
         <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
       </Box>
@@ -48,13 +84,14 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
 export default ChatSessionPage;
 
 
-function MessageContent(props: { message:IChatMessage, mode:string}) {
+function MessageContent(props: { message:IChatMessage}) {
+  const {mode} = useTheme();
   const {message:m} = props;
   const isUser = m.role==='user';
   const codeStyle = useMemo(()=>{
-    console.log(props.mode);
-    return (props.mode === 'dark' ? okaidia : coy);
-  },[props.mode]);
+    console.log(mode);
+    return (mode === 'dark' ? okaidia : coy);
+  },[mode]);
 
   return <Box sx={(theme)=>({px:1, border:'0px solid gray', overflow:'auto',
     ml: isUser?8:0, mr: isUser?0:8,
@@ -85,7 +122,7 @@ function MessageContent(props: { message:IChatMessage, mode:string}) {
   />
 </Box>
 }
-function MessageItem(props: { message:IChatMessage, mode: string}) {
+function MessageItem(props: { message:IChatMessage }) {
   const {message:m} = props;
   const ref = useRef<HTMLDivElement>(null);
   const isUser = m.role==='user';
@@ -93,7 +130,7 @@ function MessageItem(props: { message:IChatMessage, mode: string}) {
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, []);
+  }, [props.message.content]);
 
   return (
     <div ref={ref}>
@@ -101,12 +138,12 @@ function MessageItem(props: { message:IChatMessage, mode: string}) {
         <Avatar alt='user avatar' sx={{mt:2, width: 24, height: 24, background:'transparent'}}>
           <PsychologyAltIcon color='primary'/>
         </Avatar>
-        <MessageContent message={m} mode={props.mode}/>
+        <MessageContent message={m} />
       </Box>:<Box key={m.id} sx={{display:'flex', flexDirection:'row', alignItems:'flex-start',mb:1,}}>
         <Avatar alt='bot avatar' sx={{mt:1, width: 24, height: 24, background:'transparent'}}>
           <PsychologyIcon color='secondary'/>
         </Avatar>
-        <MessageContent message={m} mode={props.mode}/>
+        <MessageContent message={m} />
       </Box>}
     </div>
   );

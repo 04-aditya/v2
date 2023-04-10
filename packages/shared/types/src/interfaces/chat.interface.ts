@@ -3,6 +3,7 @@ export interface IChatMessage {
   id: number;
   role: 'user' | 'system' | 'assistant';
   content: string;
+  index: number;
 };
 export interface IChatSession {
   id: string;
