@@ -28,9 +28,14 @@ const LoginPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Logi
 const Home = React.lazy(() => import("../pages/home-page/home-page"));
 const HomePage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Home/></React.Suspense>
 
-
 const ChatSession = React.lazy(() => import("../pages/chat-session-page/chat-session-page"));
 const ChatSessionPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><ChatSession/></React.Suspense>
+
+const Terms = React.lazy(() => import("../pages/terms-page/terms-page"));
+const TermsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Terms/></React.Suspense>
+
+const Privacy = React.lazy(() => import("../pages/privacy-page/privacy-page"));
+const PrivacyPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Privacy/></React.Suspense>
 
 const routeMap:RouteMap = {
   path: '/',
@@ -40,7 +45,9 @@ const routeMap:RouteMap = {
       roles:[],
       routes:[
         {path:'/login', element:<LoginPage/>,},
-        {path:'/unauthorized', element:<Unauthorized/>}
+        {path:'/unauthorized', element:<Unauthorized/>},
+        {path:'/terms', element:<TermsPage/>},
+        {path:'/privacy', element:<PrivacyPage/>},
       ]
     },
     {

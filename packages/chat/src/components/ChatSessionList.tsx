@@ -1,0 +1,110 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+import React, { useCallback, useMemo, useState } from "react";
+import { FixedSizeList as List } from "react-window";
+import InfiniteLoader from "react-window-infinite-loader";
+import { useChatHistory } from "../api/chat";
+import { IChatSession } from "sharedtypes";
+import useAxiosPrivate from "psnapi/useAxiosPrivate";
+import { Avatar, Divider, ListItem, ListItemAvatar, ListItemText, Typography } from "@mui/material";
+import { formatDistanceToNow, parseJSON } from "date-fns";
+
+export default function ChatSessionList({type=''}) {
+  const axios = useAxiosPrivate();
+  //const chatSessions = useChatHistory();
+
+  // Are there more items to load?
+  // (This information comes from the most recent API request.)
+  const [hasNextPage, setHasNextPage] = useState(true);
+
+  // Are we currently loading a page of items?
+  const [isNextPageLoading, setIsNextPageLoading] = useState(false);
+
+  // Array of items loaded so far.
+  const [items, setItems] = useState<IChatSession[]>([]);
+
+  // Callback function responsible for loading the next page of items.
+  const loadNextPage = useCallback((offset:number, limit:number)=>{
+    limit = limit===0?10:limit;
+    console.log(offset, limit);
+    setIsNextPageLoading(true);
+    axios.get(`/api/chat/history?type=${type}&offset=${offset}&limit=${limit}`)
+      .then((res)=>{
+        const newItems = res.data.data as IChatSession[]
+        if (newItems && newItems.length>0) {
+          setItems([...items, ...newItems]);
+          setHasNextPage(newItems.length === limit);
+          console.log(`got ${newItems.length} items`)
+        } else {
+          setHasNextPage(false);
+        }
+      })
+      .catch(err=>{
+        console.error(err);
+      })
+      .finally(()=>{
+        setIsNextPageLoading(false);
+      })
+  },[axios, items, type]);
+
+  // If there are more items to be loaded then add an extra row to hold a loading indicator.
+  const itemCount = hasNextPage ? items.length + 1 : items.length;
+
+  // Only load 1 page of items at a time.
+  // Pass an empty callback to InfiniteLoader in case it asks us to load more than once.
+  const loadMoreItems = useMemo(()=>(isNextPageLoading ? () => {} : loadNextPage), [isNextPageLoading, loadNextPage]);
+
+  // Every row is loaded except for our loading indicator row.
+  const isItemLoaded = useCallback((index: number) => (!hasNextPage || index < items.length),[hasNextPage, items.length]);
+
+  // Render an item or a loading indicator.
+  const Item = (props:{ index:number, style:any }) => {
+    if (!isItemLoaded(props.index)) {
+      return <div style={props.style}>{"Loading..."}</div>;
+    }
+    const session = items[props.index];
+
+    return <div style={props.style}>
+      <ListItem alignItems="flex-start" dense>
+        <ListItemAvatar>
+          <Avatar alt="User Avatar">U</Avatar>
+        </ListItemAvatar>
+        <ListItemText
+          primary={session.name}
+          secondary={
+            <React.Fragment>
+              {/* <Typography
+                sx={{ display: 'inline' }}
+                component="span"
+                variant="body2"
+                color="text.primary"
+              ></Typography> */}
+              {formatDistanceToNow(parseJSON(session.updatedAt),{addSuffix:true})}
+            </React.Fragment>
+          }
+        />
+      </ListItem>
+      <Divider variant="inset" />
+    </div>;
+  };
+
+  return (
+    <InfiniteLoader
+      isItemLoaded={isItemLoaded}
+      itemCount={itemCount}
+      loadMoreItems={loadMoreItems}
+    >
+      {({ onItemsRendered, ref }) => (
+        <List
+          height={400}
+          itemCount={itemCount}
+          itemSize={72}
+          onItemsRendered={onItemsRendered}
+          ref={ref}
+          width={'100%'}
+        >
+          {Item}
+        </List>
+      )}
+    </InfiniteLoader>
+  );
+}

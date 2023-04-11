@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
-import {APIResponse, IChatSession} from "sharedtypes";
+import {APIResponse, IChatModel, IChatSession} from "sharedtypes";
 
 const CACHEKEY='chat';
 const CHATAPI = '/api/chat';
@@ -23,6 +23,23 @@ export function useChatHistory() {
   return {...query, invalidateCache};
 }
 
+
+export function useChatModels() {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, 'models'];
+  const query = useQuery<IChatModel[], AxiosError>(keys, async ()=>{
+    const res = await axios.get(`${CHATAPI}/models`);
+    return res.data.data as IChatModel[];
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 1 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
 
 export function useChatSession(id: string) {
   const queryClient = useQueryClient();

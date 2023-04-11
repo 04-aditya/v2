@@ -1,4 +1,4 @@
-import { Avatar, Box, FormControl, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, Toolbar, Typography } from '@mui/material';
+import { Alert, AlertTitle, Avatar, Box, FormControl, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, Toolbar, Typography } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
@@ -25,7 +25,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   useEffect(() => {
     if (session && session.messages) {
       if (session.messages.length>2 && typeMode) {
-        const msgs = session.messages.slice(1,-1);
+        const msgs = session.messages.slice(0,-1);
         const lastmsg = session.messages[session.messages.length-1];
         console.log(lastmsg.content);
         const words = lastmsg.content.split(' ');
@@ -57,7 +57,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
     } else {
       setMessages([]);
     }
-  }, [session]);
+  }, [session, typeMode]);
 
   const handleSessionUpdate = (session: IChatSession) => {
     setTypeMode(true);
@@ -72,7 +72,12 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
         <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
         </Toolbar>
         <Box sx={{flexGrow:1,}} className="scrollbarv">
-          {messages.map((m,idx)=><MessageItem message={m}/>)}
+          {messages.map((m,idx)=>( idx===0?(
+            <Alert key={idx} severity='info' sx={{mb:1, mx:2}}>
+              <AlertTitle>Chat Model initial instruction</AlertTitle>
+              <p>{m.content}</p>
+            </Alert>
+          ):<MessageItem key={m.id} message={m}/>))}
         </Box>
         <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
       </Box>

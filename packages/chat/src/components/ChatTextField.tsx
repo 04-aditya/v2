@@ -1,19 +1,28 @@
 //import regeneratorRuntime from "regenerator-runtime";
 //import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { useState, ChangeEvent, useEffect } from 'react';
-import { Alert, Box, CircularProgress, Divider, FilledInput, FormControl, Grid, Input, InputAdornment, InputBase, InputLabel, ListSubheader, MenuItem, OutlinedInput, Paper, Select, Slider, Stack, TextField, ToggleButton } from '@mui/material';
+import { Alert, Box, Checkbox, CircularProgress, Divider, FilledInput, FormControl, Grid, Input, InputAdornment, InputBase, InputLabel, ListItemText, ListSubheader, MenuItem, OutlinedInput, Paper, Select, SelectChangeEvent, Slider, Stack, TextField, ToggleButton } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 import IconButton from '@mui/material/IconButton';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DisplaySettingsIcon from '@mui/icons-material/DisplaySettings';
 import { AxiosError } from 'axios';
-import useAxiosPrivate from 'psnapi/useAxiosPrivate';
-import { useNavigate } from 'react-router-dom';
 import { IChatSession } from 'sharedtypes';
-import { useChatHistory, useChatSession } from '../api/chat';
+import { useChatHistory, useChatModels, useChatSession } from '../api/chat';
 import MicIcon from '@mui/icons-material/Mic';
 
+
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
 interface ChatTextFieldProps {
   sessionid?: string;
   message?: string;
@@ -23,13 +32,13 @@ interface ChatTextFieldProps {
 
 export function ChatTextField(props: ChatTextFieldProps) {
   const {sessionid} = props;
-  const axios = useAxiosPrivate();
+  const chatModels = useChatModels();
   const {data:chatsession, error, mutation} = useChatSession(sessionid||'');
   const [newMessage, setNewMessage] = useState<string>('');
   const [isBusy, setIsBusy] = useState(false);
   const [model, setModel] = useState('gpt35turbo-test');
   const [assistant, setAssistant] = useState('You are a helpful AI assistant.');
-  const [context, setContext] = useState('none');
+  const [contexts, setContext] = useState<string[]>([]);
   const [showOptions, setShowOptions] = useState(false);
   const [showParameters, setShowParameters] = useState(false);
   const [temperature, setTemperature] = useState(0);
@@ -51,6 +60,9 @@ export function ChatTextField(props: ChatTextFieldProps) {
       if (chatsession.options?.model) {
         setModel(chatsession.options.model as string);
       }
+      if (chatsession.options?.context) {
+        setContext(chatsession.options.context as string[]);
+      }
       setAssistant(chatsession.messages[0].content);
     }
   }, [chatsession])
@@ -63,7 +75,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
     setIsBusy(true);
     setErrorMessage(undefined);
     mutation.mutate({
-      model, assistant,
+      model, assistant, contexts,
       message: newMessage,
       parameters: {
         temperature,
@@ -95,8 +107,18 @@ export function ChatTextField(props: ChatTextFieldProps) {
       }
     }
   };
+  const handleContextChange = (event: SelectChangeEvent<string[]>) => {
+    const {
+      target: { value },
+    } = event;
+    setContext(
+      // On autofill we get a stringified value.
+      typeof value === 'string' ? value.split(',') : value,
+    );
+  }
   const rowCount = newMessage.split('').filter(c => c === '\n').length + 1;
-
+  const availableModels = chatModels.data || [];
+  const availableContexts = availableModels.find(m=>m.id===model)?.contexts||[];
   return (<Box>
     {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
     {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
@@ -138,14 +160,10 @@ export function ChatTextField(props: ChatTextFieldProps) {
             value={model}
             onChange={(e)=>setModel(e.target.value as string)}
           >
-            <MenuItem value="">
-              <em>None</em>
-            </MenuItem>
             <ListSubheader>Standard</ListSubheader>
-            <MenuItem value={'gpt35turbo-test'}>GPT 3.5 Turbo</MenuItem>
-            <MenuItem value={'gpt4'} disabled>GPT 4</MenuItem>
+            {(chatModels?.data||[]).filter(m=>m.group==='Standard').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
             <ListSubheader>Custom</ListSubheader>
-            <MenuItem value={'psbodhi'}>PS Bodhi</MenuItem>
+            {(chatModels?.data||[]).filter(m=>m.group==='Custom').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
           </Select>
         </FormControl>
       </Grid>
@@ -167,13 +185,22 @@ export function ChatTextField(props: ChatTextFieldProps) {
         </FormControl>
       </Grid>
       <Grid item xs={12} sm={3}>
-        <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
-          <InputLabel htmlFor="assistant-select">Additional Context</InputLabel>
-          <Select id="assistant-select" label="Additional Context" size='small'
-            value={context}
-            onChange={(e)=>setContext(e.target.value as string)}
+        <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined || availableContexts.length===0}>
+          <InputLabel htmlFor="contexts-select-label">Additional Context</InputLabel>
+          <Select<string[]> id="contexts-select" labelId="contexts-select-label" label="Additional Contexts" size='small'
+            multiple
+            input={<OutlinedInput label="Tag" />}
+            value={contexts}
+            renderValue={(selected) => selected.join(', ')}
+            onChange={handleContextChange}
+            MenuProps={MenuProps}
           >
-            <MenuItem value={'none'}>none</MenuItem>
+            {
+              availableContexts.map(c=> <MenuItem key={c.id} value={c.id}>
+                <Checkbox checked={contexts.indexOf(c.id) > -1} />
+                <ListItemText primary={c.name} />
+              </MenuItem>)
+            }
           </Select>
         </FormControl>
       </Grid>

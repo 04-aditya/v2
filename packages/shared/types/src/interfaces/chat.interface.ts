@@ -9,16 +9,30 @@ export interface IChatSession {
   id: string;
   userid: string;
   name?: string;
-  timestamp: Date;
+  createdAt: Date;
+  updatedAt: Date;
   messages: Array<IChatMessage>;
-  options?: {
-    model: string,
-    model_version: string,
-    temperature: number;
-    top_p: number;
-    frequency_penalty: number;
-    presence_penalty: number;
-    max_tokens: number;
-    stop?: string;
-  } | Record<string, unknown>;
+  options?: Record<string, unknown>;
+  // {
+  //   model: string,
+  //   model_version: string,
+  //   temperature: number;
+  //   top_p: number;
+  //   frequency_penalty: number;
+  //   presence_penalty: number;
+  //   max_tokens: number;
+  //   stop?: string;
+  // };
 };
+export interface IChatModel {
+  id: string;
+  name: string;
+  group: string;
+  enabled: boolean;
+  contexts: {
+    id: string;
+    name: string;
+    description: string;
+    enabled: boolean;
+  }[]
+}

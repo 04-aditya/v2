@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Divider, Grid, Paper, Stack, Typography } from '@mui/material';
 import styles from './home-page.module.css';
 import { ChatTextField } from '../../components/ChatTextField';
+import ChatSessionList from '../../components/ChatSessionList';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export function HomePage() {
           <Paper sx={{width:'100%', minHeight:200, height:'100%', p:1}} elevation={4}>
             <Typography variant='button' color='secondary'>Favourites</Typography>
             <Divider/>
-
+            <ChatSessionList type=''/>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={12} md={4}>

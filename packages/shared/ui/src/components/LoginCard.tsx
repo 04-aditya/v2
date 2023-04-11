@@ -156,9 +156,8 @@ export default function LoginCard(props: LoginCardProps) {
               }}
             />
           )}
-          &nbsp;
-          <Button href='/auth/ssologin'>SSO</Button>
         </Box>
+        <Button href={`${process.env['NX_API_URL']}/auth/ssologin?redirect_url=${from}`}>SSO</Button>
       </CardActions>
     </Card>
   );

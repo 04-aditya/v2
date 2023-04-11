@@ -1,4 +1,4 @@
-import { APIResponse, IChatSession, IChatMessage } from '@sharedtypes';
+import { APIResponse, IChatSession, IChatMessage, IChatModel } from '@sharedtypes';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import { HttpException } from '@/exceptions/HttpException';
@@ -23,7 +23,6 @@ import {
 import { OpenAPI } from 'routing-controllers-openapi';
 import { ChatSessionEntity } from '@/entities/chatsession.entity';
 import { ChatMessageEntity } from '@/entities/chatmessage.entity';
-import { request } from 'https';
 
 // import { OpenAI } from 'langchain/llms';
 // const openai = new OpenAI();
@@ -67,39 +66,59 @@ export class ChatController {
   async getChatModels(@CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
-    const result = new APIResponse<{ id: string; name: string; group: string; contexts: { id: string; name: string; description: string }[] }[]>();
+    const bodhiModel: IChatModel = {
+      id: 'psbodhi',
+      name: 'PSBodhi',
+      group: 'Custom',
+      enabled: true,
+      contexts: [],
+    };
+    try {
+      const contextsResponse = await psbodhiclient.get('contexts');
+      if (contextsResponse.status === 200) {
+        contextsResponse.data.forEach((c: any) => {
+          bodhiModel.contexts.push({
+            id: c._id,
+            name: c.name,
+            description: c.description,
+            enabled: true,
+          });
+        });
+      }
+    } catch (ex) {
+      console.error(ex);
+    }
+
+    const result = new APIResponse<IChatModel[]>();
     result.data = [];
 
     result.data.push({
       id: 'gpt35turbo-test',
       name: 'GPT 3.5 Turbo',
       group: 'Standard',
+      enabled: true,
       contexts: [],
     });
     result.data.push({
-      id: 'psbodhi',
-      name: 'PSBodhi',
-      group: 'Custom',
-      contexts: [
-        {
-          id: 'india_policies',
-          name: 'India Policies',
-          description: 'PF, Leave, Salary, Holidays, Paternity Maternity, Vacation policies etc.',
-        },
-        {
-          id: 'resumes',
-          name: 'Resumes',
-          description: 'related to resumes of profiles on individuals',
-        },
-      ],
+      id: 'gpt4-test',
+      name: 'GPT 4 (preview)',
+      group: 'Standard',
+      enabled: false,
+      contexts: [],
     });
+    result.data.push(bodhiModel);
 
     return result;
   }
 
   @Get('/history')
   @OpenAPI({ summary: 'Return the chat history of the current user' })
-  async getChatHistory(@CurrentUser() currentUser: UserEntity, @QueryParam('offset') offset = 0, @QueryParam('limit') limit = 20) {
+  async getChatHistory(
+    @CurrentUser() currentUser: UserEntity,
+    @QueryParam('type') type: string|undefined = '',
+    @QueryParam('offset') offset = 0,
+    @QueryParam('limit') limit = 10,
+  ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
     const result = new APIResponse<IChatSession[]>();
@@ -112,10 +131,10 @@ export class ChatController {
         userid: currentUser.email,
       },
       order: {
-        timestamp: 'desc',
+        updatedAt: 'desc',
       },
-      limit,
-      offset,
+      skip: offset,
+      take: limit,
     });
 
     sessions.forEach(s => result.data.push(s.toJSON()));
@@ -150,6 +169,7 @@ export class ChatController {
     @BodyParam('message') message_param: string,
     @BodyParam('model') model_param?: string,
     @BodyParam('assistant') assistant_param?: string,
+    @BodyParam('contexts') contexts_param?: string[],
     @BodyParam('model_version') model_version_param?: string,
     @BodyParam('parameters') parameters?: Record<string, unknown>,
   ) {
@@ -161,12 +181,12 @@ export class ChatController {
     const message = message_param;
     const model = model_param || process.env['AZ_OPENAI_DEPLOYMENT'];
     const model_version = model_version_param || process.env['AZ_OPENAI_VERSION'];
+    const contexts = contexts_param || [];
 
     const session = new ChatSessionEntity();
-    session.name = message.substring(0, 24);
+    session.name = message.substring(0, 45);
     session.userid = currentUser.email;
-    session.timestamp = new Date();
-    session.options = { model, model_version };
+    session.options = { model, model_version, contexts };
 
     const systemMessage = new ChatMessageEntity();
     systemMessage.role = 'system';
@@ -186,25 +206,19 @@ export class ChatController {
       assistantMessage.role = 'assistant';
       assistantMessage.index = 2;
       if (model === 'psbodhi') {
-        const response = await psbodhiclient.post(
-          '/ask',
-          {
-            messages: [systemMessage, newMessage].map(m => ({
-              role: m.role,
-              content: m.content,
-            })),
-            contexts: ['india_policies'],
-            model: 'IGNORED',
-            max_tokens: 0,
-            temperature: reqparams.temperature || 0,
-          },
-          {
-            method: 'POST',
-          },
-        );
-        console.log(response.data);
-        console.log(response.data.choices[0].message);
-        assistantMessage.content = response.data.choices[0].message;
+        const response = await psbodhiclient.post('/ask/', {
+          messages: [systemMessage, newMessage].map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+          contexts,
+          model: 'IGNORED',
+          max_tokens: 0,
+          temperature: reqparams.temperature || 0,
+        });
+        logger.debug(response.data);
+        logger.debug(response.data.choices[0].message);
+        assistantMessage.content = response.data.choices[0].message.content;
         session.options.usage = response.data.usage;
       } else {
         const response = await openaiclient.post(`${model}/chat/completions?api-version=${model_version}`, {
@@ -214,8 +228,8 @@ export class ChatController {
             content: m.content,
           })),
         });
-        console.log(response.data);
-        // console.log(response.data.choices[0].message);
+        logger.debug(response.data);
+        logger.debug(response.data.choices[0].message);
         assistantMessage.content = response.data.choices[0].message.content;
         session.options.usage = response.data.usage;
       }
@@ -262,6 +276,7 @@ export class ChatController {
     const message = message_param;
     const model = session.options.model;
     const model_version = session.options.model_version;
+    const contexts = session.options.contexts || [];
     // session.options = { model, model_version };
 
     const newMessage = new ChatMessageEntity();
@@ -277,19 +292,19 @@ export class ChatController {
       assistantMessage.index = session.messages.length;
 
       if (model === 'psbodhi') {
-        const response = await psbodhiclient.post('ask', {
+        const response = await psbodhiclient.post('ask/', {
           messages: [...session.messages, newMessage].map(m => ({
             role: m.role,
             content: m.content,
           })),
-          contexts: ['india_policies'],
+          contexts,
           model: 'IGNORED',
           max_tokens: 0,
           temperature: reqparams.temperature || 0,
         });
-        console.log(response.data);
-        console.log(response.data.choices[0].message);
-        assistantMessage.content = response.data.choices[0].message;
+        logger.debug(response.data);
+        logger.debug(response.data.choices[0].message);
+        assistantMessage.content = response.data.choices[0].message.content;
         session.options.usage = response.data.usage;
       } else {
         const response = await openaiclient.post(`${model}/chat/completions?api-version=${model_version}`, {
@@ -298,7 +313,7 @@ export class ChatController {
             content: m.content,
           })),
         });
-        console.log(response.data);
+        logger.debug(response.data);
         assistantMessage.content = response.data.choices[0].message.content;
         session.options.usage = response.data.usage;
       }

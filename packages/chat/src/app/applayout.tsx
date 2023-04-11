@@ -1,5 +1,5 @@
 import React from "react";
-import { AppBar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography } from "@mui/material";
+import { AppBar, Box, Button, CssBaseline, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Paper, Skeleton, TextField, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -89,7 +89,7 @@ export default function AppLayout(props: Props) {
                 <ListItemIcon>
                   <ForumIcon color="primary" />
                 </ListItemIcon>
-                <ListItemText primary={item.name} secondary={formatDistanceToNow(parseJSON(item.timestamp),{addSuffix:true})} />
+                <ListItemText primary={item.name} secondary={formatDistanceToNow(parseJSON(item.updatedAt),{addSuffix:true})} />
               </ListItemButton>
             </ListItem>
           ))}
@@ -106,12 +106,7 @@ export default function AppLayout(props: Props) {
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
-          <ListItemButton>
-            <ListItemIcon>
-              <InfoIcon/>
-            </ListItemIcon>
-            <ListItemText primary={`About ${process.env['NX_APP_NAME']}`} />
-          </ListItemButton>
+          <AboutDialog/>
         </ListItem>
       </List>
     </Box>
@@ -228,5 +223,61 @@ export default function AppLayout(props: Props) {
     </Box>
   </Box>
   </ThemeProvider>
+}
+function AboutDialog() {
+  const [open, setOpen] = React.useState(false);
+  const {theme} = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <ListItemButton onClick={handleClickOpen}>
+        <ListItemIcon>
+          <InfoIcon/>
+        </ListItemIcon>
+        <ListItemText primary={`About ${process.env['NX_APP_NAME']}`} />
+      </ListItemButton>
+      <Dialog
+        fullScreen={fullScreen}
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="about-dialog-title"
+      >
+        <DialogTitle id="about-dialog-title">
+          <img src='/assets/appicon.svg' alt="pschat application logo" width="22px"/> {`About ${process.env['NX_APP_NAME']}`}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            PS Chat - An AI ChatBot for Publicis Sapient employees.<br/>
+            <Skeleton width="100%" height={20} animation="wave"/>
+            <Skeleton width="80%" height={20} animation="wave"/>
+            <Skeleton width="90%" height={20} animation="wave"/>
+            <Typography variant="caption">for any queries,
+              please contact <a href="mailto:rakesh.ravuri@publicissapient.com">mailto:rakesh.ravuri@publicissapient.com</a>
+            </Typography>
+            <br/>
+            <Typography variant="caption">
+              Please read the <a href='/terms' style={{color:'inherit'}}>terms of service</a>
+              &nbsp;&amp;&nbsp;
+              <a href='/privacy' style={{color:'inherit'}}>privacy policy</a> for the acceptable usage guidelines.
+            </Typography>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} autoFocus>
+            Ok
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
 }
 

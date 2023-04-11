@@ -14,6 +14,7 @@ import {
   ForbiddenError,
   HttpError,
   QueryParam,
+  Redirect,
 } from 'routing-controllers';
 
 import { logger } from '@/utils/logger';
@@ -240,16 +241,18 @@ export class AuthController {
   }
 
   @Get('/ssologin')
+  @Redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize')
   async ssoLogin(@Req() req: Request, @Res() res: Response, @QueryParam('scopes') qscopes: string) {
     const state = base64URLEncode(crypto.randomBytes(16));
     const code_verifier = base64URLEncode(crypto.randomBytes(32));
-    cache.set(state, code_verifier);
+    cache.set(state, JSON.stringify({ code_verifier }));
 
     const client_id = CLID;
     const client_secret = CLIS;
 
     try {
       const or = await axios.get(OPENID_CONFIG_URL);
+      console.log(or.data);
       if (or.status !== 200) {
         console.error(`unable to get openid configuration from ${OPENID_CONFIG_URL} \n ${or.status} - ${or.data}`);
         throw new HttpError(500, `Unable to get openid configuration from ${OPENID_CONFIG_URL}`);
@@ -271,15 +274,18 @@ export class AuthController {
       `client_id=${client_id}&`,
       `scope=${scopes}&`,
       `response_type=code&`,
-      `redirect_uri=${req.protocol + '://' + req.headers['host'] + '/auth/callback'}&`,
+      `redirect_uri=${req.protocol + '://' + req.headers['host'] + '/auth/ssocallback'}&`,
       `code_challenge=${code_challenge}&`,
       `code_challenge_method=S256&`,
       `state=${state}`,
     ].join('');
-    res.redirect(url);
+    logger.debug(url);
+    // https://www.npmjs.com/package/routing-controllers#set-redirect
+    return url;
   }
 
-  @Get('/callback')
+  @Get('/ssocallback')
+  @Redirect('/')
   async ssoCallback(@Req() req: Request, @Res() res: Response) {
     const { code, state, error, error_description } = req.query;
 
@@ -288,9 +294,10 @@ export class AuthController {
       return res.json({ error, error_description });
     }
     try {
-      const code_verifier = await cache.get(state as string);
+      const stateData = JSON.parse(await cache.get(state as string));
+      const code_verifier = stateData.code_verifier;
       cache.del(state as string);
-      const redirect_uri = `${req.protocol + '://' + req.headers.host + '/auth/callback'}`;
+      const redirect_uri = `${req.protocol + '://' + req.headers.host + '/auth/ssocallback'}`;
       const tokenResponse = await axios.post(
         `${OAuthConfig.token_endpoint}`,
         qs.stringify({
@@ -318,8 +325,9 @@ export class AuthController {
 
       if (userInfoResponse.status !== 200) {
         console.error({ status: userInfoResponse.status, data: userInfoResponse.data });
-        return res.redirect('/');
+        return '/';
       }
+      logger.debug(userInfoResponse);
 
       // let user = await AppDataSource.getRepository(UserEntity).findOne({
       //   where: { email },
@@ -345,11 +353,11 @@ export class AuthController {
       //   ua: req.headers['user-agent'],
       //   authorization_endpoint: OAuthConfig.authorization_endpoint,
       // }, {ttl: config.sessionTimeout});
-      const returnUrl = '/';
-      return res.redirect(returnUrl);
+      const returnUrl = stateData.returnUrl || '/';
+      return returnUrl;
     } catch (ex) {
       console.error(ex);
-      return res.status(500).json({ error: 'Unable to authenticate.' });
+      throw new HttpError(500, 'Unable to authenticate.');
     }
   }
 }
