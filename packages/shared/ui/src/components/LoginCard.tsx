@@ -97,7 +97,7 @@ export default function LoginCard(props: LoginCardProps) {
       <Divider/>
       <CardContent>
       {codeEntry? (
-          <TextField fullWidth focused
+        <TextField fullWidth focused
           id="code"
           label="Code"
           type='number'
@@ -116,7 +116,6 @@ export default function LoginCard(props: LoginCardProps) {
           }}
           variant="standard"
         />
-
         ):<TextField fullWidth focused
           id="email"
           label="Email"
@@ -157,7 +156,7 @@ export default function LoginCard(props: LoginCardProps) {
             />
           )}
         </Box>
-        <Button href={`${process.env['NX_API_URL']}/auth/ssologin?redirect_url=${from}`}>SSO</Button>
+        {/* <Button href={`${process.env['NX_API_URL']}/auth/ssologin?redirect_url=${from}`}>SSO</Button> */}
       </CardActions>
     </Card>
   );

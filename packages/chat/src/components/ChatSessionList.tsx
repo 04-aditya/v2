@@ -5,10 +5,12 @@ import InfiniteLoader from "react-window-infinite-loader";
 import { useChatHistory } from "../api/chat";
 import { IChatSession } from "sharedtypes";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
-import { Avatar, Divider, ListItem, ListItemAvatar, ListItemText, Typography } from "@mui/material";
+import { Avatar, Divider, ListItem, ListItemAvatar, ListItemButton, ListItemText, Typography } from "@mui/material";
 import { formatDistanceToNow, parseJSON } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 export default function ChatSessionList({type=''}) {
+  const navigate = useNavigate();
   const axios = useAxiosPrivate();
   //const chatSessions = useChatHistory();
 
@@ -64,7 +66,7 @@ export default function ChatSessionList({type=''}) {
     const session = items[props.index];
 
     return <div style={props.style}>
-      <ListItem alignItems="flex-start" dense>
+      <ListItemButton onClick={()=>navigate(`/chat/${session.id}`)} alignItems="flex-start" dense >
         <ListItemAvatar>
           <Avatar alt="User Avatar">U</Avatar>
         </ListItemAvatar>
@@ -82,7 +84,7 @@ export default function ChatSessionList({type=''}) {
             </React.Fragment>
           }
         />
-      </ListItem>
+      </ListItemButton>
       <Divider variant="inset" />
     </div>;
   };
