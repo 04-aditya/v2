@@ -56,7 +56,7 @@ export function useChatSession(id: string) {
     queryClient.invalidateQueries(keys);
   }
   const mutation = useMutation(async (data: unknown) => {
-    const res = await axios.post(`${CHATAPI}/${id}`, data);
+    const res = await axios.post(`${CHATAPI}/`, data);
     return res.data.data as IChatSession;
   });
   return {...query, mutation, invalidateCache};

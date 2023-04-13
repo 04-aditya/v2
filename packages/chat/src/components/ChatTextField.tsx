@@ -75,6 +75,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
     setIsBusy(true);
     setErrorMessage(undefined);
     mutation.mutate({
+      id:sessionid,
       model, assistant, contexts,
       message: newMessage,
       parameters: {
@@ -174,13 +175,13 @@ export function ChatTextField(props: ChatTextFieldProps) {
             value={assistant}
             onChange={(e)=>setAssistant(e.target.value as string)}
           >
-            <MenuItem value={'You are a helpful AI assistant.'}>AI Assistant</MenuItem>
+            <MenuItem value={'You are a helpful AI assistant. Respond in markdown format when possible'}>AI Assistant</MenuItem>
             <Divider/>
-            <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer.'}>Senior Software Engineer</MenuItem>
-            <MenuItem value={'You are a helpful AI assistant, acting as a senior product manager.'}>Senior Product Manager</MenuItem>
-            <MenuItem value={'You are a helpful AI assistant, acting as a senior experience or UX designer.'}>Senior Experience designer</MenuItem>
+            <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer.Respond in markdown format when possible'}>Senior Software Engineer</MenuItem>
+            <MenuItem value={'You are a helpful AI assistant, acting as a senior product manager.Respond in markdown format when possible'}>Senior Product Manager</MenuItem>
+            <MenuItem value={'You are a helpful AI assistant, acting as a senior experience or UX designer.Respond in markdown format when possible'}>Senior Experience designer</MenuItem>
             <Divider/>
-            <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer. when reviewing the code you look for exception handling, security issues, performance problems, and readability of code.'}>AI Reviewer</MenuItem>
+            <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer. when reviewing the code you look for exception handling, security issues, performance problems, and readability of code. Respond in markdown format when possible'}>AI Reviewer</MenuItem>
           </Select>
         </FormControl>
       </Grid>

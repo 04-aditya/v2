@@ -24,10 +24,13 @@ export const getDesignTokens = (mode: PaletteMode) => ({
           border: 1px solid lightgray;
           border-radius: 4px;
           padding: 4px;
+          border-collapse: collapse;
         }
         .message-content th {
           background-color: #d6d6d6;
-          color: #000;
+          border-top-width: 3px;
+          border-top-style: solid;
+          border-top-color: #b1b1b1;
         }
         .message-content tbody tr:nth-child(odd) {
           background-color: #eeeeee;
@@ -44,12 +47,15 @@ export const getDesignTokens = (mode: PaletteMode) => ({
         .message-content table {
           border: 1px solid #4b4b4b;
           border-radius: 4px;
-          padding: 4px
+          padding: 4px;
+          border-collapse: collapse;
         }
         .message-content th {
           background-color: #4b4b4b;
           color: #EEE;
-
+          border-top-width: 3px;
+          border-top-style: solid;
+          border-top-color: #828282;
         }
         .message-content tbody tr:nth-child(odd) {
           background-color: #030303;
