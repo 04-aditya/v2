@@ -142,6 +142,7 @@ export default function AppLayout(props: Props) {
           .then(()=>{
             setAuth({});
             navigate('/login');
+            //navigate(`https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=${global.window.location.protocol}://${global.window.location.hostname}/login`);
           })
           .catch(console.error);
       }}

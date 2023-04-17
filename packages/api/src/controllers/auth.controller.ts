@@ -392,8 +392,19 @@ export class AuthController {
         return '/';
       }
       logger.debug(userInfoResponse.data);
+      const email = userInfoResponse.data.email.toLocaleLowerCase().trim();
 
-      const user = await UserEntity.CreateUser(userInfoResponse.data.email, false);
+      const emailParts = email.split('@');
+
+      if (emailParts.length < 2) {
+        throw new HttpException(400, 'Invalid email');
+      }
+
+      if (MAILDOMAINS.split(',').includes(emailParts[1]) === false) {
+        return (stateData.redirect_url || '/') + `?error=Unsupported Domain: (${emailParts[1]})`;
+      }
+
+      const user = await UserEntity.CreateUser(email, false);
       // create JWTs
       const accessToken = user.createAccessToken();
       const newRefreshToken = user.createRefeshToken();

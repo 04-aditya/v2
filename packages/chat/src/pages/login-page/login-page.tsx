@@ -45,7 +45,8 @@ export function LoginPage(props: LoginPageProps) {
   },[location.search]);
 
   return (
-    <Box className={styles['container']} sx={{display:'flex', height:'100%',justifyContent:'center', alignItems:'center'}}>
+    <Box sx={{display:'flex', flexDirection:'column', height:'100%',justifyContent:'center', alignItems:'center'}}>
+      <LoginCard/><br/>
       {busy? <CircularProgress/> : (
         <Button
           href={`${process.env['NX_API_URL']}/auth/login?redirect_url=${global.window.location.href}`}
@@ -53,7 +54,7 @@ export function LoginPage(props: LoginPageProps) {
           variant="contained"
           color='primary'
         >
-          Login
+          Login with SSO
         </Button>
           )}
     </Box>

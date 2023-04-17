@@ -104,7 +104,7 @@ export default function LoginCard(props: LoginCardProps) {
       const accessToken = data?.accessToken;
       const user = data?.user;
       setAuth({ user, accessToken });
-      navigate(from, { replace: true });
+      navigate('/', { replace: true });
     } catch(ex) {
       console.error(ex);
       setError('Invalid code. Please try again')
@@ -180,6 +180,7 @@ export default function LoginCard(props: LoginCardProps) {
             />
           )}
         </Box>
+        {/*
           <Button href={`${process.env['NX_API_URL']}/auth/login?redirect_url=${global.window.location.href}`}
             disabled={busy}
           >
@@ -195,7 +196,6 @@ export default function LoginCard(props: LoginCardProps) {
               }}
             />
           )}</Button>
-        {/*
         */}
       </CardActions>
     </Card>
