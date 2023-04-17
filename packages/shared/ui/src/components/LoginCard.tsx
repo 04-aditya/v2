@@ -49,10 +49,6 @@ export default function LoginCard(props: LoginCardProps) {
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>)=>{
     const newEmail = e.target.value;
 
-    if (!validateEmail(newEmail)) {
-      return setError('Invalid email');
-    }
-
     if (newEmail.length > 48 || newEmail.split('@').length>2) {
       return setError('Invalid email');
     } else {
