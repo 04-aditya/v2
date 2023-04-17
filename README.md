@@ -1,6 +1,5 @@
 # v2
 
-
 ## development environment
 
 * nodejs v18
@@ -31,4 +30,6 @@
 
 * run api in development mode `nx serve api` watches for changes and auto restarts on changes
 
-* run the dashboard web ui in development mode `nx serve dashboard`
+* run the chat web ui in development mode `nx serve chat`
+
+* run the dashboard web ui in development mode `nx serve dash`
