@@ -115,7 +115,7 @@ export class ChatController {
   @OpenAPI({ summary: 'Return the chat history of the current user' })
   async getChatHistory(
     @CurrentUser() currentUser: UserEntity,
-    @QueryParam('type') type: string | undefined = '',
+    @QueryParam('type') type: string | undefined = 'private',
     @QueryParam('offset') offset = 0,
     @QueryParam('limit') limit = 10,
   ) {
@@ -129,6 +129,7 @@ export class ChatController {
     const sessions: ChatSessionEntity[] = await repo.find({
       where: {
         userid: currentUser.email,
+        type,
       },
       order: {
         updatedAt: 'desc',
@@ -143,7 +144,7 @@ export class ChatController {
   }
 
   @Get('/:id')
-  @OpenAPI({ summary: 'Return the chat history of the current user' })
+  @OpenAPI({ summary: 'Return the chat session identified by the id' })
   async getChatSession(@Param('id') id: string, @CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -157,39 +158,43 @@ export class ChatController {
     });
     if (!session) return;
 
+    if (session.userid !== currentUser.email && session.type === 'private') {
+      throw new HttpError(403);
+    }
+
     const result = new APIResponse<IChatSession>();
     result.data = session.toJSON();
     return result;
   }
 
-  @Get('/:id/messages')
-  @OpenAPI({ summary: 'Return the chat messages of a session identified by the id' })
-  async getChatSessionMessages(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: UserEntity,
-    @QueryParam('offset') offset = 0,
-    @QueryParam('limit') limit = 10,
-  ) {
-    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+  // @Get('/:id/messages')
+  // @OpenAPI({ summary: 'Return the chat messages of a session identified by the id' })
+  // async getChatSessionMessages(
+  //   @Param('id') id: string,
+  //   @CurrentUser() currentUser: UserEntity,
+  //   @QueryParam('offset') offset = 0,
+  //   @QueryParam('limit') limit = 10,
+  // ) {
+  //   if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
-    const repo = AppDataSource.getRepository(ChatSessionEntity);
+  //   const repo = AppDataSource.getRepository(ChatSessionEntity);
 
-    const session = await repo.findOne({
-      where: {
-        id,
-      },
-      relations: ['messages'],
-      take: limit,
-    });
-    if (!session) return;
+  //   const session = await repo.findOne({
+  //     where: {
+  //       id,
+  //     },
+  //     relations: ['messages'],
+  //     take: limit,
+  //   });
+  //   if (!session) return;
 
-    const result = new APIResponse<IChatMessage[]>();
-    result.data = [];
+  //   const result = new APIResponse<IChatMessage[]>();
+  //   result.data = [];
 
-    session.messages.forEach(m => result.data.push(m.toJSON()));
+  //   session.messages.forEach(m => result.data.push(m.toJSON()));
 
-    return result;
-  }
+  //   return result;
+  // }
 
   @Post('/')
   @OpenAPI({ summary: 'Create or continue a chat session' })
@@ -266,6 +271,7 @@ export class ChatController {
         reqparams.stream = false;
         if (model === 'psbodhi') {
           return await psbodhiclient.post('/ask/', {
+            sessionid: session.id,
             messages: messages.map(m => ({
               role: m.role,
               content: m.content,
@@ -302,6 +308,41 @@ export class ChatController {
     await AppDataSource.getRepository(ChatMessageEntity).save(messages);
     session.messages = messages;
     await repo.save(session);
+    result.data = session.toJSON();
+    return result;
+  }
+
+  @Post('/:id/')
+  @OpenAPI({ summary: 'Update properties of a session identified by the id' })
+  async updateChatSession(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: UserEntity,
+    @BodyParam('name') name?: string,
+    @BodyParam('group') group?: string,
+    @BodyParam('type') type?: string,
+    @BodyParam('path') path?: string,
+  ) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+
+    const repo = AppDataSource.getRepository(ChatSessionEntity);
+
+    const session = await repo.findOne({
+      where: {
+        id,
+      },
+      relations: ['messages'],
+    });
+    if (!session) return;
+
+    //TODO: validate parameters
+    if (name) session.name = name;
+    if (group) session.name = group;
+    if (type) session.name = type;
+    if (path) session.name = path;
+
+    await session.save();
+
+    const result = new APIResponse<IChatSession[]>();
     result.data = session.toJSON();
     return result;
   }

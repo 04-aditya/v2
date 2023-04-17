@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import React, { useCallback, useMemo, useState } from "react";
+import React, { ReactNode, useCallback, useMemo, useState } from "react";
 import { FixedSizeList as List } from "react-window";
 import InfiniteLoader from "react-window-infinite-loader";
 import { useChatHistory } from "../api/chat";
@@ -8,8 +8,18 @@ import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import { Avatar, Divider, ListItem, ListItemAvatar, ListItemButton, ListItemText, Typography } from "@mui/material";
 import { formatDistanceToNow, parseJSON } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import ForumIcon from '@mui/icons-material/Forum';
+import useAuth from "psnapi/useAuth";
 
-export default function ChatSessionList({type=''}) {
+export class ChatSessionListProps {
+  type?: string = 'private';
+  icon?: ReactNode = <ForumIcon/>;
+  userid?: string;
+}
+
+export default function ChatSessionList(props: ChatSessionListProps) {
+  const {auth} = useAuth();
+  const {type, icon} = props;
   const navigate = useNavigate();
   const axios = useAxiosPrivate();
   //const chatSessions = useChatHistory();
@@ -27,15 +37,15 @@ export default function ChatSessionList({type=''}) {
   // Callback function responsible for loading the next page of items.
   const loadNextPage = useCallback((offset:number, limit:number)=>{
     limit = limit===0?10:limit;
-    console.log(offset, limit);
+    // console.log(offset, limit);
     setIsNextPageLoading(true);
-    axios.get(`/api/chat/history?type=${type}&offset=${offset}&limit=${limit}`)
+    axios.get(`/api/chat/history?type=${type}&offset=${offset}&limit=${limit}${auth?.user?.email?('&userid='+auth.user.email):''}`)
       .then((res)=>{
         const newItems = res.data.data as IChatSession[]
         if (newItems && newItems.length>0) {
           setItems([...items, ...newItems]);
           setHasNextPage(newItems.length === limit);
-          console.log(`got ${newItems.length} items`)
+          // console.log(`got ${newItems.length} items`)
         } else {
           setHasNextPage(false);
         }
@@ -68,7 +78,7 @@ export default function ChatSessionList({type=''}) {
     return <div style={props.style}>
       <ListItemButton onClick={()=>navigate(`/chat/${session.id}`)} alignItems="flex-start" dense >
         <ListItemAvatar>
-          <Avatar alt="User Avatar">U</Avatar>
+          {icon ? icon : <Avatar alt="User Avatar">U</Avatar>}
         </ListItemAvatar>
         <ListItemText
           primary={session.name}

@@ -10,6 +10,9 @@ export interface IChatSession {
   id: string;
   userid: string;
   name?: string;
+  type: string;
+  path: string;
+  group: string;
   createdAt: Date;
   updatedAt: Date;
   messages: Array<IChatMessage>;

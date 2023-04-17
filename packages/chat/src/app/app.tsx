@@ -7,7 +7,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import {useTheme, ColorModeContext} from 'sharedui/theme';
 import { Route, Routes } from 'react-router-dom';
 import RequireAuth from 'psnapi/RequireAuth';
-import { AuthProvider } from 'psnapi/context/AuthProvider';
+import { AuthProvider, IAuth } from 'psnapi/context/AuthProvider';
 import routemap, { RouteMap } from './routes';
 import {
   QueryClient,
@@ -15,6 +15,7 @@ import {
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import "intro.js/introjs.css";
+import useAuth from 'psnapi/useAuth';
 
 const queryClient = new QueryClient();
 
@@ -46,9 +47,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ColorModeContext.Provider value={colorMode}>
         <AuthProvider>
-          <Routes>
-            {generateRoute(routemap,1)}
-          </Routes>
+          <AppRouter/>
         </AuthProvider>
       </ColorModeContext.Provider>
       <ReactQueryDevtools />
@@ -57,3 +56,9 @@ export function App() {
 }
 
 export default App;
+function AppRouter() {
+  return <Routes>
+    {generateRoute(routemap, 1)}
+  </Routes>;
+}
+

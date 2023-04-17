@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, ChangeEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
+import useRefreshToken from "psnapi/useRefreshToken";
 
 const LOGIN_URL = '/auth/requestaccess';
 const VERIFY_URL = '/auth/gettoken';
@@ -16,7 +17,8 @@ export type LoginCardProps = CardProps & {
 export default function LoginCard(props: LoginCardProps) {
   const {bannerUrl, ...rest} = props;
 
-  const { setAuth } = useAuth();
+  const { auth, setAuth } = useAuth();
+  const refresh = useRefreshToken();
   const [email, setEmail] = useState<string>('');
   const [code, setCode] = useState<string>('');
   const [codeEntry, showCodeEntry] = useState(false);
@@ -33,6 +35,11 @@ export default function LoginCard(props: LoginCardProps) {
     if (inputRef.current) {
       inputRef.current.focus();
     }
+    // try {
+    //   refresh();
+    // } catch(ex) {
+    //   console.error(ex);
+    // }
   }, [])
 
   function validateEmail(email:string) {
@@ -180,7 +187,9 @@ export default function LoginCard(props: LoginCardProps) {
             />
           )}
         </Box>
-        {/* <Button href={`${process.env['NX_API_URL']}/auth/ssologin?redirect_url=${from}`}>SSO</Button> */}
+        {/*
+          <Button href={`${process.env['NX_API_URL']}/auth/ssologin?redirect_url=${global.window.location.href}`}>Login with SSO</Button>
+        */}
       </CardActions>
     </Card>
   );

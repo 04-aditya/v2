@@ -1,8 +1,9 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, Divider, Grid, Paper, Stack, Typography } from '@mui/material';
 import styles from './home-page.module.css';
 import { ChatTextField } from '../../components/ChatTextField';
 import ChatSessionList from '../../components/ChatSessionList';
+import ForumIcon from '@mui/icons-material/Forum';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export function HomePage() {
           <Paper sx={{width:'100%', minHeight:200, height:'100%', p:1}} elevation={4}>
             <Typography variant='button' color='secondary'>Favourites</Typography>
             <Divider/>
-            <ChatSessionList type=''/>
+            <ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={12} md={4}>
@@ -36,9 +37,9 @@ export function HomePage() {
         </Grid>
       </Grid>
       <Stack direction={'row'} spacing={1} sx={{height:24, justifyContent:'center'}}>
-        <a href='/terms' target='_blank' rel='noreferrer' style={{fontSize:'0.75em', color:'gray'}}>Terms of Service</a>
+        <Link to='/terms' style={{fontSize:'0.75em', color:'gray'}}>Terms of Service</Link>
         &nbsp;
-        <a href='/privacy' target='_blank' rel='noreferrer' style={{fontSize:'0.75em', color:'gray'}}>Privacy Policy</a>
+        <Link to='/privacy' style={{fontSize:'0.75em', color:'gray'}}>Privacy Policy</Link>
       </Stack>
       <ChatTextField onSuccess={(newSession)=>navigate(`/chat/${newSession.id}`)}/>
     </Paper>

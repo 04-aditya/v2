@@ -29,6 +29,7 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import {formatDistanceToNow, parseJSON} from 'date-fns';
 import ReactMarkdown from "react-markdown";
 import useAuth from "psnapi/useAuth";
+import ChatSessionList from "../components/ChatSessionList";
 
 const drawerWidth = 220;
 
@@ -41,12 +42,11 @@ interface Props {
 }
 
 export default function AppLayout(props: Props) {
-  const { setAuth } = useAuth();
+  const { auth, setAuth } = useAuth();
   const navigate = useNavigate();
   const {colorMode, mode, theme} = useTheme();
   const { window } = props;
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const {data:history} = useChatHistory();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const isProfileMenuOpen = Boolean(anchorEl);
@@ -62,7 +62,7 @@ export default function AppLayout(props: Props) {
     setMobileOpen(!mobileOpen);
   };
 
-  const drawer = (
+  const DrawerContent = (props: any)=>(
     <Box sx={{height:'100%', display:'flex', flexDirection:'column'}}>
       <Toolbar>
         <img src={logo} height={48} alt={`${process.env['NX_APP_NAME']} logo`} onClick={()=>navigate('/')} style={{cursor: 'pointer'}}/>
@@ -86,7 +86,8 @@ export default function AppLayout(props: Props) {
               <ListItemText primary={'New Chat'} />
             </ListItemButton>
           </ListItem>
-          {(history||[]).map((item, index) => (
+          <ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>
+          {/* {(history||[]).map((item, index) => (
             <ListItem key={index} disablePadding>
               <ListItemButton onClick={()=>navigate(`/chat/${item.id}`)}>
                 <ListItemIcon>
@@ -95,7 +96,7 @@ export default function AppLayout(props: Props) {
                 <ListItemText primary={item.name} secondary={formatDistanceToNow(parseJSON(item.updatedAt),{addSuffix:true})} />
               </ListItemButton>
             </ListItem>
-          ))}
+          ))} */}
         </List>
       </Box>
       <Divider />
@@ -201,7 +202,7 @@ export default function AppLayout(props: Props) {
           '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, },
         }}
       >
-        {drawer}
+        <DrawerContent auth={auth}/>
       </Drawer>
       <Drawer
         variant="permanent"
@@ -214,7 +215,7 @@ export default function AppLayout(props: Props) {
         }}
         open
       >
-        {drawer}
+        <DrawerContent auth={auth}/>
       </Drawer>
     </Box>
     <Box

@@ -779,7 +779,7 @@ export class UserEntity extends BaseEntity implements IUser {
   static async CreateUser(email: string, getpdadata = false) {
     const usersRepo = AppDataSource.getRepository(UserEntity);
     const rolesRepo = AppDataSource.getRepository(UserRoleEntity);
-    let user = await usersRepo.findOne({ where: { email: email.trim().toLocaleLowerCase() } });
+    let user = await usersRepo.findOne({ where: { email: email.trim().toLocaleLowerCase() }, relations: { roles: true } });
     if (!user) {
       user = new UserEntity();
       user.email = email.trim().toLocaleLowerCase();

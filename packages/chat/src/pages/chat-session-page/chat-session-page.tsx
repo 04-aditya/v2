@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, Avatar, Box, FormControl, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, Toolbar, Typography } from '@mui/material';
+import { Alert, AlertTitle, Avatar, Box, FormControl, Grid, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, TextField, Toolbar, Typography } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
@@ -9,7 +9,7 @@ import { ChatTextField } from '../../components/ChatTextField';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter'
 import {dark, coy, okaidia} from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { IChatMessage, IChatSession } from 'sharedtypes';
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, ChangeEvent } from 'react';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 import { useTheme } from 'sharedui/theme';
@@ -22,9 +22,14 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   const {data:session, invalidateCache} = useChatSession(chatId||'');
   const [messages, setMessages] = useState<IChatMessage[]>([]);
   const [typeMode, setTypeMode] = useState(false);
+  const [sessionName, setSessionName] = useState('');
+  const [sessionGroup, setSessionGroup] = useState('');
 
   useEffect(() => {
-    if (session && session.messages) {
+    if (session) {
+      setSessionName(session.name||'');
+      setSessionGroup(session.group||'');
+
       if (session.messages.length>2 && typeMode) {
         const msgs = session.messages.slice(0,-1);
         const lastmsg = session.messages[session.messages.length-1];
@@ -65,6 +70,22 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
     invalidateCache();
   }
 
+  const handleSessionNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    if (newName.length<45) {
+      setSessionName(newName);
+    } else {
+      setSessionName(newName.substring(0,45));
+    }
+  }
+  const handleSessionGroupChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const newGroup = e.target.value;
+    if (newGroup.length<45) {
+      setSessionGroup(newGroup);
+    } else {
+      setSessionGroup(newGroup.substring(0,45));
+    }
+  }
 
   return (
     <Paper elevation={2}
@@ -73,7 +94,15 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
         <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
           <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
           </Toolbar>
-          <Box sx={{flexGrow:1,}} className="scrollbarv">
+          <Box sx={{flexGrow:1, pt:1}} className="scrollbarv">
+            <Grid container sx={{mb:0.5}}>
+              <Grid item xs={12} sm={9}>
+                <TextField label='Name' value={sessionName} onChange={handleSessionNameChange} fullWidth size='small' sx={{pr:0.5}}/>
+              </Grid>
+              <Grid xs={12} sm={3}>
+                <TextField label='Group' value={sessionGroup} onChange={handleSessionGroupChange} fullWidth size='small'/>
+              </Grid>
+            </Grid>
             {messages.map((m,idx)=>( idx===0?(
               <Alert key={idx} severity='info' sx={{mb:1, mx:2}}>
                 <AlertTitle>Chat Model initial instruction</AlertTitle>

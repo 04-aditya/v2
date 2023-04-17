@@ -255,10 +255,10 @@ export class AuthController {
 
   @Get('/ssologin')
   @Redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize')
-  async ssoLogin(@Req() req: Request, @Res() res: Response, @QueryParam('scopes') qscopes: string) {
+  async ssoLogin(@Req() req: Request, @Res() res: Response, @QueryParam('scopes') qscopes: string, @QueryParam('redirect_url') redirect_url?: string) {
     const state = base64URLEncode(crypto.randomBytes(16));
     const code_verifier = base64URLEncode(crypto.randomBytes(32));
-    cache.set(state, JSON.stringify({ code_verifier }));
+    cache.set(state, JSON.stringify({ code_verifier, redirect_url: redirect_url || '/' }));
 
     const client_id = CLID;
     const client_secret = CLIS;
@@ -317,7 +317,7 @@ export class AuthController {
           grant_type: 'authorization_code',
           client_id: CLID,
           redirect_uri,
-          client_secret: CLIS,
+          // client_secret: CLIS,
           code_verifier,
           code,
         }),
@@ -340,33 +340,41 @@ export class AuthController {
         console.error({ status: userInfoResponse.status, data: userInfoResponse.data });
         return '/';
       }
-      logger.debug(userInfoResponse);
+      logger.debug(userInfoResponse.data);
 
-      // let user = await AppDataSource.getRepository(UserEntity).findOne({
-      //   where: { email },
-      // });
-      // if (!user) {
-      //   user = await UserEntity.CreateUser(email, true);
-      // }
+      const user = await UserEntity.CreateUser(userInfoResponse.data.email, false);
+      // create JWTs
+      const accessToken = user.createAccessToken();
+      const newRefreshToken = user.createRefeshToken();
 
-      // const sessionId = "ac."+base64URLEncode(sha256(crypto.randomBytes(32)));
+      const existingTokens = (user.refreshTokens || '').split(',');
+      // const newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
 
-      // res.cookie(SSID_COOKIE_NAME, sessionId, {
-      //   signed: true,
-      //   maxAge: config.sessionTimeout,
-      //   secure: true,
-      //   httpOnly: true,
-      //   domain: getDomainRoot(req.headers.host)
-      // });
-      // cache.set(sessionId, {
-      //   id: sessionId,
-      //   expiresAt: Date.now()+(tokenData.expires_in-1)*1000,
-      //   tokenData,
-      //   userInfo: userInfoResponse.data,
-      //   ua: req.headers['user-agent'],
-      //   authorization_endpoint: OAuthConfig.authorization_endpoint,
-      // }, {ttl: config.sessionTimeout});
-      const returnUrl = stateData.returnUrl || '/';
+      // Saving refreshToken with current user
+      user.refreshTokens = [...existingTokens, newRefreshToken].filter(t => t).join(',');
+      await UserDataEntity.Add(user.id, 's-:login', { value: new Date().toISOString() }, new Date());
+      await user.save();
+      // Creates Secure Cookie with refresh token
+      res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        domain: DOMAIN,
+        maxAge: 24 * 60 * 60 * 1000,
+      });
+
+      const roleMap = new Map<string, IUserRole>();
+      for await (const role of user.roles) {
+        roleMap.set(role.name, { id: role.id, name: role.name, permissions: role.permissions });
+        const includedRoles = await role.loadChildren();
+        includedRoles.forEach(prole => {
+          roleMap.set(prole.name, { id: prole.id, name: prole.name, permissions: prole.permissions });
+        });
+      }
+      // return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
+
+      const returnUrl = stateData.redirect_url || '/';
+      logger.debug(returnUrl);
       return returnUrl;
     } catch (ex) {
       console.error(ex);

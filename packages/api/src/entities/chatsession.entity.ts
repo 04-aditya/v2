@@ -30,6 +30,15 @@ export class ChatSessionEntity extends BaseEntity implements IChatSession {
   @Column({ nullable: true })
   name: string;
 
+  @Column({ default: 'private' })
+  type: string;
+
+  @Column({ default: '' })
+  path: string;
+
+  @Column({ default: '' })
+  group: string;
+
   @Column()
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
@@ -49,6 +58,9 @@ export class ChatSessionEntity extends BaseEntity implements IChatSession {
       id: this.id,
       userid: this.userid,
       name: this.name,
+      type: this.type,
+      path: this.path,
+      group: this.group,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       options: this.options,
