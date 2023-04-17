@@ -31,7 +31,7 @@ import ReactMarkdown from "react-markdown";
 import useAuth from "psnapi/useAuth";
 import ChatSessionList from "../components/ChatSessionList";
 
-const drawerWidth = 220;
+const drawerWidth = 260;
 
 interface Props {
   /**
