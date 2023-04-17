@@ -11,6 +11,7 @@ import { AxiosError } from 'axios';
 import { IChatSession } from 'sharedtypes';
 import { useChatHistory, useChatModels, useChatSession } from '../api/chat';
 import MicIcon from '@mui/icons-material/Mic';
+import { Steps, Hints } from "intro.js-react";
 
 
 const ITEM_HEIGHT = 48;
@@ -44,6 +45,26 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const [temperature, setTemperature] = useState(0);
   const [max_tokens, setMaxTokens] = useState(400);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [introState, setIntroState] = useState({
+    stepsEnabled: false,
+    initialStep: 0,
+    steps: [
+      {
+        element: '.chat-message-field',
+        title:'Message',
+        intro: "Continue the converstaion by entering your next message here... ",
+        position: 'top',
+      },
+    ],
+    hintsEnabled: false,
+    hints: [
+      {
+        element: ".hello",
+        hint: "Hello hint",
+        hintPosition: "middle-right"
+      }
+    ]
+  });
   // const {
   //   transcript,
   //   listening,
@@ -57,6 +78,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
 
   useEffect(()=>{
     if (chatsession) {
+      setIntroState(prev=>({...prev, stepsEnabled: true}));
       if (chatsession.options?.model) {
         setModel(chatsession.options.model as string);
       }
@@ -68,7 +90,13 @@ export function ChatTextField(props: ChatTextFieldProps) {
   }, [chatsession])
 
   const handleNewMessageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
+    const msg = e.target.value;
+    if (msg.length<2000) {
+      setErrorMessage(undefined);
+      setNewMessage(msg);
+    } else {
+      setErrorMessage('Message is too long. Please shorten it to less than 2000 characters.');
+    }
   };
 
   const onSend = async () => {
@@ -117,10 +145,19 @@ export function ChatTextField(props: ChatTextFieldProps) {
       typeof value === 'string' ? value.split(',') : value,
     );
   }
+  const onExit = () => {
+    setIntroState((prev) => ({...prev, stepsEnabled: false }));
+  };
   const rowCount = newMessage.split('').filter(c => c === '\n').length + 1;
   const availableModels = chatModels.data || [];
   const availableContexts = availableModels.find(m=>m.id===model)?.contexts||[];
   return (<Box>
+    <Steps
+      enabled={introState.stepsEnabled}
+      steps={introState.steps}
+      initialStep={introState.initialStep}
+      onExit={onExit}/>
+    <Hints enabled={introState.hintsEnabled} hints={introState.hints} />
     {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
     {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
     <Paper
@@ -134,8 +171,8 @@ export function ChatTextField(props: ChatTextFieldProps) {
         onClick={async ()=>{listening?SpeechRecognition.stopListening():SpeechRecognition.startListening()}}>
         <MicIcon color={listening?'success':'inherit'}/>
       </IconButton> : null} */}
-      <InputBase multiline rows={rowCount}
-        sx={{ ml: 1, flex: 1 }}
+      <InputBase multiline rows={rowCount} className='chat-message-field'
+        sx={{ ml: 1, flex: 1 }} autoFocus
         placeholder="Type your message here..."
         inputProps={{ 'aria-label': 'chat message box' }}
         value={newMessage}

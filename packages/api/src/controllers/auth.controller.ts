@@ -240,6 +240,19 @@ export class AuthController {
     return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
   }
 
+  @Get('/logout')
+  @Redirect('/')
+  async logout(
+    @Req() req: Request,
+    @Res() res: Response,
+    @QueryParam('returnUrl') returnUrl?: string,
+    @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string,
+  ) {
+    res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
+    const redirect_uri = returnUrl || req.protocol + '://' + req.headers['host'] + '/';
+    return redirect_uri;
+  }
+
   @Get('/ssologin')
   @Redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize')
   async ssoLogin(@Req() req: Request, @Res() res: Response, @QueryParam('scopes') qscopes: string) {

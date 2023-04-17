@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 import { useTheme } from 'sharedui/theme';
+
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
 
@@ -64,23 +65,24 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
     invalidateCache();
   }
 
+
   return (
     <Paper elevation={2}
       sx={theme=>({display:'flex', height:'100%', flexDirection:'column', justifyContent:'space-between', p:{xs:0, sm:1},})}>
       {session?(
-      <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
-        <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
-        </Toolbar>
-        <Box sx={{flexGrow:1,}} className="scrollbarv">
-          {messages.map((m,idx)=>( idx===0?(
-            <Alert key={idx} severity='info' sx={{mb:1, mx:2}}>
-              <AlertTitle>Chat Model initial instruction</AlertTitle>
-              <p>{m.content}</p>
-            </Alert>
-          ):<MessageItem key={m.id} message={m}/>))}
+        <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
+          <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
+          </Toolbar>
+          <Box sx={{flexGrow:1,}} className="scrollbarv">
+            {messages.map((m,idx)=>( idx===0?(
+              <Alert key={idx} severity='info' sx={{mb:1, mx:2}}>
+                <AlertTitle>Chat Model initial instruction</AlertTitle>
+                <p>{m.content}</p>
+              </Alert>
+            ):<MessageItem key={m.id} message={m}/>))}
+          </Box>
+          <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
         </Box>
-        <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
-      </Box>
       ) : <LinearProgress/>}
     </Paper>
   );

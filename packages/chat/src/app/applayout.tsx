@@ -27,6 +27,8 @@ import { useChatHistory } from "../api/chat";
 import ForumIcon from '@mui/icons-material/Forum';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import {formatDistanceToNow, parseJSON} from 'date-fns';
+import ReactMarkdown from "react-markdown";
+import useAuth from "psnapi/useAuth";
 
 const drawerWidth = 220;
 
@@ -39,6 +41,7 @@ interface Props {
 }
 
 export default function AppLayout(props: Props) {
+  const { setAuth } = useAuth();
   const navigate = useNavigate();
   const {colorMode, mode, theme} = useTheme();
   const { window } = props;
@@ -130,8 +133,11 @@ export default function AppLayout(props: Props) {
       open={isProfileMenuOpen}
       onClose={handleMenuClose}
     >
-      <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-      <MenuItem onClick={handleMenuClose}>My account</MenuItem>
+      <MenuItem onClick={()=>{
+        setAuth({});
+        global.window.location.assign(`${process.env['NX_API_URL']}/auth/logout?returnUrl=${global.window.location.href}`)
+      }}
+      >Logout</MenuItem>
     </Menu>
   );
 
@@ -257,6 +263,19 @@ function AboutDialog() {
         <DialogContent>
           <DialogContentText>
             PS Chat - An AI ChatBot for Publicis Sapient employees.<br/>
+            <ReactMarkdown>{`
+> It’s our Groupe position that employees are free to use any emerging tools to speed the development of pitches, strategies, concepts, POCs,
+> perspectives or thought leadership for our clients’ consumption. However, when considering how to implement these ideas for
+> public consumption there are limitations and risks.
+>
+
+> Currently only OpenAI toolsets should be considered for direct consumer engagement with AI experiences and AI output.
+> That means text from GPT, images from Dalle, code from Codex and speech to text from Whisper are approved go to market solutions.
+>
+>
+> Due to the legal landscape surrounding AI, these solutions do need to be used with appropriate business and legal involvement
+> and review in the same manner as other creative work produced for publication.
+            `}</ReactMarkdown>
             <Skeleton width="100%" height={20} animation="wave"/>
             <Skeleton width="80%" height={20} animation="wave"/>
             <Skeleton width="90%" height={20} animation="wave"/>
@@ -265,9 +284,9 @@ function AboutDialog() {
             </Typography>
             <br/>
             <Typography variant="caption">
-              Please read the <a href='/terms' style={{color:'inherit'}}>terms of service</a>
+              Please read the <a href='/terms' style={{color:'inherit'}}><strong>terms of service</strong></a>
               &nbsp;&amp;&nbsp;
-              <a href='/privacy' style={{color:'inherit'}}>privacy policy</a> for the acceptable usage guidelines.
+              <a href='/privacy' style={{color:'inherit'}}><strong>privacy policy</strong></a> for the acceptable usage guidelines.
             </Typography>
           </DialogContentText>
         </DialogContent>
