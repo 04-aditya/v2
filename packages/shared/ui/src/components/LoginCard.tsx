@@ -1,11 +1,10 @@
 import { Alert, Box, Button, Card, CardActions, CardContent, CardHeader, CardProps, CircularProgress, Divider, InputAdornment, Link, Stack, TextField } from "@mui/material";
 import axios from "psnapi/axios";
-import useAuth from "psnapi/useAuth";
 import { useState, useRef, useEffect, ChangeEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
-import useRefreshToken from "psnapi/useRefreshToken";
+import useAuth from "psnapi/useAuth";
 
 const LOGIN_URL = '/auth/requestaccess';
 const VERIFY_URL = '/auth/gettoken';
@@ -16,9 +15,7 @@ export type LoginCardProps = CardProps & {
 
 export default function LoginCard(props: LoginCardProps) {
   const {bannerUrl, ...rest} = props;
-
-  const { auth, setAuth } = useAuth();
-  const refresh = useRefreshToken();
+  const {setAuth} = useAuth();
   const [email, setEmail] = useState<string>('');
   const [code, setCode] = useState<string>('');
   const [codeEntry, showCodeEntry] = useState(false);
@@ -183,8 +180,22 @@ export default function LoginCard(props: LoginCardProps) {
             />
           )}
         </Box>
+          <Button href={`${process.env['NX_API_URL']}/auth/login?redirect_url=${global.window.location.href}`}
+            disabled={busy}
+          >
+            {!busy ? 'Login with SSO' : (
+            <CircularProgress
+              size={24}
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                marginTop: '-12px',
+                marginLeft: '-12px',
+              }}
+            />
+          )}</Button>
         {/*
-          <Button href={`${process.env['NX_API_URL']}/auth/ssologin?redirect_url=${global.window.location.href}`}>Login with SSO</Button>
         */}
       </CardActions>
     </Card>

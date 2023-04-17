@@ -244,12 +244,7 @@ export class AuthController {
 
   @Get('/logout')
   @UseBefore(authMiddleware)
-  async logout(
-    @Req() req: Request,
-    @Res() res: Response,
-    @CurrentUser() currentUser: UserEntity,
-    @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string,
-  ) {
+  async logout(@Req() req: Request, @Res() res: Response, @CurrentUser() currentUser: UserEntity, @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string) {
     const userRepo = AppDataSource.getRepository(UserEntity);
 
     const existingTokens = (currentUser.refreshTokens || '').split(',');
@@ -280,11 +275,27 @@ export class AuthController {
     return 'Ok';
   }
 
+  @Get('/login')
+  @Redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize')
+  async Login(@Req() req: Request, @Res() res: Response, @QueryParam('scopes') qscopes: string, @QueryParam('redirect_url') redirect_url?: string) {
+    return this.LoginHelper(req, res, 'callback', qscopes, redirect_url);
+  }
+
   @Get('/ssologin')
   @Redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize')
   async ssoLogin(
     @Req() req: Request,
     @Res() res: Response,
+    @QueryParam('scopes') qscopes: string,
+    @QueryParam('redirect_url') redirect_url?: string,
+  ) {
+    return this.LoginHelper(req, res, 'ssocallback', qscopes, redirect_url);
+  }
+
+  async LoginHelper(
+    @Req() req: Request,
+    @Res() res: Response,
+    callbackType: string,
     @QueryParam('scopes') qscopes: string,
     @QueryParam('redirect_url') redirect_url?: string,
   ) {
@@ -319,7 +330,7 @@ export class AuthController {
       `client_id=${client_id}&`,
       `scope=${scopes}&`,
       `response_type=code&`,
-      `redirect_uri=${req.protocol + '://' + req.headers['host'] + '/auth/ssocallback'}&`,
+      `redirect_uri=${req.protocol + '://' + req.headers['host'] + '/auth/' + callbackType}&`,
       `code_challenge=${code_challenge}&`,
       `code_challenge_method=S256&`,
       `state=${state}`,
@@ -329,11 +340,19 @@ export class AuthController {
     return url;
   }
 
+  @Get('/callback')
+  @Redirect('/')
+  async loginCallback(@Req() req: Request, @Res() res: Response) {
+    return this.callback(req, res, 'callback');
+  }
   @Get('/ssocallback')
   @Redirect('/')
   async ssoCallback(@Req() req: Request, @Res() res: Response) {
-    const { code, state, error, error_description } = req.query;
+    return this.callback(req, res, 'ssocallback');
+  }
 
+  async callback(@Req() req: Request, @Res() res: Response, callbackType: string) {
+    const { code, state, error, error_description } = req.query;
     if (error) {
       logger.error({ error, error_description });
       return res.json({ error, error_description });
@@ -342,7 +361,7 @@ export class AuthController {
       const stateData = JSON.parse(await cache.get(state as string));
       const code_verifier = stateData.code_verifier;
       cache.del(state as string);
-      const redirect_uri = `${req.protocol + '://' + req.headers.host + '/auth/ssocallback'}`;
+      const redirect_uri = `${req.protocol + '://' + req.headers.host + '/auth/' + callbackType}`;
       const tokenResponse = await axios.post(
         `${OAuthConfig.token_endpoint}`,
         qs.stringify({
@@ -405,7 +424,7 @@ export class AuthController {
       }
       // return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
 
-      const returnUrl = stateData.redirect_url || '/';
+      const returnUrl = (stateData.redirect_url || '/') + '?status=success';
       logger.debug(returnUrl);
       return returnUrl;
     } catch (ex) {

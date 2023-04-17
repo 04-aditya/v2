@@ -26,7 +26,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
 
   // Are there more items to load?
   // (This information comes from the most recent API request.)
-  const [hasNextPage, setHasNextPage] = useState(true);
+  const [hasNextPage, setHasNextPage] = useState((auth?.user)?true:false);
 
   // Are we currently loading a page of items?
   const [isNextPageLoading, setIsNextPageLoading] = useState(false);
