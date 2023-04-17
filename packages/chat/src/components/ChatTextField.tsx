@@ -31,6 +31,16 @@ interface ChatTextFieldProps {
   onSuccess?: (session: IChatSession) => void;
 }
 
+const systemMessages = [
+  {name:'AI Assistant', message: 'You are a helpful AI assistant. Respond in markdown format when possible'},
+  {name:'divider', message: ''},
+  {name:'Senior Software Engineer', message: 'You are a helpful AI assistant, acting as a senior software engineer.Respond in markdown format when possible'},
+  {name:'Senior Product Manager', message: 'You are a helpful AI assistant, acting as a senior product manager.Respond in markdown format when possible'},
+  {name:'Senior Experience designer', message: 'You are a helpful AI assistant, acting as a senior experience or UX designer.Respond in markdown format when possible'},
+  {name:'divider', message: ''},
+  {name:'AI Reviewer', message: 'You are a helpful AI assistant, acting as a senior software engineer. when reviewing the code you look for exception handling, security issues, performance problems, and readability of code. Respond in markdown format when possible'},
+];
+
 export function ChatTextField(props: ChatTextFieldProps) {
   const {sessionid} = props;
   const chatModels = useChatModels();
@@ -38,7 +48,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const [newMessage, setNewMessage] = useState<string>('');
   const [isBusy, setIsBusy] = useState(false);
   const [model, setModel] = useState('gpt35turbo-test');
-  const [assistant, setAssistant] = useState('You are a helpful AI assistant.');
+  const [assistant, setAssistant] = useState(systemMessages[0].message);
   const [contexts, setContext] = useState<string[]>([]);
   const [showOptions, setShowOptions] = useState(false);
   const [showParameters, setShowParameters] = useState(false);
@@ -212,13 +222,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
             value={assistant}
             onChange={(e)=>setAssistant(e.target.value as string)}
           >
-            <MenuItem value={'You are a helpful AI assistant. Respond in markdown format when possible'}>AI Assistant</MenuItem>
-            <Divider/>
-            <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer.Respond in markdown format when possible'}>Senior Software Engineer</MenuItem>
-            <MenuItem value={'You are a helpful AI assistant, acting as a senior product manager.Respond in markdown format when possible'}>Senior Product Manager</MenuItem>
-            <MenuItem value={'You are a helpful AI assistant, acting as a senior experience or UX designer.Respond in markdown format when possible'}>Senior Experience designer</MenuItem>
-            <Divider/>
-            <MenuItem value={'You are a helpful AI assistant, acting as a senior software engineer. when reviewing the code you look for exception handling, security issues, performance problems, and readability of code. Respond in markdown format when possible'}>AI Reviewer</MenuItem>
+            {systemMessages.map((m,i)=>(m.name==='divider')?<Divider key={i}/>:<MenuItem key={i} value={m.message}>{m.name}</MenuItem>)}
           </Select>
         </FormControl>
       </Grid>

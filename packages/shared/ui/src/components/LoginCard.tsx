@@ -35,17 +35,39 @@ export default function LoginCard(props: LoginCardProps) {
     }
   }, [])
 
+  function validateEmail(email:string) {
+    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
+  }
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>)=>{
-    setEmail(e.target.value);
+    const newEmail = e.target.value;
+
+    if (!validateEmail(newEmail)) {
+      return setError('Invalid email');
+    }
+
+    if (newEmail.length > 48 || newEmail.split('@').length>2) {
+      return setError('Invalid email');
+    } else {
+      setEmail(newEmail);
+      setError('');
+    }
   }
 
   const handleCodeChange = (e: ChangeEvent<HTMLInputElement>)=>{
-    setCode(e.target.value);
+    const newCode = e.target.value;
+    if (newCode.length>10) {
+      setError('Invalid code');
+    } else {
+      setCode(e.target.value);
+      setError('');
+    }
   }
 
   const onGenerateCode = async ()=>{
     try {
       setBusy(true);
+      setError('');
       await axios.post(
         LOGIN_URL,
         JSON.stringify({email}),
@@ -54,6 +76,7 @@ export default function LoginCard(props: LoginCardProps) {
           withCredentials: true,
         }
       );
+      setError('');
       showCodeEntry(true);
     } catch(ex) {
       console.error(ex);
@@ -101,6 +124,7 @@ export default function LoginCard(props: LoginCardProps) {
           id="code"
           label="Code"
           type='number'
+
           value={code}
           onChange={handleCodeChange}
           error={code===''}
