@@ -36,10 +36,11 @@ export default function ChatSessionList(props: ChatSessionListProps) {
 
   // Callback function responsible for loading the next page of items.
   const loadNextPage = useCallback((offset:number, limit:number)=>{
+    const userid = auth?.user?.email || '';
     limit = limit===0?10:limit;
     // console.log(offset, limit);
     setIsNextPageLoading(true);
-    axios.get(`/api/chat/history?type=${type}&offset=${offset}&limit=${limit}${auth?.user?.email?('&userid='+auth.user.email):''}`)
+    axios.get(`/api/chat/history?type=${type}&offset=${offset}&limit=${limit}${userid!==''?('&userid='+userid):''}`)
       .then((res)=>{
         const newItems = res.data.data as IChatSession[]
         if (newItems && newItems.length>0) {
@@ -56,7 +57,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
       .finally(()=>{
         setIsNextPageLoading(false);
       })
-  },[axios, items, type, auth.user.email]);
+  },[axios, items, type, auth]);
 
   // If there are more items to be loaded then add an extra row to hold a loading indicator.
   const itemCount = hasNextPage ? items.length + 1 : items.length;
