@@ -5,7 +5,7 @@ import InfiniteLoader from "react-window-infinite-loader";
 import { useChatHistory } from "../api/chat";
 import { IChatSession } from "sharedtypes";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
-import { Avatar, Divider, ListItem, ListItemAvatar, ListItemButton, ListItemText, Typography } from "@mui/material";
+import { Avatar, Button, Divider, ListItem, ListItemAvatar, ListItemButton, ListItemText, Typography } from "@mui/material";
 import { formatDistanceToNow, parseJSON } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import ForumIcon from '@mui/icons-material/Forum';
@@ -56,7 +56,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
       .finally(()=>{
         setIsNextPageLoading(false);
       })
-  },[axios, items, type]);
+  },[axios, items, type, auth.user.email]);
 
   // If there are more items to be loaded then add an extra row to hold a loading indicator.
   const itemCount = hasNextPage ? items.length + 1 : items.length;
@@ -71,7 +71,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
   // Render an item or a loading indicator.
   const Item = (props:{ index:number, style:any }) => {
     if (!isItemLoaded(props.index)) {
-      return <div style={props.style}>{"Loading..."}</div>;
+      return <div style={props.style}>{""}</div>;
     }
     const session = items[props.index];
 
@@ -99,7 +99,8 @@ export default function ChatSessionList(props: ChatSessionListProps) {
     </div>;
   };
 
-  return (
+  return (<>
+    {(items.length===0 && !isNextPageLoading) ? <Button size='small' color='inherit' onClick={()=>loadNextPage(0,0)} fullWidth>Load Chat History</Button> : null}
     <InfiniteLoader
       isItemLoaded={isItemLoaded}
       itemCount={itemCount}
@@ -118,5 +119,6 @@ export default function ChatSessionList(props: ChatSessionListProps) {
         </List>
       )}
     </InfiniteLoader>
+    </>
   );
 }

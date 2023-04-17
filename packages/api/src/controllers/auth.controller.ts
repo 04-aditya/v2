@@ -15,6 +15,7 @@ import {
   HttpError,
   QueryParam,
   Redirect,
+  CurrentUser,
 } from 'routing-controllers';
 
 import { logger } from '@/utils/logger';
@@ -31,6 +32,7 @@ import crypto from 'crypto';
 import cache from '@/utils/cache';
 import axios from 'axios';
 import qs from 'qs';
+import authMiddleware from '@/middlewares/auth.middleware';
 
 const REFRESHTOKENCOOKIE = 'rt';
 
@@ -241,27 +243,57 @@ export class AuthController {
   }
 
   @Get('/logout')
-  @Redirect('/')
+  @UseBefore(authMiddleware)
   async logout(
     @Req() req: Request,
     @Res() res: Response,
-    @QueryParam('returnUrl') returnUrl?: string,
+    @CurrentUser() currentUser: UserEntity,
     @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string,
   ) {
-    res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
-    const redirect_uri = returnUrl || req.protocol + '://' + req.headers['host'] + '/';
-    return redirect_uri;
+    const userRepo = AppDataSource.getRepository(UserEntity);
+
+    const existingTokens = (currentUser.refreshTokens || '').split(',');
+    let newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
+
+    if (cjwt) {
+      /*
+      Scenario added here:
+          1) User logs in but never uses RT and does not logout
+          2) RT is stolen
+          3) If 1 & 2, reuse detection is needed to clear all RTs when user logs in
+      */
+      const foundToken = await userRepo.findOne({ where: { refreshTokens: Like(`%${cjwt}%`) } });
+
+      // Detected refresh token reuse!
+      if (!foundToken) {
+        // clear out ALL previous refresh tokens
+        newRefreshTokenArray = [];
+      }
+      res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
+    }
+
+    // Saving refreshToken with current user
+    currentUser.refreshTokens = [...newRefreshTokenArray].join(',');
+    await currentUser.save();
+    // const redirect_uri = returnUrl || req.protocol + '://' + req.headers['host'] + '/';
+    // return redirect_uri;
+    return 'Ok';
   }
 
   @Get('/ssologin')
   @Redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize')
-  async ssoLogin(@Req() req: Request, @Res() res: Response, @QueryParam('scopes') qscopes: string, @QueryParam('redirect_url') redirect_url?: string) {
+  async ssoLogin(
+    @Req() req: Request,
+    @Res() res: Response,
+    @QueryParam('scopes') qscopes: string,
+    @QueryParam('redirect_url') redirect_url?: string,
+  ) {
     const state = base64URLEncode(crypto.randomBytes(16));
     const code_verifier = base64URLEncode(crypto.randomBytes(32));
     cache.set(state, JSON.stringify({ code_verifier, redirect_url: redirect_url || '/' }));
 
     const client_id = CLID;
-    const client_secret = CLIS;
+    // const client_secret = CLIS;
 
     try {
       const or = await axios.get(OPENID_CONFIG_URL);

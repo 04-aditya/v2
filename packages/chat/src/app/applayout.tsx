@@ -30,6 +30,7 @@ import {formatDistanceToNow, parseJSON} from 'date-fns';
 import ReactMarkdown from "react-markdown";
 import useAuth from "psnapi/useAuth";
 import ChatSessionList from "../components/ChatSessionList";
+import useAxiosPrivate from "psnapi/useAxiosPrivate";
 
 const drawerWidth = 260;
 
@@ -43,6 +44,7 @@ interface Props {
 
 export default function AppLayout(props: Props) {
   const { auth, setAuth } = useAuth();
+  const axios = useAxiosPrivate();
   const navigate = useNavigate();
   const {colorMode, mode, theme} = useTheme();
   const { window } = props;
@@ -135,8 +137,13 @@ export default function AppLayout(props: Props) {
       onClose={handleMenuClose}
     >
       <MenuItem onClick={()=>{
-        setAuth({});
-        global.window.location.assign(`${process.env['NX_API_URL']}/auth/logout?returnUrl=${global.window.location.href}`)
+        //const returnUrl = global.window.location.href;
+        axios.get(`${process.env['NX_API_URL']}/auth/logout`)
+          .then(()=>{
+            setAuth({});
+            navigate('/login');
+          })
+          .catch(console.error);
       }}
       >Logout</MenuItem>
     </Menu>

@@ -20,6 +20,7 @@ import {
   Param,
   QueryParam,
 } from 'routing-controllers';
+import { Not, MoreThan, Equal, And } from 'typeorm';
 import { OpenAPI } from 'routing-controllers-openapi';
 import { ChatSessionEntity } from '@/entities/chatsession.entity';
 import { ChatMessageEntity } from '@/entities/chatmessage.entity';
@@ -153,9 +154,16 @@ export class ChatController {
     const repo = AppDataSource.getRepository(ChatSessionEntity);
 
     const session = await repo.findOne({
-      where: {
-        id,
-      },
+      where: [
+        {
+          id,
+          userid: currentUser.email,
+        },
+        {
+          id,
+          type: 'public',
+        },
+      ],
       relations: ['messages'],
     });
     if (!session) return;
