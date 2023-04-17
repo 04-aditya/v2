@@ -33,9 +33,10 @@ const openaiclient = axios.create({
   headers: {
     'api-key': process.env['AZ_OPENAI_KEY'],
   },
+  timeout: 60000,
 });
 axiosRetry(openaiclient, {
-  retries: 1,
+  retries: 2,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: error => {
     console.log(error);
@@ -48,9 +49,10 @@ const psbodhiclient = axios.create({
   headers: {
     'access-token': process.env['PSBODHI_KEY'],
   },
+  timeout: 60000,
 });
 axiosRetry(psbodhiclient, {
-  retries: 1,
+  retries: 2,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: error => {
     console.log(error);
