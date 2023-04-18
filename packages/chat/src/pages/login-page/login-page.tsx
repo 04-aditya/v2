@@ -3,18 +3,19 @@ import styles from './login-page.module.css';
 import LoginCard from 'sharedui/components/LoginCard';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import axios from "psnapi/axios";
 import useAuth from 'psnapi/useAuth';
 import LogoutButton from '../../components/LogoutButton';
 import React from 'react';
 import KeyIcon from '@mui/icons-material/Key';
 import { TermsNotice } from '../terms-page/terms-page';
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 /* eslint-disable-next-line */
 export interface LoginPageProps {}
 
 export function LoginPage(props: LoginPageProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const axios = useAxiosPrivate();
   const {auth, setAuth} = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -61,7 +62,7 @@ export function LoginPage(props: LoginPageProps) {
     .finally(() => {
       setBusy(false);
     });
-  },[location.search, navigate, setAuth]);
+  },[location.search, navigate, setAuth, axios]);
 
   if (auth?.user) {
     return <Box sx={{display:'flex', flexDirection:'column', height:'100%',justifyContent:'center', alignItems:'center'}}>
