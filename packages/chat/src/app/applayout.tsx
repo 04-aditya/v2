@@ -288,6 +288,10 @@ function AboutDialog() {
               &nbsp;&amp;&nbsp;
               <a href='/privacy' style={{color:'inherit'}}><strong>privacy policy</strong></a> for the acceptable usage guidelines.
             </Typography>
+            <br/>
+            <Typography variant="caption">
+              build date: {process.env['NX_BUILD_DATE']}, version: {process.env['NX_BUILD_VERSION']}
+            </Typography>
           </DialogContentText>
         </DialogContent>
         <DialogActions>
