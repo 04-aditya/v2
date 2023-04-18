@@ -34,7 +34,7 @@ export function LoginPage(props: LoginPageProps) {
       const accessToken = data?.accessToken;
       const user = data?.user;
       setAuth({ user, accessToken });
-      navigate('/', { replace: true });
+      navigate('/');
     } )
     .catch(ex=>{
       console.error(ex);
@@ -47,9 +47,10 @@ export function LoginPage(props: LoginPageProps) {
 
   if (auth?.user) {
     return <Box sx={{display:'flex', flexDirection:'column', height:'100%',justifyContent:'center', alignItems:'center'}}>
-      <Typography variant='h5'>Already logged in as</Typography>
+      <Typography variant='h6'>Currently logged in as</Typography>
       <Typography variant='h5' color='primary'>{auth.user.email}</Typography>
-      <Link to='/'>Click here to continue.</Link>
+      <br/>
+      <Button onClick={()=>navigate('/')}>Continue.</Button>
       <Typography variant='caption'>-- or --</Typography>
       <LogoutButton color='secondary'>Logout</LogoutButton>
     </Box>

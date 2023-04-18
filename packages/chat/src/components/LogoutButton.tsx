@@ -1,10 +1,11 @@
 import { Button, ButtonProps } from "@mui/material";
-import axios from "axios";
 import useAuth from "psnapi/useAuth";
+import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import { useNavigate } from "react-router-dom";
 
 
 export default function LogoutButton(props:ButtonProps) {
+  const axios = useAxiosPrivate();
   const navigate = useNavigate();
   const {setAuth} = useAuth();
   const {onClick, ...rest} = props;

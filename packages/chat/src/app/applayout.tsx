@@ -137,7 +137,7 @@ export default function AppLayout(props: Props) {
       open={isProfileMenuOpen}
       onClose={handleMenuClose}
     >
-      <MenuItem ><LogoutButton>Logout</LogoutButton></MenuItem>
+      <MenuItem ><LogoutButton onClick={handleMenuClose}>Logout</LogoutButton></MenuItem>
     </Menu>
   );
 
