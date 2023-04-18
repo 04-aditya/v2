@@ -31,6 +31,7 @@ import ReactMarkdown from "react-markdown";
 import useAuth from "psnapi/useAuth";
 import ChatSessionList from "../components/ChatSessionList";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
+import LogoutButton from "../components/LogoutButton";
 
 const drawerWidth = 260;
 
@@ -136,17 +137,7 @@ export default function AppLayout(props: Props) {
       open={isProfileMenuOpen}
       onClose={handleMenuClose}
     >
-      <MenuItem onClick={()=>{
-        //const returnUrl = global.window.location.href;
-        axios.get(`${process.env['NX_API_URL']}/auth/logout`)
-          .then(()=>{
-            setAuth({});
-            navigate('/login');
-            //navigate(`https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=${global.window.location.protocol}://${global.window.location.hostname}/login`);
-          })
-          .catch(console.error);
-      }}
-      >Logout</MenuItem>
+      <MenuItem ><LogoutButton>Logout</LogoutButton></MenuItem>
     </Menu>
   );
 

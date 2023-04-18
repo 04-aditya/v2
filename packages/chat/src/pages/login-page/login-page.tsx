@@ -1,17 +1,18 @@
-import { Box, Button, CircularProgress } from '@mui/material';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import styles from './login-page.module.css';
 import LoginCard from 'sharedui/components/LoginCard';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import axios from "psnapi/axios";
 import useAuth from 'psnapi/useAuth';
+import LogoutButton from '../../components/LogoutButton';
 /* eslint-disable-next-line */
 export interface LoginPageProps {}
 
 export function LoginPage(props: LoginPageProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const {setAuth} = useAuth();
+  const {auth, setAuth} = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const from = location.state?.from?.pathname || "/";
@@ -43,6 +44,16 @@ export function LoginPage(props: LoginPageProps) {
       setBusy(false);
     });
   },[location.search]);
+
+  if (auth?.user) {
+    return <Box sx={{display:'flex', flexDirection:'column', height:'100%',justifyContent:'center', alignItems:'center'}}>
+      <Typography variant='h5'>Already logged in as</Typography>
+      <Typography variant='h5' color='primary'>{auth.user.email}</Typography>
+      <Link to='/'>Click here to continue.</Link>
+      <Typography variant='caption'>-- or --</Typography>
+      <LogoutButton color='secondary'>Logout</LogoutButton>
+    </Box>
+  }
 
   return (
     <Box sx={{display:'flex', flexDirection:'column', height:'100%',justifyContent:'center', alignItems:'center'}}>

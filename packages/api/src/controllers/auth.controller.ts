@@ -330,7 +330,7 @@ export class AuthController {
       `client_id=${client_id}&`,
       `scope=${scopes}&`,
       `response_type=code&`,
-      `redirect_uri=${req.protocol + '://' + req.headers['host'] + '/auth/' + callbackType}&`,
+      `redirect_uri=${(req.headers.host.startsWith('localhost') ? 'http' : 'https') + '://' + req.headers['host'] + '/auth/' + callbackType}&`,
       `code_challenge=${code_challenge}&`,
       `code_challenge_method=S256&`,
       `state=${state}`,
@@ -361,7 +361,7 @@ export class AuthController {
       const stateData = JSON.parse(await cache.get(state as string));
       const code_verifier = stateData.code_verifier;
       cache.del(state as string);
-      const redirect_uri = `${req.protocol + '://' + req.headers.host + '/auth/' + callbackType}`;
+      const redirect_uri = `${(req.headers.host.startsWith('localhost') ? 'http' : 'https') + '://' + req.headers.host + '/auth/' + callbackType}`;
       const tokenResponse = await axios.post(
         `${OAuthConfig.token_endpoint}`,
         qs.stringify({
