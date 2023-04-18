@@ -230,6 +230,7 @@ export class ChatController {
       ? await repo.findOne({
           where: {
             id: sessionid_param,
+            userid: currentUser.email,
           },
           relations: ['messages'],
         })
@@ -339,6 +340,7 @@ export class ChatController {
     const session = await repo.findOne({
       where: {
         id,
+        userid: currentUser.email,
       },
       relations: ['messages'],
     });
