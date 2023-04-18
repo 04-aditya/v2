@@ -104,7 +104,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
 
   return (<>
     {(items.length===0 && !isNextPageLoading) ? <Button size='small' color='inherit' onClick={()=>loadNextPage(0,0)} fullWidth>Load Chat History</Button> : null}
-    <InfiniteLoader
+    {auth.user && <InfiniteLoader
       isItemLoaded={isItemLoaded}
       itemCount={itemCount}
       loadMoreItems={loadMoreItems}
@@ -121,7 +121,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
           {Item}
         </List>
       )}
-    </InfiniteLoader>
+    </InfiniteLoader>}
     </>
   );
 }

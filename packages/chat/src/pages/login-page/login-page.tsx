@@ -36,25 +36,27 @@ export function LoginPage(props: LoginPageProps) {
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setAcceptTerms(event.target.checked);
   };
+
   useEffect(()=>{
     if (location.search !== '?status=success') return;
-      setBusy(true);
-      setError('');
-      axios.get(
-        '/auth/refreshtoken',
-        {
-          headers: { 'Content-Type': 'application/json' },
-          withCredentials: true,
-        }
-      ).then(response => {
+    setBusy(true);
+    setError('');
+    axios.get(
+      '/auth/refreshtoken',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        withCredentials: true,
+      }
+    ).then(response => {
       setBusy(false);
-        if (response.status!==200) return;
-        const data = response.data;
-        const accessToken = data?.accessToken;
-        const user = data?.user;
-        setAuth({ user, accessToken });
-        navigate('/');
-    } )
+      if (!response.data) return;
+      console.log('got new refresh token');
+      const data = response.data;
+      const accessToken = data?.accessToken;
+      const user = data?.user;
+      setAuth({ user, accessToken })
+      navigate('/');
+    })
     .catch(ex=>{
       console.error(ex);
       setError('Invalid code. Please try again')
