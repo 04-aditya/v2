@@ -10,7 +10,9 @@ export default function LogoutButton(props:ButtonProps) {
   const {setAuth} = useAuth();
   const {onClick, ...rest} = props;
   const handleClick = (e:React.MouseEvent<HTMLButtonElement>)=>{
-    axios.get(`${process.env['NX_API_URL']}/auth/logout`)
+    axios.get(`${process.env['NX_API_URL']}/auth/logout`,{
+      withCredentials: true
+    })
     .then(()=>{
       setAuth({});
       if (onClick) onClick(e)
