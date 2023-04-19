@@ -34,22 +34,23 @@ export default function ChatStatsList(props: ChatStatsListProps) {
     >
       <ul>
         <ListSubheader>Top users</ListSubheader>
-        {items?.map((item,i)=><div key={i}>
+        {items?.map((item: any, i: number)=><div key={i}>
           <ListItemButton alignItems="flex-start" dense >
             <ListItemAvatar>
-              <Chip variant="outlined" color='secondary' label={item.count+''}/>
+              <Chip variant="outlined" color="secondary" size="small" label={item.count+''} sx={{fontSize:"0.5em"}}/>
             </ListItemAvatar>
             <ListItemText
-              primary={<a href={`mailto:${item.userid}`} target="_blank">{item.userid}</a>}
+              primary={<a href={`mailto:${item.userid}`} target="_blank" rel="noreferrer">{item.userid}</a>}
               secondary={
                 <React.Fragment>
-                  {/* <Typography
+                  {'tokens:'}
+                  <Typography
                     sx={{ display: 'inline' }}
                     component="span"
                     variant="body2"
                     color="text.primary"
-                  >{'sessions:'}</Typography>
-                  {item.count} */}
+                  >{Math.round(item.total_tokens/10)/100}<small>K</small></Typography>
+
                   {/* {formatDistanceToNow(parseJSON(session.updatedAt),{addSuffix:true})} */}
                 </React.Fragment>
               }

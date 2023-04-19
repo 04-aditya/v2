@@ -66,9 +66,9 @@ export function useChatStats(type='user') {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
   const keys = [CACHEKEY, 'stats', type];
-  const query = useQuery<Array<{userid: string, count: number}>, AxiosError>(keys, async ()=>{
+  const query = useQuery<Array<any>, AxiosError>(keys, async ()=>{
     const res = await axios.get(`${CHATAPI}/stats?type=${type}`);
-    return res.data.data as Array<{userid: string, count: number}>;
+    return res.data.data as Array<any>;
   },{
     enabled: !!axios,
     staleTime:  60 * 60 * 1000 // 1 minute

@@ -156,6 +156,9 @@ export class UserEntity extends BaseEntity implements IUser {
   @Column({ nullable: true })
   refreshTokens: string;
 
+  @Column({ nullable: true })
+  accessTokens: string;
+
   @Column()
   @CreateDateColumn()
   createdAt: Date;

@@ -33,6 +33,7 @@ import cache from '@/utils/cache';
 import axios from 'axios';
 import qs from 'qs';
 import authMiddleware from '@/middlewares/auth.middleware';
+import { RequestWithUser } from '@/interfaces/auth.interface';
 
 const REFRESHTOKENCOOKIE = 'rt';
 
@@ -154,6 +155,8 @@ export class AuthController {
 
     const newRefreshToken = foundUser.createRefeshToken();
 
+    // Save accessToken to the user list
+    foundUser.accessTokens = [...(foundUser.accessTokens || []), accessToken].join(',');
     // Saving refreshToken with current user
     foundUser.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
     await foundUser.save();
@@ -224,8 +227,10 @@ export class AuthController {
       res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
     }
 
+    // Save accessToken to the user list
+    user.accessTokens = [...(user.accessTokens || []), accessToken].join(',');
     // Saving refreshToken with current user
-    user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
+    user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].join(',');
     await UserDataEntity.Add(user.id, 's-:login', { value: new Date().toISOString() }, new Date());
     await user.save();
     // Creates Secure Cookie with refresh token
@@ -244,11 +249,17 @@ export class AuthController {
 
   @Get('/logout')
   @UseBefore(authMiddleware)
-  async logout(@Req() req: Request, @Res() res: Response, @CurrentUser() currentUser: UserEntity, @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string) {
+  async logout(
+    @Req() req: RequestWithUser,
+    @Res() res: Response,
+    @CurrentUser() currentUser: UserEntity,
+    @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string,
+  ) {
     const userRepo = AppDataSource.getRepository(UserEntity);
 
     const existingTokens = (currentUser.refreshTokens || '').split(',');
     let newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
+    const newAccessTokenArray = req.accessToken ? (currentUser.accessTokens || '').split(',').filter(at => at !== req.accessToken) : [];
 
     if (cjwt) {
       /*
@@ -267,6 +278,8 @@ export class AuthController {
       res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
     }
 
+    // save the accessTokens
+    currentUser.accessTokens = [...newAccessTokenArray].join(',');
     // Saving refreshToken with current user
     currentUser.refreshTokens = [...newRefreshTokenArray].join(',');
     await currentUser.save();
@@ -299,6 +312,13 @@ export class AuthController {
     @QueryParam('scopes') qscopes: string,
     @QueryParam('redirect_url') redirect_url?: string,
   ) {
+    if (redirect_url && redirect_url.toLowerCase().startsWith('http')) {
+      const rurl = new URL(redirect_url);
+      console.log(rurl);
+      if (!rurl.host.toLocaleLowerCase().endsWith('.psnext.info') && rurl.hostname.toLocaleLowerCase() !== 'localhost') {
+        throw new HttpError(400, 'Invalid redirect url');
+      }
+    }
     const state = base64URLEncode(crypto.randomBytes(16));
     const code_verifier = base64URLEncode(crypto.randomBytes(32));
     cache.set(state, JSON.stringify({ code_verifier, redirect_url: redirect_url || '/' }));
@@ -435,9 +455,10 @@ export class AuthController {
       }
       // return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
 
-      const returnUrl = (stateData.redirect_url || '/') + '?status=success';
-      logger.debug(returnUrl);
-      return returnUrl;
+      const rurl = new URL(stateData.redirect_url || '/');
+      rurl.searchParams.append('status', 'success');
+      logger.debug(rurl.href);
+      return rurl.href;
     } catch (ex) {
       console.error(ex);
       throw new HttpError(500, 'Unable to authenticate.');

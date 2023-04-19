@@ -156,11 +156,22 @@ export class ChatController {
   ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
-    const result = new APIResponse<{ userid: string; count: number }[]>();
+    const result = new APIResponse<{ userid: string; count: number; total_tokens: number }[]>();
     result.data = [];
 
-    const data = await AppDataSource.query(`select userid, count(*) as count from chatsession group by userid order by count desc limit ${limit}`);
-    data.forEach(d => result.data.push({ userid: d.userid, count: d.count }));
+    const data = await AppDataSource.query(
+      `
+        SELECT
+        userid,
+        COUNT(*) AS count,
+        SUM(cast(options::jsonb->'usage'->'total_tokens' as integer)) AS total_tokens
+        FROM chatsession
+        GROUP BY userid
+        ORDER BY count desc
+        LIMIT ${limit}
+      `,
+    );
+    data.forEach(d => result.data.push({ userid: d.userid, count: d.count, total_tokens: d.total_tokens }));
     return result;
   }
 
@@ -263,7 +274,8 @@ export class ChatController {
     const model = model_param || (sessionid_param ? session.options.model : process.env['AZ_OPENAI_DEPLOYMENT']);
     const model_version = model_version_param || (sessionid_param ? session.options.model_version : process.env['AZ_OPENAI_VERSION']);
     const contexts = contexts_param || (sessionid_param ? session.options.contexts : []);
-    session.options = { model, model_version, contexts };
+    session.options = { ...session.options, model, model_version, contexts };
+    session.options.usage = session.options.usage ?? { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 };
 
     const messages: ChatMessageEntity[] = [];
     for (let i = 0; i < session.messages.length; i++) {
@@ -332,8 +344,12 @@ export class ChatController {
     logger.debug(response.data);
     logger.debug(response.data.choices[0].message);
     assistantMessage.content = response.data.choices[0].message.content;
-    session.options.usage = response.data.usage;
     messages.push(assistantMessage);
+    if (response.data.usage) {
+      session.options.usage.total_tokens += response.data.usage.total_tokens;
+      session.options.usage.prompt_tokens += response.data.usage.prompt_tokens;
+      session.options.usage.completion_tokens += response.data.usage.completion_tokens;
+    }
     await AppDataSource.getRepository(ChatMessageEntity).save(messages);
     session.messages = messages;
     await repo.save(session);

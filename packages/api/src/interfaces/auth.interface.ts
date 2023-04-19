@@ -17,4 +17,5 @@ export interface TokenData {
 export interface RequestWithUser extends Request {
   user: UserEntity;
   permissions: string[];
+  accessToken?: string;
 }

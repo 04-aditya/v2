@@ -8,6 +8,7 @@ import { logger } from '@/utils/logger';
 import { isInstance } from 'class-validator';
 import { IPermission, IUserRole } from '@sharedtypes';
 import { UserPATEntity } from '@/entities/userpat.entity';
+import { Like } from 'typeorm';
 
 const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFunction) => {
   try {
@@ -44,6 +45,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
       matchedUser = await AppDataSource.getRepository(UserEntity).findOne({
         where: {
           id: userId,
+          accessTokens: Like(`%${Authorization}%`),
         },
         relations: {
           roles: true,
@@ -55,6 +57,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
       });
 
       if (!matchedUser) return res.status(401).send('Invalid token');
+      req.accessToken = Authorization;
     }
 
     req.user = matchedUser;
