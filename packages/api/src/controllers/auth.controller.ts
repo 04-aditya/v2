@@ -315,7 +315,14 @@ export class AuthController {
     if (redirect_url && redirect_url.toLowerCase().startsWith('http')) {
       const rurl = new URL(redirect_url);
       console.log(rurl);
-      if (!rurl.host.toLocaleLowerCase().endsWith('.psnext.info') && rurl.hostname.toLocaleLowerCase() !== 'localhost') {
+      if (
+        !(
+          rurl.host.toLocaleLowerCase() === 'api.psnext.info' ||
+          rurl.host.toLocaleLowerCase() === 'chat.psnext.info' ||
+          rurl.host.toLocaleLowerCase() === 'dash.psnext.info'
+        ) &&
+        rurl.hostname.toLocaleLowerCase() !== 'localhost'
+      ) {
         throw new HttpError(400, 'Invalid redirect url');
       }
     }

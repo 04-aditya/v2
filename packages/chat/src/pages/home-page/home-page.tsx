@@ -40,7 +40,7 @@ export function HomePage() {
       <Stack direction={'row'} spacing={1} sx={{height:24, justifyContent:'center'}}>
         <Link to='/terms' style={{fontSize:'0.75em', color:'gray'}}>Terms of Service</Link>
         &nbsp;
-        <Link to='/privacy' style={{fontSize:'0.75em', color:'gray'}}>Privacy Policy</Link>
+        <Link to='https://lion.app.box.com/v/PG-Staff-HR-PrivacyNotice/file/1177190323591' style={{fontSize:'0.75em', color:'gray'}}>Privacy Policy</Link>
       </Stack>
       <ChatTextField onSuccess={(newSession)=>navigate(`/chat/${newSession.id}`)}/>
     </Paper>

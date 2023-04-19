@@ -1,5 +1,5 @@
 import React from "react";
-import { AppBar, Box, Button, CssBaseline, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Paper, Skeleton, TextField, ThemeProvider, Typography, useMediaQuery } from "@mui/material";
+import { AppBar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography } from "@mui/material";
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -12,7 +12,6 @@ import ListItemText from '@mui/material/ListItemText';
 import MenuIcon from '@mui/icons-material/Menu';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
-import InfoIcon from '@mui/icons-material/Info';
 import AddCommentIcon from '@mui/icons-material/AddComment';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -27,13 +26,13 @@ import { useChatHistory } from "../api/chat";
 import ForumIcon from '@mui/icons-material/Forum';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import {formatDistanceToNow, parseJSON} from 'date-fns';
-import ReactMarkdown from "react-markdown";
 import useAuth from "psnapi/useAuth";
 import ChatSessionList from "../components/ChatSessionList";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import LogoutButton from "../components/LogoutButton";
+import { AboutDialog } from "../components/AboutDialog";
 
-const drawerWidth = 260;
+const drawerWidth = 280;
 
 interface Props {
   /**
@@ -79,6 +78,8 @@ export default function AppLayout(props: Props) {
 
       <Divider />
       */}
+
+      <Paper sx={{p:1, height:'100%',mt:2, mb:2,ml:1,mr:1}} elevation={6}>
       <Box sx={{flexGrow:1, maxHeight:600,}} className="scrollbarv">
         <List dense>
           <ListItem disablePadding>
@@ -116,6 +117,7 @@ export default function AppLayout(props: Props) {
           <AboutDialog/>
         </ListItem>
       </List>
+      </Paper>
     </Box>
   );
 
@@ -214,7 +216,7 @@ export default function AppLayout(props: Props) {
         }}
         open
       >
-        <DrawerContent auth={auth}/>
+          <DrawerContent auth={auth}/>
       </Drawer>
     </Box>
     <Box
@@ -229,78 +231,5 @@ export default function AppLayout(props: Props) {
     </Box>
   </Box>
   </ThemeProvider>
-}
-function AboutDialog() {
-  const [open, setOpen] = React.useState(false);
-  const {theme} = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
-
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  return (
-    <>
-      <ListItemButton onClick={handleClickOpen}>
-        <ListItemIcon>
-          <InfoIcon/>
-        </ListItemIcon>
-        <ListItemText primary={`About ${process.env['NX_APP_NAME']}`} />
-      </ListItemButton>
-      <Dialog
-        fullScreen={fullScreen}
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="about-dialog-title"
-      >
-        <DialogTitle id="about-dialog-title">
-          <img src='/assets/appicon.svg' alt="pschat application logo" width="22px"/> {`About ${process.env['NX_APP_NAME']}`}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            PS Chat - An AI ChatBot for Publicis Sapient employees.<br/>
-            <ReactMarkdown>{`
-> It’s our Groupe position that employees are free to use any emerging tools to speed the development of pitches, strategies, concepts, POCs,
-> perspectives or thought leadership for our clients’ consumption. However, when considering how to implement these ideas for
-> public consumption there are limitations and risks.
->
-
-> Currently only OpenAI toolsets should be considered for direct consumer engagement with AI experiences and AI output.
-> That means text from GPT, images from Dalle, code from Codex and speech to text from Whisper are approved go to market solutions.
->
->
-> Due to the legal landscape surrounding AI, these solutions do need to be used with appropriate business and legal involvement
-> and review in the same manner as other creative work produced for publication.
-            `}</ReactMarkdown>
-            <Skeleton width="100%" height={20} animation="wave"/>
-            <Skeleton width="80%" height={20} animation="wave"/>
-            <Skeleton width="90%" height={20} animation="wave"/>
-            <Typography variant="caption">for any queries,
-              please contact <a href="mailto:rakesh.ravuri@publicissapient.com">mailto:rakesh.ravuri@publicissapient.com</a>
-            </Typography>
-            <br/>
-            <Typography variant="caption">
-              Please read the <a href='/terms' style={{color:'inherit'}}><strong>terms of service</strong></a>
-              &nbsp;&amp;&nbsp;
-              <a href='/privacy' style={{color:'inherit'}}><strong>privacy policy</strong></a> for the acceptable usage guidelines.
-            </Typography>
-            <br/>
-            <Typography variant="caption">
-              build date: {process.env['NX_BUILD_DATE']}, version: {process.env['NX_BUILD_VERSION']}
-            </Typography>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} autoFocus>
-            Ok
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
-  );
 }
 
