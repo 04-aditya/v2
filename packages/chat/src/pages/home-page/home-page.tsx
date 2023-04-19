@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, Divider, Grid, Paper, Stack, Typography } from '@mui/material';
+import { Card, Divider, Grid, Paper, Stack, Typography, alpha } from '@mui/material';
 import styles from './home-page.module.css';
 import { ChatTextField } from '../../components/ChatTextField';
 import ChatSessionList from '../../components/ChatSessionList';
@@ -10,7 +10,8 @@ export function HomePage() {
   const navigate = useNavigate();
   return (
     <Paper elevation={4}
-      sx={{display:'flex', height:'100%', flexDirection:'column', justifyContent:'space-between', p:1}}>
+      sx={theme=>({display:'flex', height:'100%', backgroundColor: alpha(theme.palette.background.paper, 0.5),
+        flexDirection:'column', justifyContent:'space-between', p:1})}>
 
       <img src='/assets/appicon.svg' alt='app icon' height={100}/>
       <Typography variant='h3' sx={{width:'100%', textAlign:'center'}}>Welcome to {process.env['NX_APP_NAME']}!</Typography>

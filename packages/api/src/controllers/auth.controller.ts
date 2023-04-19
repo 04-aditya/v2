@@ -24,7 +24,7 @@ import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import sgMail from '@sendgrid/mail';
 import jwt from 'jsonwebtoken';
-import { REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS, CLID, OPENID_CONFIG_URL, CLIS } from '@config';
+import { REFRESH_TOKEN_SECRET, DOMAIN, MAILDOMAINS, CLID, OPENID_CONFIG_URL, CLIS, ORIGIN } from '@config';
 import { Like } from 'typeorm';
 import { IUserRole } from '@sharedtypes';
 import { UserDataEntity } from '@/entities/userdata.entity';
@@ -313,16 +313,10 @@ export class AuthController {
     @QueryParam('redirect_url') redirect_url?: string,
   ) {
     if (redirect_url && redirect_url.toLowerCase().startsWith('http')) {
+      const whitelist = [];
+      ORIGIN.split(',').forEach(sd => whitelist.push(new URL(sd).hostname));
       const rurl = new URL(redirect_url);
-      console.log(rurl);
-      if (
-        !(
-          rurl.host.toLocaleLowerCase() === 'api.psnext.info' ||
-          rurl.host.toLocaleLowerCase() === 'chat.psnext.info' ||
-          rurl.host.toLocaleLowerCase() === 'dash.psnext.info'
-        ) &&
-        rurl.hostname.toLocaleLowerCase() !== 'localhost'
-      ) {
+      if (whitelist.indexOf(rurl.hostname) === -1) {
         throw new HttpError(400, 'Invalid redirect url');
       }
     }

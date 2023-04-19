@@ -239,8 +239,10 @@ export class ChatController {
   @OpenAPI({ summary: 'Create or continue a chat session' })
   async createChatSession(
     @CurrentUser() currentUser: UserEntity,
-    @BodyParam('message') message_param: string,
+    @BodyParam('message') message_param?: string,
     @BodyParam('id') sessionid_param?: string,
+    @BodyParam('name') name_param?: string,
+    @BodyParam('group') group_param?: string,
     @BodyParam('messageid') messageid_param?: string,
     @BodyParam('model') model_param?: string,
     @BodyParam('assistant') assistant_param?: string,
@@ -265,8 +267,20 @@ export class ChatController {
         })
       : new ChatSessionEntity();
 
+    //TODO: validate
+    if (name_param) session.name = name_param;
+    if (group_param) session.group = group_param;
+    // if (type) session.name = type;
+    // if (path) session.name = path;
+
+    if (!message_param && sessionid_param) {
+      await repo.save(session);
+      result.data = session.toJSON();
+      return result;
+    }
+
     if (!sessionid_param) {
-      session.name = message.substring(0, 45);
+      session.name = name_param || message.substring(0, 45);
       session.userid = currentUser.email;
       session.messages = [];
     }
@@ -357,39 +371,35 @@ export class ChatController {
     return result;
   }
 
-  @Post('/:id/')
-  @OpenAPI({ summary: 'Update properties of a session identified by the id' })
-  async updateChatSession(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: UserEntity,
-    @BodyParam('name') name?: string,
-    @BodyParam('group') group?: string,
-    @BodyParam('type') type?: string,
-    @BodyParam('path') path?: string,
-  ) {
-    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+  // @Post('/:id/')
+  // @OpenAPI({ summary: 'Update properties of a session identified by the id' })
+  // async updateChatSession(
+  //   @Param('id') id: string,
+  //   @CurrentUser() currentUser: UserEntity,
+  //   @BodyParam('name') name?: string,
+  //   @BodyParam('group') group?: string,
+  //   @BodyParam('type') type?: string,
+  //   @BodyParam('path') path?: string,
+  // ) {
+  //   if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
-    const repo = AppDataSource.getRepository(ChatSessionEntity);
+  //   const repo = AppDataSource.getRepository(ChatSessionEntity);
 
-    const session = await repo.findOne({
-      where: {
-        id,
-        userid: currentUser.email,
-      },
-      relations: ['messages'],
-    });
-    if (!session) return;
+  //   const session = await repo.findOne({
+  //     where: {
+  //       id,
+  //       userid: currentUser.email,
+  //     },
+  //     relations: ['messages'],
+  //   });
+  //   if (!session) return;
 
-    //TODO: validate parameters
-    if (name) session.name = name;
-    if (group) session.name = group;
-    if (type) session.name = type;
-    if (path) session.name = path;
+  //   //TODO: validate parameters
 
-    await session.save();
+  //   await session.save();
 
-    const result = new APIResponse<IChatSession[]>();
-    result.data = session.toJSON();
-    return result;
-  }
+  //   const result = new APIResponse<IChatSession>();
+  //   result.data = session.toJSON();
+  //   return result;
+  // }
 }

@@ -27,7 +27,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
 
   // Are there more items to load?
   // (This information comes from the most recent API request.)
-  const [hasNextPage, setHasNextPage] = useState((auth?.user)?true:false);
+  const [hasNextPage, setHasNextPage] = useState(true);
 
   // Are we currently loading a page of items?
   const [isNextPageLoading, setIsNextPageLoading] = useState(false);
@@ -61,14 +61,12 @@ export default function ChatSessionList(props: ChatSessionListProps) {
           if ((ar.response?.status||500)>= 500) {
             return; // try again
           }
-        } else {
-          console.error(err);
         }
       })
       .finally(()=>{
         setIsNextPageLoading(false);
       })
-  },[auth, axios, type, setAuth]);
+  },[auth?.user, isNextPageLoading, axios, type, setAuth]);
 
   // If there are more items to be loaded then add an extra row to hold a loading indicator.
   const itemCount = hasNextPage ? items.length + 1 : items.length;

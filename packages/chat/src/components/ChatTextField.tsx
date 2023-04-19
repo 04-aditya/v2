@@ -89,7 +89,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
 
   useEffect(()=>{
     if (chatsession) {
-      setIntroState(prev=>({...prev, stepsEnabled: true}));
+      //setIntroState(prev=>({...prev, stepsEnabled: true}));
       if (chatsession.options?.model) {
         setModel(chatsession.options.model as string);
       }

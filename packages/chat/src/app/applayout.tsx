@@ -1,5 +1,5 @@
 import React from "react";
-import { AppBar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography } from "@mui/material";
+import { AppBar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography, alpha } from "@mui/material";
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -79,7 +79,7 @@ export default function AppLayout(props: Props) {
       <Divider />
       */}
 
-      <Paper sx={{p:1, height:'100%',mt:2, mb:2,ml:1,mr:1}} elevation={6}>
+      <Paper sx={theme=>({p:1, height:'100%',mt:2, mb:2,ml:1,mr:1, backgroundColor:alpha(theme.palette.background.paper,0.5)})} elevation={6}>
       <Box sx={{flexGrow:1, maxHeight:600,}} className="scrollbarv">
         <List dense>
           <ListItem disablePadding>
