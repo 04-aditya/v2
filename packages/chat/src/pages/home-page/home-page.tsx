@@ -4,6 +4,7 @@ import styles from './home-page.module.css';
 import { ChatTextField } from '../../components/ChatTextField';
 import ChatSessionList from '../../components/ChatSessionList';
 import ForumIcon from '@mui/icons-material/Forum';
+import ChatStatsList from '../../components/StatsList';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -30,9 +31,9 @@ export function HomePage() {
         </Grid>
         <Grid item xs={12} sm={12} md={4}>
           <Paper sx={{width:'100%', height:'100%', p:1}} elevation={4}>
-            <Typography variant='button' color='success'>Templates</Typography>
+            <Typography variant='button' color='success'>Stats</Typography>
             <Divider/>
-
+            <ChatStatsList/>
           </Paper>
         </Grid>
       </Grid>

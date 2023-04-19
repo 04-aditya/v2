@@ -146,6 +146,24 @@ export class ChatController {
     return result;
   }
 
+  @Get('/stats')
+  @OpenAPI({ summary: 'Return the chat history of the current user' })
+  async getChatStats(
+    @CurrentUser() currentUser: UserEntity,
+    @QueryParam('type') type: string | undefined = 'user',
+    @QueryParam('offset') offset = 0,
+    @QueryParam('limit') limit = 10,
+  ) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+
+    const result = new APIResponse<{ userid: string; count: number }[]>();
+    result.data = [];
+
+    const data = await AppDataSource.query(`select userid, count(*) as count from chatsession group by userid order by count desc limit ${limit}`);
+    data.forEach(d => result.data.push({ userid: d.userid, count: d.count }));
+    return result;
+  }
+
   @Get('/:id')
   @OpenAPI({ summary: 'Return the chat session identified by the id' })
   async getChatSession(@Param('id') id: string, @CurrentUser() currentUser: UserEntity) {

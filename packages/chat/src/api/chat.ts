@@ -61,3 +61,20 @@ export function useChatSession(id: string) {
   });
   return {...query, mutation, invalidateCache};
 }
+
+export function useChatStats(type='user') {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, 'stats', type];
+  const query = useQuery<Array<{userid: string, count: number}>, AxiosError>(keys, async ()=>{
+    const res = await axios.get(`${CHATAPI}/stats?type=${type}`);
+    return res.data.data as Array<{userid: string, count: number}>;
+  },{
+    enabled: !!axios,
+    staleTime:  60 * 60 * 1000 // 1 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  };
+  return {...query, invalidateCache};
+}
