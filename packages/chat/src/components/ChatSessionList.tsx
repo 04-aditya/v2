@@ -10,6 +10,7 @@ import { formatDistanceToNow, parseJSON } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import ForumIcon from '@mui/icons-material/Forum';
 import useAuth from "psnapi/useAuth";
+import { AxiosError } from "axios";
 
 export class ChatSessionListProps {
   type?: string = 'private';
@@ -18,7 +19,7 @@ export class ChatSessionListProps {
 }
 
 export default function ChatSessionList(props: ChatSessionListProps) {
-  const {auth} = useAuth();
+  const {auth, setAuth} = useAuth();
   const {type, icon} = props;
   const navigate = useNavigate();
   const axios = useAxiosPrivate();
@@ -38,6 +39,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
   const loadNextPage = useCallback((offset:number, limit:number)=>{
     if (!(auth?.user)) return;
     limit = limit===0?10:limit;
+    if (isNextPageLoading) return;
     // console.log(offset, limit);
     setIsNextPageLoading(true);
     axios.get(`/api/chat/history?type=${type}&offset=${offset}&limit=${limit}`)
@@ -53,12 +55,20 @@ export default function ChatSessionList(props: ChatSessionListProps) {
         }
       })
       .catch(err=>{
-        console.error(err);
+        const ar = err as AxiosError;
+        console.log(ar);
+        if (ar) {
+          if ((ar.response?.status||500)>= 500) {
+            return; // try again
+          }
+        } else {
+          console.error(err);
+        }
       })
       .finally(()=>{
         setIsNextPageLoading(false);
       })
-  },[axios, type, auth]);
+  },[auth, axios, type, setAuth]);
 
   // If there are more items to be loaded then add an extra row to hold a loading indicator.
   const itemCount = hasNextPage ? items.length + 1 : items.length;
