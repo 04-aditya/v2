@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 
-import { styled, ThemeProvider } from '@mui/material/styles';
+import { alpha, styled, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import MuiDrawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
@@ -45,7 +45,7 @@ const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== 'open',
 })<AppBarProps>(({ theme, open }) => ({
   zIndex: theme.zIndex.drawer + 1,
-  background: theme.palette.background.paper,
+  background: alpha(theme.palette.background.paper,0.3),
   transition: theme.transitions.create(['width', 'margin'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
@@ -67,7 +67,7 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
       whiteSpace: 'nowrap',
       width: drawerWidth,
       borderWidth:0,
-      background: theme.palette.background.default,
+      background: 'transparent', // theme.palette.background.default,
       transition: theme.transitions.create('width', {
         easing: theme.transitions.easing.sharp,
         duration: theme.transitions.duration.enteringScreen,
@@ -101,23 +101,11 @@ const AppLayout = ()=>{
   return <ThemeProvider theme={theme}>
   <CssBaseline />
 
-  <AppBar position="absolute" open={open} elevation={0}>
+  <AppBar position="absolute" open={open} elevation={0} >
     <Toolbar
       sx={{//ml:(open?-2:7), pr: '24px', // keep right padding when drawer closed
       }}
     >
-      {/* <IconButton
-        edge="start"
-        color="inherit"
-        aria-label="open drawer"
-        onClick={toggleDrawer}
-        sx={{
-          marginRight: '36px',
-          ...(open && { display: 'none' }),
-        }}
-      >
-        <MenuIcon />
-      </IconButton> */}
       <Box sx={{pr:2, pt:1}}>
         <img src={logo4light} height={'32px'} alt='publicis sapient logo'/>
       </Box>
@@ -127,7 +115,7 @@ const AppLayout = ()=>{
   </AppBar>
   <div id='content'>
     <Drawer variant="permanent" open={open} onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}>
-      <AppBar position='static' elevation={0}>
+      <AppBar position='static' elevation={0} sx={{background:'transparent'}}>
       <Toolbar
         sx={{
           display: 'flex',
