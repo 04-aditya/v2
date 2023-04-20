@@ -30,12 +30,18 @@ export class UserDataEntity extends BaseEntity implements IUserData {
   static async Add(userid: number, key: string, value: string | number | boolean | Record<string, unknown>, timestamp: Date) {
     const repo = AppDataSource.getRepository(UserDataEntity);
     // const month = `${timestamp.getUTCFullYear()}-${timestamp.getUTCMonth()}`;
-    let data = await repo.findOne({
-      where: { userid, key, timestamp: LessThan(timestamp) },
-      order: {
-        timestamp: 'DESC',
-      },
-    });
+    let data: UserDataEntity;
+    try {
+      data = await repo.findOne({
+        where: { userid, key, timestamp: LessThan(timestamp) },
+        order: {
+          timestamp: 'DESC',
+        },
+      });
+    } catch (ex) {
+      logger.error(`Unable to find userdata for ${userid} ${key} ${timestamp}`);
+      logger.debug(JSON.stringify(ex));
+    }
     if (!data) {
       data = await UserDataEntity.create({
         userid,

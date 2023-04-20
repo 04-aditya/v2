@@ -18,6 +18,8 @@ export function LoginPage(props: LoginPageProps) {
   const {auth, setAuth} = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // const cu =new URL(global.window.location.href);
+  // cu.pathname = '/';
   const from = global.window.location.href;
   const [acceptedTerms, setAcceptTerms] = React.useState(false);
   const [openTermsDialog, setOpenTermsDialog] = React.useState(false);

@@ -1,4 +1,5 @@
 import { Button, ButtonProps } from "@mui/material";
+import { AxiosError } from "axios";
 import useAuth from "psnapi/useAuth";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import { useNavigate } from "react-router-dom";
@@ -16,10 +17,16 @@ export default function LogoutButton(props:ButtonProps) {
     .then(()=>{
       setAuth({});
       if (onClick) onClick(e)
-      navigate('/login');
       //navigate(`https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=${global.window.location.protocol}://${global.window.location.hostname}/login`);
     })
-    .catch(console.error);
+    .catch((err:AxiosError) => {
+      if (err.response?.status===401 || err.response?.status===403) {
+        setAuth({});
+      }
+    })
+    .finally(()=>{
+      navigate('/login');
+    })
   }
   return <Button {...rest} onClick={handleClick}/>
 }

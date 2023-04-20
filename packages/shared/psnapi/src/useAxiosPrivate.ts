@@ -26,6 +26,7 @@ const useAxiosPrivate = () => {
           async (error) => {
               const prevRequest = error?.config;
               if (error?.response?.status === 401 && !prevRequest?.sent) {
+                setAuth({}); // clear auth
                 navigate('/login', { state: { replace: false, from: location.pathname } });
               } else if (error?.response?.status === 412 && !prevRequest?.sent) {
                   prevRequest.sent = true;
@@ -51,7 +52,7 @@ const useAxiosPrivate = () => {
           axiosPrivate.interceptors.request.eject(requestIntercept);
           axiosPrivate.interceptors.response.eject(responseIntercept);
       }
-    }, [auth, location.pathname, navigate, refresh])
+    }, [auth, location.pathname, navigate, refresh, setAuth])
 
     return axiosPrivate;
 }

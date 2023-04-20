@@ -45,7 +45,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
       matchedUser = await AppDataSource.getRepository(UserEntity).findOne({
         where: {
           id: userId,
-          accessTokens: Like(`%${Authorization}%`),
+          // accessTokens: Like(`%${Authorization}%`),
         },
         relations: {
           roles: true,

@@ -156,7 +156,7 @@ export class AuthController {
     const newRefreshToken = foundUser.createRefeshToken();
 
     // Save accessToken to the user list
-    foundUser.accessTokens = [...(foundUser.accessTokens || []), accessToken].join(',');
+    foundUser.accessTokens = [...(foundUser.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
     // Saving refreshToken with current user
     foundUser.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
     await foundUser.save();
@@ -228,9 +228,9 @@ export class AuthController {
     }
 
     // Save accessToken to the user list
-    user.accessTokens = [...(user.accessTokens || []), accessToken].join(',');
+    user.accessTokens = [...(user.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
     // Saving refreshToken with current user
-    user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].join(',');
+    user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
     await UserDataEntity.Add(user.id, 's-:login', { value: new Date().toISOString() }, new Date());
     await user.save();
     // Creates Secure Cookie with refresh token
@@ -279,9 +279,9 @@ export class AuthController {
     }
 
     // save the accessTokens
-    currentUser.accessTokens = [...newAccessTokenArray].join(',');
+    currentUser.accessTokens = newAccessTokenArray.join(',');
     // Saving refreshToken with current user
-    currentUser.refreshTokens = [...newRefreshTokenArray].join(',');
+    currentUser.refreshTokens = newRefreshTokenArray.join(',');
     await currentUser.save();
     // const redirect_uri = returnUrl || req.protocol + '://' + req.headers['host'] + '/';
     // return redirect_uri;
@@ -422,6 +422,7 @@ export class AuthController {
       }
 
       if (MAILDOMAINS.split(',').includes(emailParts[1]) === false) {
+        res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
         return (stateData.redirect_url || '/') + `?error=Unsupported Domain: (${emailParts[1]})`;
       }
 
@@ -433,10 +434,13 @@ export class AuthController {
       const existingTokens = (user.refreshTokens || '').split(',');
       // const newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
 
+      // Saving accessTokens with current user
+      user.accessTokens = [...(user.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
       // Saving refreshToken with current user
       user.refreshTokens = [...existingTokens, newRefreshToken].filter(t => t).join(',');
       await UserDataEntity.Add(user.id, 's-:login', { value: new Date().toISOString() }, new Date());
       await user.save();
+
       // Creates Secure Cookie with refresh token
       res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, {
         httpOnly: true,
