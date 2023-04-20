@@ -1,10 +1,9 @@
 import { Box, Button, Card, CardActionArea, CardActions, CardContent, CardHeader, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, Typography, useMediaQuery, useTheme } from '@mui/material';
 import styles from './login-page.module.css';
-import LoginCard from 'sharedui/components/LoginCard';
+import LogoutButton from 'sharedui/components/LogoutButton';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useAuth from 'psnapi/useAuth';
-import LogoutButton from '../../components/LogoutButton';
 import React from 'react';
 import KeyIcon from '@mui/icons-material/Key';
 import { TermsNotice } from '../terms-page/terms-page';

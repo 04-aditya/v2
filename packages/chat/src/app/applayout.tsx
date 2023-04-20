@@ -29,7 +29,7 @@ import {formatDistanceToNow, parseJSON} from 'date-fns';
 import useAuth from "psnapi/useAuth";
 import ChatSessionList from "../components/ChatSessionList";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
-import LogoutButton from "../components/LogoutButton";
+import LogoutButton from "../../../shared/ui/src/components/LogoutButton";
 import { AboutDialog } from "../components/AboutDialog";
 
 const drawerWidth = 280;
@@ -90,7 +90,7 @@ export default function AppLayout(props: Props) {
               <ListItemText primary={'New Chat'} />
             </ListItemButton>
           </ListItem>
-          <ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>
+          {auth.user?<ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>:null}
           {/* {(history||[]).map((item, index) => (
             <ListItem key={index} disablePadding>
               <ListItemButton onClick={()=>navigate(`/chat/${item.id}`)}>

@@ -6,12 +6,12 @@ import {APIResponse, IChatModel, IChatSession} from "sharedtypes";
 const CACHEKEY='chat';
 const CHATAPI = '/api/chat';
 
-export function useChatHistory() {
+export function useChatHistory(offset = 0, limit = 20) {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY, 'history'];
+  const keys = [CACHEKEY, 'history', offset, limit];
   const query = useQuery<IChatSession[], AxiosError>(keys, async ()=>{
-    const res = await axios.get(`${CHATAPI}/history`);
+    const res = await axios.get(`${CHATAPI}/history?offset=${offset}&limit=${limit}`);
     return res.data.data as IChatSession[];
   },{
     enabled: !!axios,

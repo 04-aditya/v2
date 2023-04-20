@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import React, { ReactNode, useCallback, useMemo, useState } from "react";
-import { FixedSizeList as List } from "react-window";
+import { FixedSizeList as FList } from "react-window";
 import InfiniteLoader from "react-window-infinite-loader";
 import { useChatHistory } from "../api/chat";
 import { IChatSession } from "sharedtypes";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
-import { Avatar, Button, Divider, ListItem, ListItemAvatar, ListItemButton, ListItemText, Typography } from "@mui/material";
+import { Avatar, Button, Divider, List, ListItem, ListItemAvatar, ListItemButton, ListItemText, Typography } from "@mui/material";
 import { formatDistanceToNow, parseJSON } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import ForumIcon from '@mui/icons-material/Forum';
@@ -19,6 +19,40 @@ export class ChatSessionListProps {
 }
 
 export default function ChatSessionList(props: ChatSessionListProps) {
+  const {type, icon} = props;
+  const navigate = useNavigate();
+  const axios = useAxiosPrivate();
+  const {data:sessions} = useChatHistory();
+
+  return <List>
+    {sessions?.map((session, index)=>{
+      return <div key={session.id} >
+      <ListItemButton onClick={()=>navigate(`/chat/${session.id}`)} alignItems="flex-start" dense >
+        <ListItemAvatar>
+          {icon ? icon : <Avatar alt="User Avatar">U</Avatar>}
+        </ListItemAvatar>
+        <ListItemText
+          primary={session.name}
+          secondary={
+            <React.Fragment>
+              {/* <Typography
+                sx={{ display: 'inline' }}
+                component="span"
+                variant="body2"
+                color="text.primary"
+              ></Typography> */}
+              {formatDistanceToNow(parseJSON(session.updatedAt),{addSuffix:true})}
+            </React.Fragment>
+          }
+        />
+      </ListItemButton>
+      <Divider variant="inset" />
+    </div>;
+    })}
+  </List>
+}
+
+export function ChatSessionList1(props: ChatSessionListProps) {
   const {auth, setAuth} = useAuth();
   const {type, icon} = props;
   const navigate = useNavigate();
@@ -117,7 +151,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
       loadMoreItems={loadMoreItems}
     >
       {({ onItemsRendered, ref }) => (
-        <List
+        <FList
           height={400}
           itemCount={itemCount}
           itemSize={72}
@@ -126,7 +160,7 @@ export default function ChatSessionList(props: ChatSessionListProps) {
           width={'100%'}
         >
           {Item}
-        </List>
+        </FList>
       )}
     </InfiniteLoader>}
     </>
