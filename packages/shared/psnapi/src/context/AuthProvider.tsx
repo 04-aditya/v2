@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }:{children:React.ReactNode}) => {
     let authSession:IAuth = {};
     try {
       authSession = JSON.parse(window.sessionStorage.getItem('auth')||'{}') as IAuth;
+      console.log(authSession);
     } catch (e) {
       console.error(e);
     }

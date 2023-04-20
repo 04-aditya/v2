@@ -7,7 +7,7 @@ import { AxiosError } from "axios";
 
 const useAxiosPrivate = () => {
     const refresh = useRefreshToken();
-    const { auth } = useAuth();
+    const { auth, setAuth } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     useEffect(() => {
@@ -35,6 +35,7 @@ const useAxiosPrivate = () => {
                     return axiosPrivate(prevRequest);
                   } catch (ex) {
                     if ((ex as AxiosError).response?.status===401) {
+                      setAuth({}); // clear auth
                       navigate('/login', { state: { replace: false, from: location.pathname } });
                       return;
                     }
