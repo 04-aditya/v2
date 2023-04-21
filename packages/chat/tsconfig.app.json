@@ -8,7 +8,8 @@
     "../../node_modules/@nrwl/react/typings/cssmodule.d.ts",
     "../../node_modules/@nrwl/react/typings/image.d.ts",
     "src/components/ChatTextField.tsx",
-    "src/components/AboutDialog.tsx"
+    "src/components/AboutDialog.tsx",
+    "src/components/TermsNotice.tsx"
   ],
   "exclude": [
     "jest.config.ts",

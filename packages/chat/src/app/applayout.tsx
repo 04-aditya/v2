@@ -1,5 +1,5 @@
 import React from "react";
-import { AppBar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography, alpha } from "@mui/material";
+import { AppBar, Avatar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography, alpha } from "@mui/material";
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -22,6 +22,7 @@ import logo4light from 'sharedui/assets/PS_Logo_RGB_light.png';
 import logo from '../assets/appicon.svg'
 import { useTheme } from "sharedui/theme";
 import { Outlet, useNavigate } from "react-router-dom";
+import {useUser} from 'psnapi/users';
 import { useChatHistory } from "../api/chat";
 import ForumIcon from '@mui/icons-material/Forum';
 import AccountCircle from '@mui/icons-material/AccountCircle';
@@ -43,8 +44,8 @@ interface Props {
 }
 
 export default function AppLayout(props: Props) {
-  const { auth, setAuth } = useAuth();
   const axios = useAxiosPrivate();
+  const { auth, setAuth } = useAuth();
   const navigate = useNavigate();
   const {colorMode, mode, theme} = useTheme();
   const { window } = props;
@@ -79,7 +80,7 @@ export default function AppLayout(props: Props) {
       <Divider />
       */}
 
-      <Paper sx={theme=>({p:1, height:'100%',mt:2, mb:2,ml:1,mr:1, backgroundColor:alpha(theme.palette.background.paper,0.5)})} elevation={6}>
+      <Paper sx={theme=>({p:1, height:'100%',mt:2, mb:1,ml:1,mr:1, backgroundColor:alpha(theme.palette.background.paper,0.5)})} elevation={6}>
       <Box sx={{flexGrow:1, maxHeight:600,}} className="scrollbarv">
         <List dense>
           <ListItem disablePadding>
@@ -91,16 +92,6 @@ export default function AppLayout(props: Props) {
             </ListItemButton>
           </ListItem>
           {auth.user?<ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>:null}
-          {/* {(history||[]).map((item, index) => (
-            <ListItem key={index} disablePadding>
-              <ListItemButton onClick={()=>navigate(`/chat/${item.id}`)}>
-                <ListItemIcon>
-                  <ForumIcon color="primary" />
-                </ListItemIcon>
-                <ListItemText primary={item.name} secondary={formatDistanceToNow(parseJSON(item.updatedAt),{addSuffix:true})} />
-              </ListItemButton>
-            </ListItem>
-          ))} */}
         </List>
       </Box>
       <Divider />
@@ -179,7 +170,7 @@ export default function AppLayout(props: Props) {
             onClick={handleProfileMenuOpen}
             color="inherit"
           >
-            <AccountCircle />
+            {auth.user?<UserAvatar/>:<AccountCircle />}
           </IconButton>
         </Box>
       </Toolbar>
@@ -208,9 +199,8 @@ export default function AppLayout(props: Props) {
       <Drawer
         variant="permanent"
         sx={{
-          maxHeight:'98%', pb:2,
           display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': {borderRadius:2, boxSizing: 'border-box', maxHeight:'98%', width: drawerWidth, borderRight:'0px',overflowY:'hidden', },
+          '& .MuiDrawer-paper': {borderRadius:2, boxSizing: 'border-box', maxHeight:'calc(100% - 16px)', width: drawerWidth, borderRight:'0px',overflowY:'hidden', },
         }}
         PaperProps={{
           sx:{backgroundColor:'transparent'}
@@ -232,5 +222,13 @@ export default function AppLayout(props: Props) {
     </Box>
   </Box>
   </ThemeProvider>
+}
+
+function UserAvatar() {
+  const {data: user} = useUser();
+  if (user) {
+    return  <Avatar alt={user.email}  src={user.photo} sx={{width:32, height: 32}} />
+  }
+  return <AccountCircle color='primary'/>;
 }
 

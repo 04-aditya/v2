@@ -75,6 +75,9 @@ export class UserEntity extends BaseEntity implements IUser {
   @Index({ unique: true })
   csid?: number;
 
+  @Column({ nullable: true })
+  photo: string;
+
   @Column('jsonb', { nullable: false, default: {} })
   pdadata: string;
 
@@ -158,6 +161,9 @@ export class UserEntity extends BaseEntity implements IUser {
 
   @Column({ nullable: true })
   accessTokens: string;
+
+  @Column({ nullable: true })
+  adtokens: string;
 
   @Column()
   @CreateDateColumn()
@@ -347,6 +353,7 @@ export class UserEntity extends BaseEntity implements IUser {
       return [
         'oid',
         'csid',
+        'photo',
         'first_name',
         'last_name',
         'middle_name',

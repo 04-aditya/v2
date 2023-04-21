@@ -208,11 +208,6 @@ export function ChatTextField(props: ChatTextFieldProps) {
       <IconButton sx={{ p: '10px' }} aria-label="settings" onClick={()=>setShowOptions(!showOptions)}>
         <SettingsIcon color={showOptions?'primary':'inherit'}/>
       </IconButton>
-      {!speechError ? <IconButton sx={{ p: '10px' }} aria-label="settings"
-        onMouseDown={()=>{startSpeechToText();}}
-        onMouseUp={handleStopSpeaking}>
-        <MicIcon color={isRecording?'secondary':'inherit'}/>
-      </IconButton> : null}
       {/* {browserSupportsSpeechRecognition ? <IconButton sx={{ p: '10px' }} aria-label="settings"
         onClick={async ()=>{listening?SpeechRecognition.stopListening():SpeechRecognition.startListening()}}>
         <MicIcon color={listening?'success':'inherit'}/>
@@ -226,6 +221,11 @@ export function ChatTextField(props: ChatTextFieldProps) {
         onKeyUp={handleMessageKeyUp}
         disabled={isBusy}
       />
+      {!speechError ? <IconButton sx={{ p: '10px' }} aria-label="settings" disabled={isBusy}
+        onMouseDown={()=>{startSpeechToText();}}
+        onMouseUp={handleStopSpeaking}>
+        <MicIcon color={isRecording?'secondary':'inherit'}/>
+      </IconButton> : null}
       {isBusy?<CircularProgress/>:(
       <IconButton sx={{ p: '10px' }} color={newMessage !== '' ? 'primary' : 'inherit'} disabled={newMessage === ''}
         aria-label="send message" onClick={onSend}>

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import useAuth from 'psnapi/useAuth';
 import React from 'react';
 import KeyIcon from '@mui/icons-material/Key';
-import { TermsNotice } from '../terms-page/terms-page';
+import { TermsNotice } from "../../components/TermsNotice";
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 /* eslint-disable-next-line */
 export interface LoginPageProps {}

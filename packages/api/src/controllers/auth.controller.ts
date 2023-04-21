@@ -282,6 +282,7 @@ export class AuthController {
     currentUser.accessTokens = newAccessTokenArray.join(',');
     // Saving refreshToken with current user
     currentUser.refreshTokens = newRefreshTokenArray.join(',');
+    currentUser.adtokens = null;
     await currentUser.save();
     // const redirect_uri = returnUrl || req.protocol + '://' + req.headers['host'] + '/';
     // return redirect_uri;
@@ -401,6 +402,7 @@ export class AuthController {
       }
 
       const tokenData = tokenResponse.data;
+      // logger.debug(tokenResponse.data);
 
       const userInfoResponse = await axios.get(OAuthConfig.userinfo_endpoint, {
         headers: {
@@ -412,7 +414,7 @@ export class AuthController {
         console.error({ status: userInfoResponse.status, data: userInfoResponse.data });
         return '/';
       }
-      logger.debug(userInfoResponse.data);
+      // logger.debug(userInfoResponse.data);
       const email = userInfoResponse.data.email.toLocaleLowerCase().trim();
 
       const emailParts = email.split('@');
@@ -427,6 +429,27 @@ export class AuthController {
       }
 
       const user = await UserEntity.CreateUser(email, false);
+      user.adtokens = JSON.stringify(tokenData);
+
+      try {
+        const graphResponse = await axios.get(`https://graph.microsoft.com/v1.0/me/photos/48x48/$value`, {
+          headers: {
+            Authorization: `Bearer ${tokenData.access_token}`,
+          },
+          responseType: 'arraybuffer',
+        });
+
+        if (graphResponse.status === 200) {
+          const photo = graphResponse.data;
+          //const photoBuffer = Buffer.from(photo, 'binary');
+          const photoBase64 = photo.toString('base64');
+          user.photo = `data:${graphResponse.headers['content-type']};base64,${photoBase64}`;
+        }
+      } catch (ex) {
+        logger.error('Unable to get the photo');
+        logger.debug(ex);
+      }
+
       // create JWTs
       const accessToken = user.createAccessToken();
       const newRefreshToken = user.createRefeshToken();

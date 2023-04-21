@@ -37,13 +37,32 @@ const defaultPermissions = [
 
   /* config permissions */
   { name: 'config.write.all', description: 'permission to write all config items data' },
+  /* chat permissions */
+  { name: 'chat.read.self', description: 'permission to read self chat data' },
+  { name: 'chat.write.self', description: 'permission to write self chat data' },
+  { name: 'chat.read.all', description: 'permission to read all users chat data' },
+  { name: 'chat.write.all', description: 'permission to write all users chat data' },
 ];
 
 const defaultRoles = [
   {
     name: 'default',
     description: 'default role. every new user will start with this role.',
-    permissions: ['user.read.self.basic', 'user.read.org.basic', 'user.write.group.custom', 'permissions.read.self', 'roles.read.self'],
+    permissions: [
+      'user.read.self.basic',
+      'user.read.org.basic',
+      'user.write.group.custom',
+      'permissions.read.self',
+      'roles.read.self',
+      'chat.read.self',
+      'chat.write.self',
+    ],
+  },
+  {
+    name: 'chat.admin',
+    includedRoleNames: ['default'],
+    description: 'admin role to read and write all chat data',
+    permissions: ['chat.read.all', 'chat.write.all'],
   },
   {
     name: 'user.admin',

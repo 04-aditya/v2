@@ -7,6 +7,8 @@ export interface IUser {
   oid?: number;
   csid?: number;
 
+  photo?: string;
+
   supervisor_id?: number;
   supervisor_name?: string;
   employment_type?: string;
