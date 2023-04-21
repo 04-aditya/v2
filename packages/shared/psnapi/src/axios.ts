@@ -3,7 +3,8 @@ import axiosRetry, {isNetworkOrIdempotentRequestError} from 'axios-retry';
 const BASE_URL = process.env['NX_API_URL']
 
 const defaultAxios = axios.create({
-    baseURL: BASE_URL
+    baseURL: BASE_URL,
+    timeout: 60000,
 });
 axiosRetry(defaultAxios, {
   retries: 3,
@@ -21,7 +22,8 @@ axiosRetry(defaultAxios, {
 const axiosPrivate = axios.create({
     baseURL: BASE_URL,
     headers: { 'Content-Type': 'application/json' },
-    withCredentials: true
+    withCredentials: true,
+    timeout: 60000,
 });
 
 axiosRetry(axiosPrivate, {

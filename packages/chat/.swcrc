@@ -1,0 +1,11 @@
+{
+  "env": {
+    "targets": {
+    "chrome": "79"
+    },
+    "include": [
+      "transform-async-to-generator",
+      "transform-regenerator"
+    ]
+  }
+}

@@ -22,58 +22,25 @@ export default TermsPage;
 export function TermsNotice() {
   return <Box sx={{ p: 1, overflowY: 'scroll' }}>
     <ReactMarkdown>{`
-**Usage Guidelines**
+Thanks for using PSChat! Our mission is to unleash your creativity and productivity by providing you with a helpful assistant powered by
+Generative AI. We do so by providing an intuitive chatbot app that allows you to provide prompts and get responses from large language
+models such as ChatGPT. You can use PSChat, but you need to follow security and privacy rules, as well as any laws that apply.
 
+Rules you must follow:
 
-  AI solutions need to be used with appropriate business and legal involvement and review in the same manner as other creative work produced for publication.
-  Creative and business teams should share the prompts used to generate any Output that is incorporated into any client-facing work at the time that such work is submitted to Legal for review and,
-  as always, all work intended to be public-facing should be reviewed by Legal.
+* Don't give any personal information (yours or others) in your requests to PSChat.
+* If you're using PSChat on behalf of a client, make sure you follow their rules and directions, written or otherwise.
+* Don't use PSChat to do anything that could harm Publicis Groupe's reputation, or to make harmful content like malware or spam.
+* Don't pretend that the output from PSChat was made by a human.
+* Check the accuracy and copyright of the content that PSChat generates, and don't use it if it's inaccurate or infringes on others' rights.
+* Only use the output in ways that are allowed by your client contract or for internal use.
 
-For Inputs:
-
-- Do not use third party property, such as trademarks, property names (e.g. the *Mona Lisa*) or other identifiable third party intellectual property.
-- Do not use personal names or other personal information.
-- Do not use “in the style” of Inputs that include third party property (e.g. in the style of Andy Warhol), but can seek Outputs in a certain genre.
-- Do not use Agency or Client confidential information. While the Inputs remain owned by the Agency, Azure Cognitive Services can use Inputs and Outputs for its internal use to develop and improve the Services, including sharing them with third party contractors
- (subject to confidentiality and security obligations) solely for data annotation purposes, with Azure Cognitive Services being
- responsible for all actions and omissions of such contractors. Agency also agrees to provide anonymized user
- interaction and engagement data with image Output provided by the Azure Cognitive Services API, as requested by Azure Cognitive Services, which Azure Cognitive Services
- may use to develop and improve the Services.
-
-Regardless of the Input, if the Output is suggestive of or substantially similar to an existing work, person, or third party property, the risks of using the Output should be evaluated.
-
-**Important license**:
-
-  - Do not use the Services in an unlawful manner, for any illegal purpose, or in any manner inconsistent with the Enterprise Agreement, applicable law or for any purpose other than as expressly permitted in the Enterprise Agreement;
-  - Do not use the Services in violation of technical documentation, usage guidelines or other requirements provided by OpenAI;
-  - Do not use the Services in a manner that infringes OpenAI’s or Azure Congitive Services intellectual property rights or to create derivative works or develop competing products or services;
-  - Do not use any method to extract data from the Services other than as permitted through the API;
-  - Do not represent to any person that output from the Services was human-generated and
-  - Do not use the Services to generate spam, for content for dissemination in electoral campaigns, for content that encourages violence, terrorism, or other serious harm.
-
+Our [Employee Privacy Policy](https://lion.app.box.com/v/PG-Staff-HR-PrivacyNotice) explains how we collect and use your information,
+our [Acceptable Use Guidelines](https://lion.box.com/v/AIAcceptableUse) outline your responsibilities when using our Services,
+and our [Security & Data Privacy Policies](https://lion.box.com/v/DataPrivacyAndSecurityPolicies) explain our overall security and privacy program policies.
+Please click agree below only if you agree with all these and the rules above.
 `}</ReactMarkdown>
     <Typography variant='body2'>PSChat uses Azure OpenAI services at the backend please read <a href='https://learn.microsoft.com/en-us/azure/cognitive-services/openai/faq'>Azure Cognitive Services FAQ</a> to determine if this is acceptable for your use case.</Typography>
-    TBD..
-    <Skeleton width="100%" height={20} animation="wave" />
-    <Skeleton width="80%" height={20} animation="wave" />
-    <Skeleton width="90%" height={20} animation="wave" />
-    <Skeleton width="100%" height={20} animation="wave" />
-    <Skeleton width="80%" height={20} animation="wave" />
-    <Skeleton width="100%" height={20} animation="wave" />
-    <Skeleton width="80%" height={20} animation="wave" />
-    <Skeleton width="90%" height={20} animation="wave" />
-    <Skeleton width="100%" height={20} animation="wave" />
-    <Skeleton width="80%" height={20} animation="wave" />
-    <Skeleton width="90%" height={20} animation="wave" />
-    <Skeleton width="100%" height={20} animation="wave" />
-    <Skeleton width="80%" height={20} animation="wave" />
-    <Skeleton width="100%" height={20} animation="wave" />
-    <Skeleton width="80%" height={20} animation="wave" />
-    <Skeleton width="90%" height={20} animation="wave" />
-    <Skeleton width="80%" height={20} animation="wave" />
-    <Skeleton width="90%" height={20} animation="wave" />
-    <Skeleton width="100%" height={20} animation="wave" />
-    <Skeleton width="80%" height={20} animation="wave" />
     <hr/>
     <Typography variant='body2'>
       By accessing this website we assume you accept these terms and conditions in full.

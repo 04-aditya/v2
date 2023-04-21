@@ -1,3 +1,4 @@
+import regeneratorRuntime from "regenerator-runtime";
 import { StrictMode } from 'react';
 import * as ReactDOM from 'react-dom/client';
 

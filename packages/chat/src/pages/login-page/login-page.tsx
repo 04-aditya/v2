@@ -86,7 +86,8 @@ export function LoginPage(props: LoginPageProps) {
           </CardHeader>
           <Divider/>
           <CardContent>
-            <Typography variant='body1'>I have read the <u onClick={handleClickOpenTermsDialog}>terms and conditions</u> for using this website.</Typography>
+            <Typography variant='body1'>I have read the <u onClick={handleClickOpenTermsDialog} style={{color:'gray'}}>terms</u> and &nbsp;
+            <Link to='https://lion.box.com/v/DataPrivacyAndSecurityPolicies' style={{color:'gray'}}>privacy policy</Link> for using this website.</Typography>
             <FormControlLabel control={<Checkbox checked={acceptedTerms} onChange={handleChange} />} label="I Agree" />
             <Dialog
               fullScreen={fullScreen}

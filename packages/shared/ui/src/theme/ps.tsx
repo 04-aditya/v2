@@ -15,6 +15,9 @@ export const getDesignTokens = (mode: PaletteMode) => ({
   components: {
     MuiCssBaseline: {
       styleOverrides: (themeParam: Theme) => (mode === 'light'?`
+        a {
+          color: #fe414d;
+        }
         *::-webkit-scrollbar-thumb {
           background-color: #d6d6d6;
           border-radius: 20px;
@@ -39,6 +42,9 @@ export const getDesignTokens = (mode: PaletteMode) => ({
           padding:4px
         }
       `:`
+        a {
+          color: #079fff;
+        }
         *::-webkit-scrollbar-thumb {
           background-color: #4b4b4b;
           border-radius: 20px;

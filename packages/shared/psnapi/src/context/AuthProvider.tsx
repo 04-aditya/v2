@@ -20,7 +20,6 @@ export const AuthProvider = ({ children }:{children:React.ReactNode}) => {
     let authSession:IAuth = {};
     try {
       authSession = JSON.parse(window.sessionStorage.getItem('auth')||'{}') as IAuth;
-      console.log(authSession);
     } catch (e) {
       console.error(e);
     }
@@ -30,9 +29,9 @@ export const AuthProvider = ({ children }:{children:React.ReactNode}) => {
     const setAuth = (auth:IAuth) => {
       window.sessionStorage.setItem('auth', JSON.stringify(auth));
       // console.log(window.sessionStorage.getItem('auth'));
-      console.log('Reseting the user cache');
-      queryClient.invalidateQueries(['users','me']);
+      // console.log('Reseting the user cache');
       setAuthInternal(auth);
+      queryClient.invalidateQueries(['users','me']);
     }
 
     return (

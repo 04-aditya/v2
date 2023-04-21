@@ -10,6 +10,7 @@
       "defaultConfiguration": "production",
       "options": {
         "compiler": "swc",
+        "swcrc": "packages/chat/.swcrc",
         "outputPath": "dist/packages/chat",
         "index": "packages/chat/src/index.html",
         "baseHref": "/",

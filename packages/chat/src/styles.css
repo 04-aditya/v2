@@ -12,6 +12,27 @@ body {
   padding: 0;
   background: rgb(254,65,77);
   background: radial-gradient(circle, rgba(254,65,77,0.5) 0%, rgba(7,159,255,0.5) 100%);
+  background-size: 100% 200%;
+
+  /* -webkit-animation: bganimation 30s ease infinite;
+  -moz-animation: bganimation 30s ease infinite;
+  animation: bganimation 30s ease infinite; */
+}
+
+@-webkit-keyframes bganimation {
+  0%{background-position:9% 0%}
+  50%{background-position:92% 100%}
+  100%{background-position:9% 0%}
+}
+@-moz-keyframes bganimation {
+  0%{background-position:9% 0%}
+  50%{background-position:92% 100%}
+  100%{background-position:9% 0%}
+}
+@keyframes bganimation {
+  0%{background-position:9% 0%}
+  50%{background-position:92% 100%}
+  100%{background-position:9% 0%}
 }
 
 #root {

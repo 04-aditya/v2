@@ -29,14 +29,14 @@ import { ChatMessageEntity } from '@/entities/chatmessage.entity';
 // const openai = new OpenAI();
 // openai.generate(['Tell me a joke.']).then(console.log).catch(console.error);
 
-const openaiclient = axios.create({
+const azopenaiclient = axios.create({
   baseURL: `${process.env['AZ_OPENAI_URL']}openai/deployments/`,
   headers: {
     'api-key': process.env['AZ_OPENAI_KEY'],
   },
   timeout: 60000,
 });
-axiosRetry(openaiclient, {
+axiosRetry(azopenaiclient, {
   retries: 2,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: error => {
@@ -337,7 +337,7 @@ export class ChatController {
             temperature: reqparams.temperature || 0,
           });
         } else {
-          return await openaiclient.post(`${model}/chat/completions?api-version=${model_version}`, {
+          return await azopenaiclient.post(`${model}/chat/completions?api-version=${model_version}`, {
             ...reqparams,
             messages: messages.map(m => ({
               role: m.role,

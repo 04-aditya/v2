@@ -65,7 +65,7 @@ export default function AppLayout(props: Props) {
   };
 
   const DrawerContent = (props: any)=>(
-    <Box sx={{height:'100%', display:'flex', flexDirection:'column'}}>
+    auth.user ? <Box sx={{display:'flex', flexDirection:'column'}}>
       <Toolbar>
         <img src={logo} height={48} alt={`${process.env['NX_APP_NAME']} logo`} onClick={()=>navigate('/')} style={{cursor: 'pointer'}}/>
         <Typography variant="h6" noWrap component="div" sx={{ml:2, cursor: 'pointer'}} onClick={()=>navigate('/')}>
@@ -118,7 +118,7 @@ export default function AppLayout(props: Props) {
         </ListItem>
       </List>
       </Paper>
-    </Box>
+    </Box> : <Box/>
   );
 
   const container = window !== undefined ? () => window().document.body : undefined;
@@ -208,8 +208,9 @@ export default function AppLayout(props: Props) {
       <Drawer
         variant="permanent"
         sx={{
+          maxHeight:'98%', pb:2,
           display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': {borderRadius:2, boxSizing: 'border-box', width: drawerWidth, borderRight:'0px' },
+          '& .MuiDrawer-paper': {borderRadius:2, boxSizing: 'border-box', maxHeight:'98%', width: drawerWidth, borderRight:'0px',overflowY:'hidden', },
         }}
         PaperProps={{
           sx:{backgroundColor:'transparent'}

@@ -41,29 +41,29 @@ export function AboutDialog() {
           <DialogContentText>
             PS Chat - An AI ChatBot for Publicis Sapient employees.<br />
             <ReactMarkdown>{`
-> It’s our Groupe position that employees are free to use any emerging tools to speed the development of pitches, strategies, concepts, POCs,
-> perspectives or thought leadership for our clients’ consumption. However, when considering how to implement these ideas for
-> public consumption there are limitations and risks.
->
+Thanks for using PSChat! Our mission is to unleash your creativity and productivity by providing you with a helpful assistant powered by
+Generative AI. We do so by providing an intuitive chatbot app that allows you to provide prompts and get responses from large language
+models such as ChatGPT. You can use PSChat, but you need to follow security and privacy rules, as well as any laws that apply.
 
-> Currently only OpenAI toolsets should be considered for direct consumer engagement with AI experiences and AI output.
-> That means text from GPT, images from Dalle, code from Codex and speech to text from Whisper are approved go to market solutions.
->
->
-> Due to the legal landscape surrounding AI, these solutions do need to be used with appropriate business and legal involvement
-> and review in the same manner as other creative work produced for publication.
+Rules you must follow:
+
+* Don't give any personal information (yours or others) in your requests to PSChat.
+* If you're using PSChat on behalf of a client, make sure you follow their rules and directions, written or otherwise.
+* Don't use PSChat to do anything that could harm Publicis Groupe's reputation, or to make harmful content like malware or spam.
+* Don't pretend that the output from PSChat was made by a human.
+* Check the accuracy and copyright of the content that PSChat generates, and don't use it if it's inaccurate or infringes on others' rights.
+* Only use the output in ways that are allowed by your client contract or for internal use.
+
+Our [Employee Privacy Policy](https://lion.app.box.com/v/PG-Staff-HR-PrivacyNotice) explains how we collect and use your information,
+our [Acceptable Use Guidelines](https://lion.box.com/v/AIAcceptableUse) outline your responsibilities when using our Services,
+and our [Security & Data Privacy Policies](https://lion.box.com/v/DataPrivacyAndSecurityPolicies) explain our overall security and privacy program policies.
+Please click agree below only if you agree with all these and the rules above.
+
+
             `}</ReactMarkdown>
-            <Skeleton width="100%" height={20} animation="wave" />
-            <Skeleton width="80%" height={20} animation="wave" />
-            <Skeleton width="90%" height={20} animation="wave" />
+            <br/><br/><br/>
             <Typography variant="caption">for any queries,
               please contact <a href="mailto:rakesh.ravuri@publicissapient.com">mailto:rakesh.ravuri@publicissapient.com</a>
-            </Typography>
-            <br />
-            <Typography variant="caption">
-              Please read the <a href='/terms' style={{ color: 'inherit' }}><strong>terms of service</strong></a>
-              &nbsp;&amp;&nbsp;
-              <a href='https://lion.app.box.com/v/PG-Staff-HR-PrivacyNotice/file/1177190323591' style={{ color: 'inherit' }} target="_blank" rel="noreferrer"><strong>privacy policy</strong></a> for the acceptable usage guidelines.
             </Typography>
             <br />
             <Typography variant="caption">

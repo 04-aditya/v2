@@ -1,5 +1,3 @@
-//import regeneratorRuntime from "regenerator-runtime";
-//import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { useState, ChangeEvent, useEffect } from 'react';
 import { Alert, Box, Checkbox, CircularProgress, Divider, FilledInput, FormControl, Grid, Input, InputAdornment, InputBase, InputLabel, ListItemText, ListSubheader, MenuItem, OutlinedInput, Paper, Select, SelectChangeEvent, Slider, Stack, TextField, ToggleButton } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
@@ -12,6 +10,8 @@ import { IChatSession } from 'sharedtypes';
 import { useChatHistory, useChatModels, useChatSession } from '../api/chat';
 import MicIcon from '@mui/icons-material/Mic';
 import { Steps, Hints } from "intro.js-react";
+// import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition'
+import useSpeechToText from 'react-hook-speech-to-text';
 
 
 const ITEM_HEIGHT = 48;
@@ -43,6 +43,27 @@ const systemMessages = [
 ];
 
 export function ChatTextField(props: ChatTextFieldProps) {
+  // const {
+  //   transcript,
+  //   listening,
+  //   resetTranscript,
+  //   browserSupportsSpeechRecognition
+  // } = useSpeechRecognition();
+  const {
+    error: speechError,
+    interimResult,
+    isRecording,
+    results,
+    startSpeechToText,
+    stopSpeechToText,
+  } = useSpeechToText({
+    continuous: true,
+    useLegacyResults: false,
+    speechRecognitionProperties: {
+      lang: 'en-US',
+      interimResults: true // Allows for displaying real-time speech results
+    }
+  });
   const {sessionid} = props;
   const chatModels = useChatModels();
   const {data:chatsession, error, mutation} = useChatSession(sessionid||'');
@@ -76,12 +97,6 @@ export function ChatTextField(props: ChatTextFieldProps) {
       }
     ]
   });
-  // const {
-  //   transcript,
-  //   listening,
-  //   resetTranscript,
-  //   browserSupportsSpeechRecognition
-  // } = useSpeechRecognition();
 
   useEffect (()=>{
     setNewMessage(props.message||'');
@@ -178,6 +193,16 @@ export function ChatTextField(props: ChatTextFieldProps) {
       <IconButton sx={{ p: '10px' }} aria-label="settings" onClick={()=>setShowOptions(!showOptions)}>
         <SettingsIcon color={showOptions?'primary':'inherit'}/>
       </IconButton>
+      {!speechError ? <IconButton sx={{ p: '10px' }} aria-label="settings"
+        onClick={()=>{
+          if (isRecording){
+            stopSpeechToText();
+            setNewMessage(newMessage+interimResult);
+          }
+          else startSpeechToText();
+        }}>
+        <MicIcon color={isRecording?'secondary':'inherit'}/>
+      </IconButton> : null}
       {/* {browserSupportsSpeechRecognition ? <IconButton sx={{ p: '10px' }} aria-label="settings"
         onClick={async ()=>{listening?SpeechRecognition.stopListening():SpeechRecognition.startListening()}}>
         <MicIcon color={listening?'success':'inherit'}/>
@@ -186,7 +211,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
         sx={{ ml: 1, flex: 1 }} autoFocus
         placeholder="Type your message here..."
         inputProps={{ 'aria-label': 'chat message box' }}
-        value={newMessage}
+        value={newMessage + (interimResult||'')}
         onChange={handleNewMessageChange}
         onKeyUp={handleMessageKeyUp}
         disabled={isBusy}
