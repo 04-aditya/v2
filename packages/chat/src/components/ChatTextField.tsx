@@ -1,4 +1,4 @@
-import { useState, ChangeEvent, useEffect } from 'react';
+import { useState, ChangeEvent, useEffect, useCallback } from 'react';
 import { Alert, Box, Checkbox, CircularProgress, Divider, FilledInput, FormControl, Grid, Input, InputAdornment, InputBase, InputLabel, ListItemText, ListSubheader, MenuItem, OutlinedInput, Paper, Select, SelectChangeEvent, Slider, Stack, TextField, ToggleButton } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
@@ -54,6 +54,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
     interimResult,
     isRecording,
     results,
+    setResults,
     startSpeechToText,
     stopSpeechToText,
   } = useSpeechToText({
@@ -115,6 +116,15 @@ export function ChatTextField(props: ChatTextFieldProps) {
     }
   }, [chatsession])
 
+  useEffect(()=>{
+    if (!isRecording) {
+      setNewMessage(msg=>{
+        const newMsg = msg + results.map((r:any)=>r.transcript+' ').join('\n');
+        setResults([]);
+        return newMsg;
+      });
+    }
+  },[results, setResults, isRecording])
   const handleNewMessageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const msg = e.target.value;
     if (msg.length<2000) {
@@ -171,6 +181,11 @@ export function ChatTextField(props: ChatTextFieldProps) {
       typeof value === 'string' ? value.split(',') : value,
     );
   }
+  const handleStopSpeaking = useCallback(()=>{
+    if (isRecording){
+      stopSpeechToText();
+    }
+  },[isRecording, stopSpeechToText,]);
   const onExit = () => {
     setIntroState((prev) => ({...prev, stepsEnabled: false }));
   };
@@ -194,13 +209,8 @@ export function ChatTextField(props: ChatTextFieldProps) {
         <SettingsIcon color={showOptions?'primary':'inherit'}/>
       </IconButton>
       {!speechError ? <IconButton sx={{ p: '10px' }} aria-label="settings"
-        onClick={()=>{
-          if (isRecording){
-            stopSpeechToText();
-            setNewMessage(newMessage+interimResult);
-          }
-          else startSpeechToText();
-        }}>
+        onMouseDown={()=>{startSpeechToText();}}
+        onMouseUp={handleStopSpeaking}>
         <MicIcon color={isRecording?'secondary':'inherit'}/>
       </IconButton> : null}
       {/* {browserSupportsSpeechRecognition ? <IconButton sx={{ p: '10px' }} aria-label="settings"
