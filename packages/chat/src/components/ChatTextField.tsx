@@ -67,7 +67,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
   });
   const {sessionid} = props;
   const chatModels = useChatModels();
-  const {data:chatsession, error, mutation} = useChatSession(sessionid||'');
+  const {data:chatsession, error, mutation} = useChatSession(sessionid);
   const [newMessage, setNewMessage] = useState<string>('');
   const [isBusy, setIsBusy] = useState(false);
   const [model, setModel] = useState('gpt35turbo-test');
@@ -217,6 +217,10 @@ export function ChatTextField(props: ChatTextFieldProps) {
         placeholder="Type your message here..."
         inputProps={{ 'aria-label': 'chat message box' }}
         value={newMessage + (interimResult||'')}
+        onClick={()=>{
+          // const context = new AudioContext();
+          // console.log(context);
+        }}
         onChange={handleNewMessageChange}
         onKeyUp={handleMessageKeyUp}
         disabled={isBusy}

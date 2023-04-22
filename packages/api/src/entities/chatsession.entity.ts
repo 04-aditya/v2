@@ -15,6 +15,7 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { ChatMessageEntity } from './chatmessage.entity';
 import { type } from 'os';
@@ -46,6 +47,9 @@ export class ChatSessionEntity extends BaseEntity implements IChatSession {
   @Column()
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  @DeleteDateColumn({ select: false })
+  deletedDate?: Date;
 
   @Column({ type: 'jsonb', nullable: false, default: {} })
   options: Record<string, unknown>;

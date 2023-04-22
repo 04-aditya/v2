@@ -28,7 +28,7 @@ import ForumIcon from '@mui/icons-material/Forum';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import {formatDistanceToNow, parseJSON} from 'date-fns';
 import useAuth from "psnapi/useAuth";
-import ChatSessionList from "../components/ChatSessionList";
+import ChatSessionList, { ChatSessions } from "../components/ChatSessionList";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import LogoutButton from "../../../shared/ui/src/components/LogoutButton";
 import { AboutDialog } from "../components/AboutDialog";
@@ -91,7 +91,8 @@ export default function AppLayout(props: Props) {
               <ListItemText primary={'New Chat'} />
             </ListItemButton>
           </ListItem>
-          {auth.user?<ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>:null}
+          {/* {auth.user?<ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>:null} */}
+          {auth.user?<ChatSessions type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>:null}
         </List>
       </Box>
       <Divider />

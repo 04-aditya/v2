@@ -8,6 +8,7 @@ import React from 'react';
 import KeyIcon from '@mui/icons-material/Key';
 //import { TermsNotice } from '../terms-page/terms-page';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
+import ReactMarkdown from 'react-markdown';
 
 /* eslint-disable-next-line */
 export interface LoginProps {}
@@ -98,6 +99,16 @@ export function Login(props: LoginProps) {
               </DialogTitle>
               <DialogContent>
                 <p>Terms & Conditions</p>
+                <ReactMarkdown>{`
+Thanks for using PSNext! Our mission is to unleash your productivity by providing you with a
+helpful data for ypu and your teams to help you with your day to day job.
+You can use PSNext, but you need to follow security and privacy rules, as well as any laws that apply.
+
+Our [Employee Privacy Policy](https://lion.app.box.com/v/PG-Staff-HR-PrivacyNotice) explains how we collect and use your information,
+our [Acceptable Use Guidelines](https://lion.box.com/v/AIAcceptableUse) outline your responsibilities when using our Services,
+and our [Security & Data Privacy Policies](https://lion.box.com/v/DataPrivacyAndSecurityPolicies) explain our overall security and privacy program policies.
+Please click agree below only if you agree with all these and the rules above.
+`}</ReactMarkdown>
               </DialogContent>
               <DialogActions>
                 <Button autoFocus onClick={()=>{setAcceptTerms(false); handleCloseTermsDialog()}}>

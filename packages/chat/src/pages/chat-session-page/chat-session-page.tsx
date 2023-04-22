@@ -20,7 +20,7 @@ export interface ChatSessionPageProps {}
 
 export function ChatSessionPage(props: ChatSessionPageProps) {
   const { chatId } = useParams();
-  const {data:session, mutation, invalidateCache} = useChatSession(chatId||'');
+  const {data:session, isLoading, isError, error, mutation, invalidateCache} = useChatSession(chatId||'');
   const [messages, setMessages] = useState<IChatMessage[]>([]);
   const [typeMode, setTypeMode] = useState(false);
   const [sessionName, setSessionName] = useState('');
@@ -109,6 +109,8 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
     <Paper elevation={2}
       sx={theme=>({display:'flex', height:'100%', flexDirection:'column', justifyContent:'space-between',
         p:{xs:0, sm:1}, backgroundColor: alpha(theme.palette.background.paper, 0.5) })}>
+      {isLoading && <LinearProgress/>}
+      {isError && <Alert severity='error'>{error.response?.status===404?'Not Found':error.message}</Alert>}
       {session?(
         <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
           {/* <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
@@ -138,7 +140,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
           </Box>
           <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
         </Box>
-      ) : <LinearProgress/>}
+      ) : null}
     </Paper>
   );
 }

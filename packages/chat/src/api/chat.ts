@@ -41,7 +41,7 @@ export function useChatModels() {
   return {...query, invalidateCache};
 }
 
-export function useChatSession(id: string) {
+export function useChatSession(id?: string) {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
   const keys = [CACHEKEY, id];
@@ -49,7 +49,7 @@ export function useChatSession(id: string) {
     const res = await axios.get(`${CHATAPI}/${id}`);
     return res.data.data as IChatSession;
   },{
-    enabled: !!axios && id!=='',
+    enabled: !!axios && id !== undefined,
     staleTime:  60 * 60 * 1000 // 1 minute
   });
   const invalidateCache = ()=>{

@@ -115,13 +115,9 @@ export class ChatController {
   }
 
   @Get('/history')
+  @Authorized(['chat.read'])
   @OpenAPI({ summary: 'Return the chat history of the current user' })
-  async getChatHistory(
-    @CurrentUser() currentUser: UserEntity,
-    @QueryParam('type') type: string | undefined = 'private',
-    @QueryParam('offset') offset = 0,
-    @QueryParam('limit') limit = 10,
-  ) {
+  async getChatHistory(@CurrentUser() currentUser: UserEntity, @QueryParam('offset') offset = 0, @QueryParam('limit') limit = 10) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
     const result = new APIResponse<IChatSession[]>();
@@ -132,7 +128,6 @@ export class ChatController {
     const sessions: ChatSessionEntity[] = await repo.find({
       where: {
         userid: currentUser.email,
-        type,
       },
       order: {
         updatedAt: 'desc',
@@ -177,6 +172,7 @@ export class ChatController {
 
   @Get('/:id')
   @OpenAPI({ summary: 'Return the chat session identified by the id' })
+  @Authorized(['chat.read'])
   async getChatSession(@Param('id') id: string, @CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -237,12 +233,14 @@ export class ChatController {
 
   @Post('/')
   @OpenAPI({ summary: 'Create or continue a chat session' })
+  @Authorized(['chat.write.self'])
   async createChatSession(
     @CurrentUser() currentUser: UserEntity,
     @BodyParam('message') message_param?: string,
     @BodyParam('id') sessionid_param?: string,
     @BodyParam('name') name_param?: string,
     @BodyParam('group') group_param?: string,
+    @BodyParam('type') type_param?: string,
     @BodyParam('messageid') messageid_param?: string,
     @BodyParam('model') model_param?: string,
     @BodyParam('assistant') assistant_param?: string,
@@ -270,12 +268,22 @@ export class ChatController {
     //TODO: validate
     if (name_param) session.name = name_param;
     if (group_param) session.group = group_param;
-    // if (type) session.name = type;
+    if (type_param) {
+      switch (type_param.toLowerCase()) {
+        case 'public':
+          session.type = 'public';
+          break;
+        case 'private':
+          session.type = 'private';
+          break;
+      }
+    }
     // if (path) session.name = path;
 
     if (!message_param && sessionid_param) {
       await repo.save(session);
       result.data = session.toJSON();
+      logger.debug(`updated session: ${session.id}}`);
       return result;
     }
 
@@ -371,15 +379,71 @@ export class ChatController {
     return result;
   }
 
+  @Delete('/:id')
+  @OpenAPI({ summary: 'Share or unshare a chat session identified by the id' })
+  @Authorized(['chat.write.self'])
+  async deleteChatSession(@Param('id') id: string, @CurrentUser() currentUser: UserEntity) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+
+    const repo = AppDataSource.getRepository(ChatSessionEntity);
+
+    const session = await repo.findOne({
+      where: {
+        id,
+      },
+    });
+    if (!session) return new HttpError(404);
+    if (session.userid !== currentUser.email) return new HttpError(403);
+    await repo.softDelete(session.id);
+    logger.debug(`deleted session ${session.id}`);
+    return 'OK';
+  }
+
+  @Post('/:id/sharing')
+  @OpenAPI({ summary: 'Share or unshare a chat session identified by the id' })
+  @Authorized(['chat.write.self'])
+  async updateChatSessionSharing(@Param('id') id: string, @CurrentUser() currentUser: UserEntity, @BodyParam('type') type_param?: string) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+
+    const repo = AppDataSource.getRepository(ChatSessionEntity);
+
+    const session = await repo.findOne({
+      where: {
+        id,
+        userid: currentUser.email,
+      },
+    });
+    if (!session) return new HttpError(404);
+
+    let newtype = session.type;
+    if (type_param) {
+      switch (type_param.toLowerCase()) {
+        case 'public':
+          newtype = 'public';
+          break;
+        case 'private':
+          newtype = 'private';
+          break;
+      }
+    }
+    const ures = await repo.update(session.id, {
+      type: newtype,
+      updatedAt: () => '"updatedAt"',
+    });
+    const result = new APIResponse<IChatSession>();
+    result.data = { ...session.toJSON(), type: newtype };
+    return result;
+  }
   // @Post('/:id/')
-  // @OpenAPI({ summary: 'Update properties of a session identified by the id' })
+  // @OpenAPI({ summary: 'Update properties of a chat session identified by the id' })
+  // @Authorized(['chat.write.self'])
   // async updateChatSession(
   //   @Param('id') id: string,
   //   @CurrentUser() currentUser: UserEntity,
-  //   @BodyParam('name') name?: string,
-  //   @BodyParam('group') group?: string,
-  //   @BodyParam('type') type?: string,
-  //   @BodyParam('path') path?: string,
+  //   @BodyParam('name') name_param?: string,
+  //   @BodyParam('group') group_param?: string,
+  //   @BodyParam('type') type_param?: string,
+  //   @BodyParam('path') path_param?: string,
   // ) {
   //   if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -390,11 +454,14 @@ export class ChatController {
   //       id,
   //       userid: currentUser.email,
   //     },
-  //     relations: ['messages'],
   //   });
   //   if (!session) return;
 
   //   //TODO: validate parameters
+  //   if (name_param) session.name = name_param;
+  //   if (group_param) session.group = group_param;
+
+  //   // if (path) session.name = path;
 
   //   await session.save();
 

@@ -7,14 +7,14 @@ const defaultAxios = axios.create({
     timeout: 60000,
 });
 axiosRetry(defaultAxios, {
-  retries: 3,
+  retries: 2,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: error => {
-    return isNetworkOrIdempotentRequestError(error);
-    // const status = error.response?.status || 500;
-    // if (status<500) return false;
-    // console.error(error);
-    // return true;
+    const status = error.response?.status || 500;
+    console.log('retry', status)
+    if (status<500) return false;
+    console.error(error);
+    return true;
   },
 });
 
@@ -30,11 +30,12 @@ axiosRetry(axiosPrivate, {
   retries: 0,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: error => {
-    return isNetworkOrIdempotentRequestError(error);
-    // const status = error.response?.status || 500;
-    // if (status<500) return false;
-    // console.error(error);
-    // return true;
+    // return isNetworkOrIdempotentRequestError(error);
+    const status = error.response?.status || 500;
+    console.log('retry', status)
+    if (status<500) return false;
+    console.error(error);
+    return true;
   },
 });
 

@@ -34,6 +34,9 @@ export function AboutDialog() {
         open={open}
         onClose={handleClose}
         aria-labelledby="about-dialog-title"
+        PaperProps={{
+          sx: {maxWidth:'800px'}
+        }}
       >
         <DialogTitle id="about-dialog-title">
           <img src='/assets/appicon.svg' alt="pschat application logo" width="22px" /> {`About ${process.env['NX_APP_NAME']}`}
