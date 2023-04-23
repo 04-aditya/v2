@@ -4,7 +4,7 @@ import { UserEntity } from '@/entities/user.entity';
 import { HttpException } from '@/exceptions/HttpException';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { logger } from '@/utils/logger';
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import axiosRetry from 'axios-retry';
 import {
   JsonController,
@@ -29,21 +29,39 @@ import { ChatMessageEntity } from '@/entities/chatmessage.entity';
 // const openai = new OpenAI();
 // openai.generate(['Tell me a joke.']).then(console.log).catch(console.error);
 
-const azopenaiclient = axios.create({
-  baseURL: `${process.env['AZ_OPENAI_URL']}openai/deployments/`,
-  headers: {
-    'api-key': process.env['AZ_OPENAI_KEY'],
-  },
-  timeout: 60000,
-});
-axiosRetry(azopenaiclient, {
-  retries: 2,
-  retryDelay: axiosRetry.exponentialDelay,
-  retryCondition: error => {
-    console.log(error);
-    return true;
-  },
-});
+const azAPIclients: AxiosInstance[] = [];
+let currentAzAPIClientIndex = 0;
+function getAzAPIClient(): AxiosInstance {
+  if (azAPIclients.length === 0) {
+    const keys = process.env['AZ_OPENAI_KEY'].split(',');
+    const baseURLs = process.env['AZ_OPENAI_URL'].split(',');
+    const deployments = process.env['AZ_OPENAI_DEPLOYMENT'].split(',');
+    for (let i = 0; i < keys.length; i++) {
+      console.log(`creating azure client ${i}...`);
+      const client = axios.create({
+        baseURL: `${baseURLs[i]}openai/deployments/${deployments[i]}/`,
+        headers: {
+          'api-key': keys[i],
+        },
+        timeout: 60000,
+      });
+      axiosRetry(client, {
+        retries: 2,
+        retryDelay: axiosRetry.exponentialDelay,
+        retryCondition: error => {
+          console.log(error);
+          return true;
+        },
+      });
+      azAPIclients.push(client);
+    }
+  }
+  if (currentAzAPIClientIndex >= azAPIclients.length) currentAzAPIClientIndex = 0;
+  console.log('Using AZ OpenAI API client', currentAzAPIClientIndex);
+  const client = azAPIclients[currentAzAPIClientIndex];
+  currentAzAPIClientIndex += 1; // round robin
+  return client;
+}
 
 const psbodhiclient = axios.create({
   baseURL: process.env['PSBODHI_URL'],
@@ -96,7 +114,7 @@ export class ChatController {
     result.data = [];
 
     result.data.push({
-      id: 'gpt35turbo-test',
+      id: 'gpt35turbo',
       name: 'GPT 3.5 Turbo',
       group: 'Standard',
       enabled: true,
@@ -345,7 +363,7 @@ export class ChatController {
             temperature: reqparams.temperature || 0,
           });
         } else {
-          return await azopenaiclient.post(`${model}/chat/completions?api-version=${model_version}`, {
+          return await getAzAPIClient().post(`chat/completions?api-version=${model_version}`, {
             ...reqparams,
             messages: messages.map(m => ({
               role: m.role,

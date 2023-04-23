@@ -11,6 +11,7 @@ export const systemMessages = [
   {name:'Senior Software Engineer', message: 'You are a helpful AI assistant, acting as a senior software engineer.Respond in markdown format when possible'},
   {name:'Senior Product Manager', message: 'You are a helpful AI assistant, acting as a senior product manager.Respond in markdown format when possible'},
   {name:'Senior Experience designer', message: 'You are a helpful AI assistant, acting as a senior experience or UX designer.Respond in markdown format when possible'},
+  {name:'Marketing Writing Assistant', message: `You are a marketing writing assistant. You help come up with creative content ideas and content like marketing emails, blog posts, tweets, ad copy and product descriptions. You write in a friendly yet professional tone but can tailor your writing style that best works for a user-specified audience. If you do not know the answer to a question, respond by saying "I do not know the answer to your question."`},
   {name:'divider', message: ''},
   {name:'AI Reviewer', message: 'You are a helpful AI assistant, acting as a senior software engineer. when reviewing the code you look for exception handling, security issues, performance problems, and readability of code. Respond in markdown format when possible'},
   {name:'AI Architect', message:'I want you to act as an IT Architect. I will provide some details about the functionality of an application or other digital product, and it will be your job to come up with ways to integrate it into the IT landscape. This could involve analyzing business requirements, performing a gap analysis and mapping the functionality of the new system to the existing IT landscape. Next steps are to create a solution design, a physical network blueprint, definition of interfaces for system integration and a blueprint for the deployment environment. '},
@@ -32,15 +33,19 @@ interface IModelOptionsProps {
 
 export function ModelOptions(props: IModelOptionsProps) {
   const chatModels = useChatModels();
-  const [model, setModel] = useState('gpt35turbo-test');
+  const [model, setModel] = useState('gpt35turbo');
   const [assistant, setAssistant] = useState(systemMessages[0].message);
   const [contexts, setContext] = useState<string[]>([]);
 
   useEffect(()=>{
+    if (!chatModels) return;
     setModel(props.options.model);
-    setAssistant(props.options.assistant);
+    const aidx = systemMessages.findIndex(m=>m.message===props.options.assistant);
+    if (aidx !== -1) {
+      setAssistant(props.options.assistant);
+    }
     setContext(props.options.contexts);
-  }, [props.options])
+  }, [chatModels, props.options])
 
   const handleContextChange = (event: SelectChangeEvent<string[]>) => {
     const {

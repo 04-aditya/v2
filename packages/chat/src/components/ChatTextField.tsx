@@ -1,5 +1,5 @@
 import { useState, ChangeEvent, useEffect, useCallback } from 'react';
-import { Alert, Box, CircularProgress, Divider, Fade, InputBase, Paper } from '@mui/material';
+import { Alert, Box, CircularProgress, Divider, Fade, InputBase, Paper, Typography } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
 // import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 // import SettingsIcon from '@mui/icons-material/Settings';
@@ -46,6 +46,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const [showParameters, setShowParameters] = useState(false);
   const [parameters, setParameters] = useState<IModelParameters>({temperature:0, max_tokens: 400});
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [msgTokens, setMsgTokens] = useState(0);
   const [introState, setIntroState] = useState({
     stepsEnabled: false, // sessionid?false:true,
     initialStep: 0,
@@ -99,6 +100,8 @@ export function ChatTextField(props: ChatTextFieldProps) {
     if (msg.length<2000) {
       setErrorMessage(undefined);
       setNewMessage(msg);
+      //https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
+      setMsgTokens(Math.round(msg.length/4));
     } else {
       setErrorMessage('Message is too long. Please shorten it to less than 2000 characters.');
     }
@@ -161,9 +164,10 @@ export function ChatTextField(props: ChatTextFieldProps) {
     <Hints enabled={introState.hintsEnabled} hints={introState.hints} />
     {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
     {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
+
     <Paper className='chat-message-field'
       component="div"
-      sx={theme=>({ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', backgroundColor: theme.palette.background.default })}
+      sx={theme=>({ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', backgroundColor: theme.palette.background.default, position:'relative' })}
     >
       <IconButton sx={{ p: '10px' }} aria-label="settings" onClick={()=>setShowOptions(!showOptions)}>
         <PsychologyIcon color={showOptions?'secondary':'inherit'} sx={{transform:'scale(-1,1)'}}/>
@@ -195,6 +199,9 @@ export function ChatTextField(props: ChatTextFieldProps) {
       <IconButton sx={{ p: '10px' }} aria-label="directions" onClick={()=>setShowParameters(!showParameters)}>
         <DisplaySettingsIcon color={showParameters?'primary':'inherit'} />
       </IconButton>
+      <Box sx={{position:'absolute', right:96, bottom:0}}>
+        <Typography variant='caption' color='secondary'><small>{msgTokens}/4000</small></Typography>
+      </Box>
     </Paper>
     {showOptions && <ModelOptions options={options} onChange={handleOptionsChange}/>}
     {showParameters && <ModelParameters parameters={parameters} onChange={handleParametersChange}/>}
