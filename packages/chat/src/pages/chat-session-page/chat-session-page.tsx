@@ -72,18 +72,16 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   }
 
   const handleSessionNameChange = useCallback((e: {target:{value:string}}) => {
-    const newName = e.target.value;
-    if (newName.length<45) {
-      setSessionName(newName);
-    } else {
-      setSessionName(newName.substring(0,45));
-    }
+    const newName = e.target.value.substring(0,45);
+    setSessionName(newName);
+    console.log(newName);
   },[setSessionName]);
 
-  const handleUpdateSessionName = useCallback(()=>{
+  const handleUpdateSessionName = ()=>{
     if (session) {
       //const newSession = {...session, name:sessionName, group:sessionGroup};
       const data = { id:session.id, name: sessionName};
+      console.log(data);
       mutation.mutate(data,
       {
         onSuccess: ()=>{
@@ -94,7 +92,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
         }
       });
     }
-  },[invalidateCache, mutation, session, sessionName]);
+  };
 
   const handleSessionGroupChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newGroup = e.target.value;

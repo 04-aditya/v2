@@ -174,7 +174,11 @@ export function SessionSummary(props: {sessionid?: string, session?:IChatSession
     .catch((err)=>console.error(err))
   },[axios, session?.id]);
 
-  const toggleSharing = useCallback(() => {
+  const toggleFavourite = useCallback(() => {
+  },[]);
+
+  const toggleSharing = useCallback((e:any) => {
+    e.preventDefault();
     axios.post(`/api/chat/${session?.id}/sharing`,{
       type: session?.type==='public'?'private':'public'
     })
@@ -190,31 +194,31 @@ export function SessionSummary(props: {sessionid?: string, session?:IChatSession
     //   invalidateCache();
     // })
     // .catch((err)=>console.error(err))
-  },[mutation, session?.id, session?.type, invalidateCache]);
+  },[axios, session?.id, session?.type, invalidateCache]);
 
   if (isLoading) return <LinearProgress/>;
   if (!session) return <Typography variant="body2">?</Typography>;
-  return <Box sx={{
+  return <Fade in timeout={500}><Box sx={theme=>({
       mb: 1, p: 0.5, minHeight: 56, display: 'flex', flexDirection: 'row', alignItems: 'center', cursor: 'pointer',
-      borderRadius: '3px', border: '1px solid #ccc', '&:hover': { borderColor: '#000' },
-    }} onClick={()=>!isDeleted && navigate(`/chat/${session.id}`)}>
+      borderRadius: '3px', border: `1px solid #ccc`, borderColor:theme.palette.divider, '&:hover': { borderColor: theme.palette.action.active },
+    })} onClick={()=>!isDeleted && navigate(`/chat/${session.id}`)}>
     {/* <IconButton size="small">{props.icon}</IconButton> */}
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', pl: 0.5 }}>
       <Typography variant="body2" sx={isDeleted?{textDecoration: "line-through"}:{}} >{session.name}</Typography>
       <Stack direction="row" display={'flex'} justifyContent="end" alignItems={'flex-end'} spacing={1} sx={{ width: '100%' }}>
         <Typography variant="caption" sx={{ flexGrow: 1, color: 'text.secondary' }}>{formatDistanceToNow(parseJSON(session.updatedAt), { addSuffix: true })}</Typography>
-        <IconButton aria-label="toggle favourite" size="small" disabled={isDeleted}>
+        <IconButton aria-label="toggle favourite" size="small" onClick={toggleFavourite} disabled={isDeleted}>
           {session.type === 'f' ? <FavoriteIcon fontSize="inherit" color="secondary" /> : <FavoriteBorderIcon fontSize="inherit" />}
         </IconButton>
         <IconButton aria-label="toggle sharing" size="small" onClick={toggleSharing} disabled={isDeleted}>
-          {session.type === 'public' ? <ShareIcon fontSize="inherit" color="success" /> : <ShareIcon fontSize="inherit" />}
+          {session.type === 'public' ? <ShareIcon fontSize="inherit" color="info" /> : <ShareIcon fontSize="inherit" />}
         </IconButton>
         <IconButton aria-label="delete session" size="small" onClick={deleteSession} disabled={isDeleted}>
           <DeleteIcon fontSize="inherit" />
         </IconButton>
       </Stack>
     </Box>
-  </Box>;
+  </Box></Fade>;
 }
 
 export default function ChatSessionList(props: ChatSessionListProps) {

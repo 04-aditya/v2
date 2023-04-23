@@ -1,7 +1,8 @@
 import { useState, ChangeEvent, useEffect, useCallback } from 'react';
-import { Alert, Box, Checkbox, CircularProgress, Divider, FilledInput, FormControl, Grid, Input, InputAdornment, InputBase, InputLabel, ListItemText, ListSubheader, MenuItem, OutlinedInput, Paper, Select, SelectChangeEvent, Slider, Stack, TextField, ToggleButton } from '@mui/material';
+import { Alert, Box, Checkbox, CircularProgress, Collapse, Divider, Fade, FilledInput, FormControl, Grid, Input, InputAdornment, InputBase, InputLabel, ListItemText, ListSubheader, MenuItem, OutlinedInput, Paper, Select, SelectChangeEvent, Slider, Stack, TextField, ToggleButton } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
+import PsychologyIcon from '@mui/icons-material/Psychology';
 import IconButton from '@mui/material/IconButton';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DisplaySettingsIcon from '@mui/icons-material/DisplaySettings';
@@ -79,14 +80,14 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const [max_tokens, setMaxTokens] = useState(400);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [introState, setIntroState] = useState({
-    stepsEnabled: false,
+    stepsEnabled: sessionid?false:true,
     initialStep: 0,
     steps: [
       {
         element: '.chat-message-field',
         title:'Message',
-        intro: "Continue the converstaion by entering your next message here... ",
-        position: 'top',
+        intro: "Start the converstaion by entering your next message here... ",
+        position: 'bottom',
       },
     ],
     hintsEnabled: false,
@@ -109,8 +110,8 @@ export function ChatTextField(props: ChatTextFieldProps) {
       if (chatsession.options?.model) {
         setModel(chatsession.options.model as string);
       }
-      if (chatsession.options?.context) {
-        setContext(chatsession.options.context as string[]);
+      if (chatsession.options?.contexts) {
+        setContext(chatsession.options.contexts as string[]);
       }
       setAssistant(chatsession.messages[0].content);
     }
@@ -201,18 +202,18 @@ export function ChatTextField(props: ChatTextFieldProps) {
     <Hints enabled={introState.hintsEnabled} hints={introState.hints} />
     {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
     {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
-    <Paper
+    <Paper className='chat-message-field'
       component="div"
       sx={theme=>({ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', backgroundColor: theme.palette.background.default })}
     >
       <IconButton sx={{ p: '10px' }} aria-label="settings" onClick={()=>setShowOptions(!showOptions)}>
-        <SettingsIcon color={showOptions?'primary':'inherit'}/>
+        <PsychologyIcon color={showOptions?'secondary':'inherit'} sx={{transform:'scale(-1,1)'}}/>
       </IconButton>
       {/* {browserSupportsSpeechRecognition ? <IconButton sx={{ p: '10px' }} aria-label="settings"
         onClick={async ()=>{listening?SpeechRecognition.stopListening():SpeechRecognition.startListening()}}>
         <MicIcon color={listening?'success':'inherit'}/>
       </IconButton> : null} */}
-      <InputBase multiline rows={rowCount} className='chat-message-field'
+      <InputBase multiline rows={rowCount}
         sx={{ ml: 1, flex: 1 }} autoFocus
         placeholder="Type your message here..."
         inputProps={{ 'aria-label': 'chat message box' }}
@@ -233,7 +234,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
       {isBusy?<CircularProgress/>:(
       <IconButton sx={{ p: '10px' }} color={newMessage !== '' ? 'primary' : 'inherit'} disabled={newMessage === ''}
         aria-label="send message" onClick={onSend}>
-        <PsychologyAltIcon />
+        <TelegramIcon/>
       </IconButton>)}
       <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
       <IconButton sx={{ p: '10px' }} aria-label="directions" onClick={()=>setShowParameters(!showParameters)}>
@@ -242,7 +243,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
     </Paper>
     {showOptions && <Grid container sx={{ml:-1, mt:0.5}}>
       <Grid item xs={12} sm={3} sx={{pr:1}}>
-        <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
+        <FormControl sx={{ m: 1}} fullWidth>
           <InputLabel htmlFor="model-select">Model</InputLabel>
           <Select id="model-select" label="Model" size='small'
             value={model}
@@ -267,7 +268,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
         </FormControl>
       </Grid>
       <Grid item xs={12} sm={3}>
-        <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined || availableContexts.length===0}>
+        <FormControl sx={{ m: 1}} fullWidth disabled={availableContexts.length===0}>
           <InputLabel htmlFor="contexts-select-label">Additional Context</InputLabel>
           <Select<string[]> id="contexts-select" labelId="contexts-select-label" label="Additional Contexts" size='small'
             multiple
@@ -287,7 +288,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
         </FormControl>
       </Grid>
     </Grid>}
-    {showParameters && <Grid container sx={{mt:0.5}}>
+    {showParameters && <Fade in timeout={500}><Grid container sx={{mt:0.5}}>
       <Grid item xs={12} sm={6} sx={{p:0.5}}>
         <TextField id="model-temperature" label="Temperature" size='small'
           type='number' fullWidth
@@ -302,7 +303,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
           onChange={(e)=>setMaxTokens(parseInt(e.target.value))}
         />
       </Grid>
-    </Grid>}
+    </Grid></Fade>}
   </Box>
   );
 }
