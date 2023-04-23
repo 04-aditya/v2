@@ -220,7 +220,7 @@ function MessageItem(props: { message:IChatMessage }) {
   return (
     <div ref={ref}>
       {isUser?<Box key={m.id} sx={{display:'flex', flexGrow:1, flexDirection:'row-reverse', alignItems:'flex-start',}}>
-        <Avatar alt='user avatar' sx={{mt:2, width: 24, height: 24, background:'transparent', display:{xs:'none', sm:'block'}}}>
+        <Avatar alt='user avatar' sx={{mt:2, width: 24, height: 24, boxShadow:"0px 6px 10px 0px rgba(0,0,0,0.14)", background:'transparent', display:{xs:'none', sm:'block'}}}>
           <PsychologyAltIcon color='primary'/>
         </Avatar>
         <MessageContent message={m} />

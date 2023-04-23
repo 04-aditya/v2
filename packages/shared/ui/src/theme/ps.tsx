@@ -92,7 +92,7 @@ export const getDesignTokens = (mode: PaletteMode) => ({
           text:{
             primary: '#030303',
           },
-          divider: '#e0e0e0',
+          divider: '#ccc',
           background:{
             paper: '#fff',
             default: '#EEEEEE',
@@ -113,12 +113,12 @@ export const getDesignTokens = (mode: PaletteMode) => ({
             main: '#ffe63b',
           },
           text:{
-            primary: '#eeeeee',
+            primary: '#c2d2d8',
           },
-          divider: '#222',
+          divider: '#224',
           background:{
-            paper: '#000',
-            default: '#030303',
+            paper: '#001623',
+            default: '#031c2e',
           }
         }),
   },

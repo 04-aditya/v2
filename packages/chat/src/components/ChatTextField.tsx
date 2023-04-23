@@ -1,30 +1,18 @@
 import { useState, ChangeEvent, useEffect, useCallback } from 'react';
-import { Alert, Box, Checkbox, CircularProgress, Collapse, Divider, Fade, FilledInput, FormControl, Grid, Input, InputAdornment, InputBase, InputLabel, ListItemText, ListSubheader, MenuItem, OutlinedInput, Paper, Select, SelectChangeEvent, Slider, Stack, TextField, ToggleButton } from '@mui/material';
+import { Alert, Box, CircularProgress, Divider, Fade, InputBase, Paper } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
-import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
+// import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
+// import SettingsIcon from '@mui/icons-material/Settings';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import IconButton from '@mui/material/IconButton';
-import SettingsIcon from '@mui/icons-material/Settings';
 import DisplaySettingsIcon from '@mui/icons-material/DisplaySettings';
-import { AxiosError } from 'axios';
 import { IChatSession } from 'sharedtypes';
-import { useChatHistory, useChatModels, useChatSession } from '../api/chat';
+import {useChatSession } from '../api/chat';
 import MicIcon from '@mui/icons-material/Mic';
 import { Steps, Hints } from "intro.js-react";
-// import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition'
 import useSpeechToText from 'react-hook-speech-to-text';
-
-
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
+import { DefaultModelOptions, IModelOptions, ModelOptions } from './ModelOptions';
+import { IModelParameters, ModelParameters } from './ModelParameters';
 interface ChatTextFieldProps {
   sessionid?: string;
   message?: string;
@@ -32,24 +20,7 @@ interface ChatTextFieldProps {
   onSuccess?: (session: IChatSession) => void;
 }
 
-const systemMessages = [
-  {name:'AI Assistant', message: 'You are a helpful AI assistant. Respond in markdown format when possible'},
-  {name:'divider', message: ''},
-  {name:'Senior Software Engineer', message: 'You are a helpful AI assistant, acting as a senior software engineer.Respond in markdown format when possible'},
-  {name:'Senior Product Manager', message: 'You are a helpful AI assistant, acting as a senior product manager.Respond in markdown format when possible'},
-  {name:'Senior Experience designer', message: 'You are a helpful AI assistant, acting as a senior experience or UX designer.Respond in markdown format when possible'},
-  {name:'divider', message: ''},
-  {name:'AI Reviewer', message: 'You are a helpful AI assistant, acting as a senior software engineer. when reviewing the code you look for exception handling, security issues, performance problems, and readability of code. Respond in markdown format when possible'},
-  {name:'AI Architect', message:'I want you to act as an IT Architect. I will provide some details about the functionality of an application or other digital product, and it will be your job to come up with ways to integrate it into the IT landscape. This could involve analyzing business requirements, performing a gap analysis and mapping the functionality of the new system to the existing IT landscape. Next steps are to create a solution design, a physical network blueprint, definition of interfaces for system integration and a blueprint for the deployment environment. '},
-];
-
 export function ChatTextField(props: ChatTextFieldProps) {
-  // const {
-  //   transcript,
-  //   listening,
-  //   resetTranscript,
-  //   browserSupportsSpeechRecognition
-  // } = useSpeechRecognition();
   const {
     error: speechError,
     interimResult,
@@ -67,20 +38,16 @@ export function ChatTextField(props: ChatTextFieldProps) {
     }
   });
   const {sessionid} = props;
-  const chatModels = useChatModels();
   const {data:chatsession, error, mutation} = useChatSession(sessionid);
   const [newMessage, setNewMessage] = useState<string>('');
   const [isBusy, setIsBusy] = useState(false);
-  const [model, setModel] = useState('gpt35turbo-test');
-  const [assistant, setAssistant] = useState(systemMessages[0].message);
-  const [contexts, setContext] = useState<string[]>([]);
   const [showOptions, setShowOptions] = useState(false);
+  const [options, setOptions] = useState(DefaultModelOptions);
   const [showParameters, setShowParameters] = useState(false);
-  const [temperature, setTemperature] = useState(0);
-  const [max_tokens, setMaxTokens] = useState(400);
+  const [parameters, setParameters] = useState<IModelParameters>({temperature:0, max_tokens: 400});
   const [errorMessage, setErrorMessage] = useState<string>();
   const [introState, setIntroState] = useState({
-    stepsEnabled: sessionid?false:true,
+    stepsEnabled: false, // sessionid?false:true,
     initialStep: 0,
     steps: [
       {
@@ -107,20 +74,21 @@ export function ChatTextField(props: ChatTextFieldProps) {
   useEffect(()=>{
     if (chatsession) {
       //setIntroState(prev=>({...prev, stepsEnabled: true}));
-      if (chatsession.options?.model) {
-        setModel(chatsession.options.model as string);
+      if (chatsession.options) {
+        setOptions({
+          model: chatsession.options.model as string,
+          contexts: chatsession.options.contexts as string[],
+          assistant: chatsession.messages[0].content,
+        });
       }
-      if (chatsession.options?.contexts) {
-        setContext(chatsession.options.contexts as string[]);
-      }
-      setAssistant(chatsession.messages[0].content);
     }
   }, [chatsession])
 
   useEffect(()=>{
     if (!isRecording) {
       setNewMessage(msg=>{
-        const newMsg = msg + results.map((r:any)=>r.transcript+' ').join('\n');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const newMsg = msg + results.map((r: any)=>r.transcript+' ').join('\n');
         setResults([]);
         return newMsg;
       });
@@ -136,17 +104,18 @@ export function ChatTextField(props: ChatTextFieldProps) {
     }
   };
 
+  const handleOptionsChange = (options: IModelOptions)=>setOptions(options);
+
+  const handleParametersChange = (params: IModelParameters)=>setParameters(params);
+
   const onSend = async () => {
     setIsBusy(true);
     setErrorMessage(undefined);
     mutation.mutate({
       id:sessionid,
-      model, assistant, contexts,
+      model: options.model, assistant: options.assistant, contexts: options.contexts,
       message: newMessage,
-      parameters: {
-        temperature,
-        max_tokens,
-      }
+      parameters,
     },{
       onSuccess: (newSession:IChatSession)=>{
         setNewMessage('');
@@ -155,9 +124,10 @@ export function ChatTextField(props: ChatTextFieldProps) {
         }
         setIsBusy(false);
       },
-      onError: (err)=>{
-        const res:any = (err as AxiosError).response?.data;
-        setErrorMessage(res?.message || 'Unable to send message. Please try again!');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onError: (err: any)=>{
+        const res = err.response?.data?.message;
+        setErrorMessage(res || 'Unable to send message. Please try again!');
         setIsBusy(false);
       }
     });
@@ -173,15 +143,6 @@ export function ChatTextField(props: ChatTextFieldProps) {
       }
     }
   };
-  const handleContextChange = (event: SelectChangeEvent<string[]>) => {
-    const {
-      target: { value },
-    } = event;
-    setContext(
-      // On autofill we get a stringified value.
-      typeof value === 'string' ? value.split(',') : value,
-    );
-  }
   const handleStopSpeaking = useCallback(()=>{
     if (isRecording){
       stopSpeechToText();
@@ -191,8 +152,6 @@ export function ChatTextField(props: ChatTextFieldProps) {
     setIntroState((prev) => ({...prev, stepsEnabled: false }));
   };
   const rowCount = newMessage.split('').filter(c => c === '\n').length + 1;
-  const availableModels = chatModels.data || [];
-  const availableContexts = availableModels.find(m=>m.id===model)?.contexts||[];
   return (<Box>
     <Steps
       enabled={introState.stepsEnabled}
@@ -209,10 +168,6 @@ export function ChatTextField(props: ChatTextFieldProps) {
       <IconButton sx={{ p: '10px' }} aria-label="settings" onClick={()=>setShowOptions(!showOptions)}>
         <PsychologyIcon color={showOptions?'secondary':'inherit'} sx={{transform:'scale(-1,1)'}}/>
       </IconButton>
-      {/* {browserSupportsSpeechRecognition ? <IconButton sx={{ p: '10px' }} aria-label="settings"
-        onClick={async ()=>{listening?SpeechRecognition.stopListening():SpeechRecognition.startListening()}}>
-        <MicIcon color={listening?'success':'inherit'}/>
-      </IconButton> : null} */}
       <InputBase multiline rows={rowCount}
         sx={{ ml: 1, flex: 1 }} autoFocus
         placeholder="Type your message here..."
@@ -241,69 +196,10 @@ export function ChatTextField(props: ChatTextFieldProps) {
         <DisplaySettingsIcon color={showParameters?'primary':'inherit'} />
       </IconButton>
     </Paper>
-    {showOptions && <Grid container sx={{ml:-1, mt:0.5}}>
-      <Grid item xs={12} sm={3} sx={{pr:1}}>
-        <FormControl sx={{ m: 1}} fullWidth>
-          <InputLabel htmlFor="model-select">Model</InputLabel>
-          <Select id="model-select" label="Model" size='small'
-            value={model}
-            onChange={(e)=>setModel(e.target.value as string)}
-          >
-            <ListSubheader>Standard</ListSubheader>
-            {(chatModels?.data||[]).filter(m=>m.group==='Standard').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
-            <ListSubheader>Custom</ListSubheader>
-            {(chatModels?.data||[]).filter(m=>m.group==='Custom').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
-          </Select>
-        </FormControl>
-      </Grid>
-      <Grid item xs={12} sm={6} sx={{pr:1}}>
-        <FormControl sx={{ m: 1}} fullWidth disabled={sessionid!==undefined}>
-          <InputLabel htmlFor="assistant-select">Act as</InputLabel>
-          <Select id="assistant-select" label="Act as" size='small'
-            value={assistant}
-            onChange={(e)=>setAssistant(e.target.value as string)}
-          >
-            {systemMessages.map((m,i)=>(m.name==='divider')?<Divider key={i}/>:<MenuItem key={i} value={m.message}>{m.name}</MenuItem>)}
-          </Select>
-        </FormControl>
-      </Grid>
-      <Grid item xs={12} sm={3}>
-        <FormControl sx={{ m: 1}} fullWidth disabled={availableContexts.length===0}>
-          <InputLabel htmlFor="contexts-select-label">Additional Context</InputLabel>
-          <Select<string[]> id="contexts-select" labelId="contexts-select-label" label="Additional Contexts" size='small'
-            multiple
-            input={<OutlinedInput label="Tag" />}
-            value={contexts}
-            renderValue={(selected) => selected.join(', ')}
-            onChange={handleContextChange}
-            MenuProps={MenuProps}
-          >
-            {
-              availableContexts.map(c=> <MenuItem key={c.id} value={c.id}>
-                <Checkbox checked={contexts.indexOf(c.id) > -1} />
-                <ListItemText primary={c.name} />
-              </MenuItem>)
-            }
-          </Select>
-        </FormControl>
-      </Grid>
-    </Grid>}
-    {showParameters && <Fade in timeout={500}><Grid container sx={{mt:0.5}}>
-      <Grid item xs={12} sm={6} sx={{p:0.5}}>
-        <TextField id="model-temperature" label="Temperature" size='small'
-          type='number' fullWidth
-          value={temperature}
-          onChange={(e)=>setTemperature(parseInt(e.target.value))}
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} sx={{p:0.5}}>
-        <TextField id="max_tokens" label="Max Tokens" size='small'
-          type='number' fullWidth
-          value={max_tokens}
-          onChange={(e)=>setMaxTokens(parseInt(e.target.value))}
-        />
-      </Grid>
-    </Grid></Fade>}
+    {showOptions && <ModelOptions options={options} onChange={handleOptionsChange}/>}
+    {showParameters && <ModelParameters parameters={parameters} onChange={handleParametersChange}/>}
   </Box>
   );
 }
+
+
