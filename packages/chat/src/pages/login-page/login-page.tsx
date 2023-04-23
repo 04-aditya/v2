@@ -22,7 +22,7 @@ export function LoginPage(props: LoginPageProps) {
   // cu.pathname = '/';
   const from = global.window.location.href;
   const [acceptedTerms, setAcceptTerms] = React.useState(false);
-  const [openTermsDialog, setOpenTermsDialog] = React.useState(false);
+  const [openTermsDialog, setOpenTermsDialog] = React.useState(true);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
