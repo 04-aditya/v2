@@ -373,7 +373,7 @@ export class ChatController {
       session.messages = [];
     }
 
-    const model = model_param || (sessionid_param ? session.options.model : process.env['AZ_OPENAI_DEPLOYMENT']);
+    const model = model_param || (sessionid_param ? session.options.model : 'gpt35turbo');
     const model_version = model_version_param || (sessionid_param ? session.options.model_version : process.env['AZ_OPENAI_VERSION']).split(',')[0];
     const contexts = contexts_param || (sessionid_param ? session.options.contexts : []);
     session.options = { ...session.options, model, model_version, contexts };
