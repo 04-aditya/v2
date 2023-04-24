@@ -7,7 +7,7 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import IconButton from '@mui/material/IconButton';
 import DisplaySettingsIcon from '@mui/icons-material/DisplaySettings';
 import { IChatSession } from 'sharedtypes';
-import {useChatSession } from '../api/chat';
+import {useChatModels, useChatSession } from '../api/chat';
 import MicIcon from '@mui/icons-material/Mic';
 import { Steps, Hints } from "intro.js-react";
 import useSpeechToText from 'react-hook-speech-to-text';
@@ -21,6 +21,7 @@ interface ChatTextFieldProps {
 }
 
 export function ChatTextField(props: ChatTextFieldProps) {
+  const {data:models} = useChatModels(); // preload
   const {
     error: speechError,
     interimResult,

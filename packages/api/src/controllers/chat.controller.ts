@@ -24,6 +24,7 @@ import { Not, MoreThan, Equal, And } from 'typeorm';
 import { OpenAPI } from 'routing-controllers-openapi';
 import { ChatSessionEntity } from '@/entities/chatsession.entity';
 import { ChatMessageEntity } from '@/entities/chatmessage.entity';
+import { UserDataEntity } from '@/entities/userdata.entity';
 
 // import { OpenAI } from 'langchain/llms';
 // const openai = new OpenAI();
@@ -37,7 +38,7 @@ function getAzAPIClient(): AxiosInstance {
     const baseURLs = process.env['AZ_OPENAI_URL'].split(',');
     const deployments = process.env['AZ_OPENAI_DEPLOYMENT'].split(',');
     for (let i = 0; i < keys.length; i++) {
-      console.log(`creating azure client ${i}...`);
+      logger.info(`creating azure client ${i}...`);
       const client = axios.create({
         baseURL: `${baseURLs[i]}openai/deployments/${deployments[i]}/`,
         headers: {
@@ -57,7 +58,7 @@ function getAzAPIClient(): AxiosInstance {
     }
   }
   if (currentAzAPIClientIndex >= azAPIclients.length) currentAzAPIClientIndex = 0;
-  console.log('Using AZ OpenAI API client', currentAzAPIClientIndex);
+  logger.debug('Using AZ OpenAI API client', currentAzAPIClientIndex);
   const client = azAPIclients[currentAzAPIClientIndex];
   currentAzAPIClientIndex += 1; // round robin
   return client;
@@ -82,6 +83,7 @@ axiosRetry(psbodhiclient, {
 @JsonController('/api/chat')
 @UseBefore(authMiddleware)
 export class ChatController {
+  static readonly CHATFAVOURITEKEY = 'chatfavourite';
   @Get('/models')
   @OpenAPI({ summary: 'Return the chat models for the current user' })
   async getChatModels(@CurrentUser() currentUser: UserEntity) {
@@ -186,6 +188,66 @@ export class ChatController {
     );
     data.forEach(d => result.data.push({ userid: d.userid, count: d.count, total_tokens: d.total_tokens }));
     return result;
+  }
+
+  @Get('/favourites')
+  @OpenAPI({ summary: 'Return the chat favourites of the current user' })
+  async getChatFavourites(@CurrentUser() currentUser: UserEntity, @QueryParam('offset') offset = 0, @QueryParam('limit') limit = 10) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+
+    const result = new APIResponse<Array<{ id: string; timestamp: Date }>>();
+    result.data = [];
+
+    const repo = AppDataSource.getRepository(UserDataEntity);
+
+    const dataset = await repo.find({
+      where: {
+        userid: currentUser.email,
+        key: ChatController.CHATFAVOURITEKEY,
+      },
+      order: {
+        timestamp: 'desc',
+      },
+      skip: offset,
+      take: limit,
+    });
+
+    dataset.forEach((s: UserDataEntity) => result.data.push({ id: s.value as string, timestamp: s.timestamp }));
+
+    return result;
+  }
+
+  @Get('/:id/favourite')
+  @OpenAPI({ summary: 'Return the chat favourite status of the current user' })
+  @Authorized(['chat.write'])
+  async getChatFavouriteStatus(@Param('id') id: string, @CurrentUser() currentUser: UserEntity) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+
+    try {
+      const repo = AppDataSource.getRepository(ChatSessionEntity);
+      logger.debug(`getting favourite for ${id}`);
+      const session = await repo.findOne({
+        where: {
+          id,
+          userid: currentUser.email,
+        },
+      });
+      if (!session) return new HttpError(404);
+
+      const userdatarepo = AppDataSource.getRepository(UserDataEntity);
+      const exfavdata = await userdatarepo.findOne({
+        where: {
+          key: ChatController.CHATFAVOURITEKEY,
+          userid: currentUser.id,
+          value: JSON.stringify(id),
+        },
+      });
+      console.log(exfavdata);
+
+      return new APIResponse<boolean>(exfavdata ? true : false);
+    } catch (ex) {
+      console.log(ex);
+    }
   }
 
   @Get('/:id')
@@ -312,7 +374,7 @@ export class ChatController {
     }
 
     const model = model_param || (sessionid_param ? session.options.model : process.env['AZ_OPENAI_DEPLOYMENT']);
-    const model_version = model_version_param || (sessionid_param ? session.options.model_version : process.env['AZ_OPENAI_VERSION']);
+    const model_version = model_version_param || (sessionid_param ? session.options.model_version : process.env['AZ_OPENAI_VERSION']).split(',')[0];
     const contexts = contexts_param || (sessionid_param ? session.options.contexts : []);
     session.options = { ...session.options, model, model_version, contexts };
     session.options.usage = session.options.usage ?? { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 };
@@ -452,39 +514,52 @@ export class ChatController {
     result.data = { ...session.toJSON(), type: newtype };
     return result;
   }
-  // @Post('/:id/')
-  // @OpenAPI({ summary: 'Update properties of a chat session identified by the id' })
-  // @Authorized(['chat.write.self'])
-  // async updateChatSession(
-  //   @Param('id') id: string,
-  //   @CurrentUser() currentUser: UserEntity,
-  //   @BodyParam('name') name_param?: string,
-  //   @BodyParam('group') group_param?: string,
-  //   @BodyParam('type') type_param?: string,
-  //   @BodyParam('path') path_param?: string,
-  // ) {
-  //   if (!currentUser) throw new HttpException(403, 'Unauthorized');
+  @Post('/:id/favourite')
+  @OpenAPI({ summary: 'Share or unshare a chat session identified by the id' })
+  @Authorized(['chat.write.self'])
+  async favouriteChatSession(@Param('id') id: string, @CurrentUser() currentUser: UserEntity, @BodyParam('status') status = false) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
-  //   const repo = AppDataSource.getRepository(ChatSessionEntity);
+    try {
+      const repo = AppDataSource.getRepository(ChatSessionEntity);
 
-  //   const session = await repo.findOne({
-  //     where: {
-  //       id,
-  //       userid: currentUser.email,
-  //     },
-  //   });
-  //   if (!session) return;
+      const session = await repo.findOne({
+        where: {
+          id,
+        },
+      });
+      if (!session) return new HttpError(404);
 
-  //   //TODO: validate parameters
-  //   if (name_param) session.name = name_param;
-  //   if (group_param) session.group = group_param;
+      const userdatarepo = AppDataSource.getRepository(UserDataEntity);
+      const exfavdata = await userdatarepo.findOne({
+        where: {
+          key: ChatController.CHATFAVOURITEKEY,
+          userid: currentUser.id,
+          value: JSON.stringify(id),
+        },
+      });
 
-  //   // if (path) session.name = path;
+      if (exfavdata) {
+        logger.debug(exfavdata.toJSON());
+        if (status) return 'ok';
+        await exfavdata.remove();
+        return 'ok';
+      }
 
-  //   await session.save();
-
-  //   const result = new APIResponse<IChatSession>();
-  //   result.data = session.toJSON();
-  //   return result;
-  // }
+      if (status) {
+        logger.debug(`creating new favourite ${id} for user ${currentUser.email}`);
+        const favdata = await UserDataEntity.create({
+          userid: currentUser.id,
+          key: ChatController.CHATFAVOURITEKEY,
+          value: id,
+          timestamp: new Date(),
+        }).save();
+        await favdata.save();
+        logger.debug(favdata.toJSON());
+      }
+      return { data: 'ok' };
+    } catch (err) {
+      console.log(err);
+    }
+  }
 }

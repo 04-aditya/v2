@@ -62,6 +62,27 @@ export function useChatSession(id?: string) {
   return {...query, mutation, invalidateCache};
 }
 
+export function useChatSessionFavourite(id?: string) {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, id||'-1','favourite'];
+  const query = useQuery<boolean, AxiosError>(keys, async ()=>{
+    const res = await axios.get(`${CHATAPI}/${id}/favourite`);
+    return res.data.data ? true : false;
+  },{
+    enabled: !!axios && id !== undefined,
+    staleTime:  60 * 60 * 1000 // 1 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  const mutation = useMutation(async (data: boolean) => {
+    const res = await axios.post(`${CHATAPI}/${id}/favourite`, {status: data});
+    return res.data.data;
+  });
+  return {...query, mutation, invalidateCache};
+}
+
 export function useChatStats(type='user') {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();

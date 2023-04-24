@@ -2,7 +2,7 @@
 import React, { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { FixedSizeList, ListChildComponentProps } from "react-window";
 import InfiniteLoader from "react-window-infinite-loader";
-import { useChatHistory, useChatSession } from "../api/chat";
+import { useChatHistory, useChatModels, useChatSession, useChatSessionFavourite } from "../api/chat";
 import { IChatSession } from "sharedtypes";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import { Alert, Avatar, Box, Button, Divider, Fade, LinearProgress, List, ListItem, ListItemAvatar, ListItemButton, ListItemText, Paper, Stack, Typography } from "@mui/material";
@@ -24,6 +24,7 @@ export class ChatSessionListProps {
 }
 
 export function ChatSessions(props: ChatSessionListProps) {
+  const {data:models} = useChatModels(); // preload
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
   // Array of items loaded so far.
@@ -163,6 +164,7 @@ export function SessionSummary(props: {sessionid?: string, session?:IChatSession
   const axios = useAxiosPrivate();
   const {data: session,mutation, error, isLoading, invalidateCache} = useChatSession(props.sessionid);
   const [isDeleted, setIsDeleted] = useState(false);
+  const {data:isFavourite, mutation:favMutation, invalidateCache: favInvalidateCache} = useChatSessionFavourite(session?.id);
   const navigate = useNavigate();
 
   const deleteSession = useCallback(() => {
@@ -175,7 +177,15 @@ export function SessionSummary(props: {sessionid?: string, session?:IChatSession
   },[axios, session?.id]);
 
   const toggleFavourite = useCallback(() => {
-  },[]);
+    if (!session) return;
+    favMutation.mutateAsync(!isFavourite)
+      .then(() => {
+        favInvalidateCache();
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  },[favInvalidateCache, favMutation, isFavourite, session]);
 
   const toggleSharing = useCallback((e:any) => {
     e.preventDefault();
@@ -208,7 +218,7 @@ export function SessionSummary(props: {sessionid?: string, session?:IChatSession
       <Stack direction="row" display={'flex'} justifyContent="end" alignItems={'flex-end'} spacing={1} sx={{ width: '100%' }}>
         <Typography variant="caption" sx={{ flexGrow: 1, color: 'text.secondary' }}>{formatDistanceToNow(parseJSON(session.updatedAt), { addSuffix: true })}</Typography>
         <IconButton aria-label="toggle favourite" size="small" onClick={toggleFavourite} disabled={isDeleted}>
-          {session.type === 'f' ? <FavoriteIcon fontSize="inherit" color="secondary" /> : <FavoriteBorderIcon fontSize="inherit" />}
+          {isFavourite ? <FavoriteIcon fontSize="inherit" color="secondary" /> : <FavoriteBorderIcon fontSize="inherit" />}
         </IconButton>
         <IconButton aria-label="toggle sharing" size="small" onClick={toggleSharing} disabled={isDeleted}>
           {session.type === 'public' ? <ShareIcon fontSize="inherit" color="info" /> : <ShareIcon fontSize="inherit" />}
