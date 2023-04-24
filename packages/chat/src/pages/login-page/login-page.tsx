@@ -105,8 +105,15 @@ export function LoginPage(props: LoginPageProps) {
                 <Button autoFocus onClick={()=>{setAcceptTerms(false); handleCloseTermsDialog()}}>
                   Disagree
                 </Button>
-                <Button onClick={()=>{setAcceptTerms(true); handleCloseTermsDialog()}} autoFocus>
-                  Agree
+                <Button
+                  href={`${process.env['NX_API_URL']}/auth/login?redirect_url=${from}`}
+                  disabled={busy}
+                  variant="contained"
+                  color='primary'
+                  sx={{color:'white'}}
+                  startIcon={<KeyIcon />}
+                >
+                  Agree &amp; Login
                 </Button>
               </DialogActions>
             </Dialog>
