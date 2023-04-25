@@ -24,7 +24,7 @@ export interface IModelOptions {
   contexts: string[],
 }
 
-export const DefaultModelOptions: IModelOptions = {model:'gpt35-turbo', contexts:new Array<string>(), assistant: systemMessages[0].message};
+export const DefaultModelOptions: IModelOptions = {model:'gpt35turbo', contexts:new Array<string>(), assistant: systemMessages[0].message};
 
 interface IModelOptionsProps {
   options: IModelOptions,
@@ -70,49 +70,55 @@ export function ModelOptions(props: IModelOptionsProps) {
   const availableContexts = availableModels.find(m=>m.id===model)?.contexts||[];
   return <Grid container sx={{ml:-1, mt:0.5}}>
   <Grid item xs={12} sm={3} sx={{pr:1}}>
-    <FormControl sx={{ m: 1}} fullWidth>
-      <InputLabel htmlFor="model-select">Model</InputLabel>
-      <Select id="model-select" label="Model" size='small'
-        value={model}
-        onChange={handleModelChange}
-      >
-        <ListSubheader>Standard</ListSubheader>
-        {(chatModels?.data||[]).filter(m=>m.group==='Standard').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
-        <ListSubheader>Custom</ListSubheader>
-        {(chatModels?.data||[]).filter(m=>m.group==='Custom').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
-      </Select>
-    </FormControl>
+    <Tooltip arrow title='LLM model'>
+      <FormControl sx={{ m: 1}} fullWidth>
+        <InputLabel htmlFor="model-select">Model</InputLabel>
+        <Select id="model-select" label="Model" size='small'
+          value={model}
+          onChange={handleModelChange}
+        >
+          <ListSubheader>Standard</ListSubheader>
+          {(chatModels?.data||[]).filter(m=>m.group==='Standard').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
+          <ListSubheader>Custom</ListSubheader>
+          {(chatModels?.data||[]).filter(m=>m.group==='Custom').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+    </Tooltip>
   </Grid>
   <Grid item xs={12} sm={6} sx={{pr:1}}>
-    <FormControl sx={{ m: 1}} fullWidth>
-      <InputLabel htmlFor="assistant-select">Act as</InputLabel>
-      <Select id="assistant-select" label="Act as" size='small'
-        value={assistant}
-        onChange={handleAssistantChange}
-      >
-        {systemMessages.map((m,i)=>(m.name==='divider')?<Divider key={i}/>:<MenuItem key={i} value={m.message}>{m.name}</MenuItem>)}
-      </Select>
-    </FormControl>
+    <Tooltip arrow title='Initial prompt'>
+      <FormControl sx={{ m: 1}} fullWidth>
+        <InputLabel htmlFor="assistant-select">Act as</InputLabel>
+        <Select id="assistant-select" label="Act as" size='small'
+          value={assistant}
+          onChange={handleAssistantChange}
+        >
+          {systemMessages.map((m,i)=>(m.name==='divider')?<Divider key={i}/>:<MenuItem key={i} value={m.message}>{m.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+    </Tooltip>
   </Grid>
   <Grid item xs={12} sm={3}>
-    <FormControl sx={{ m: 1}} fullWidth disabled={availableContexts.length===0}>
-      <InputLabel htmlFor="contexts-select-label">Additional Context</InputLabel>
-      <Select<string[]> id="contexts-select" labelId="contexts-select-label" label="Additional Contexts" size='small'
-        multiple
-        input={<OutlinedInput label="Tag" />}
-        value={contexts}
-        renderValue={(selected) => selected.join(', ')}
-        onChange={handleContextChange}
-        MenuProps={MenuProps}
-      >
-        {
-          availableContexts.map(c=> <MenuItem key={c.id} value={c.id}>
-            <Checkbox checked={contexts.indexOf(c.id) > -1} />
-            <ListItemText primary={c.name} />
-          </MenuItem>)
-        }
-      </Select>
-    </FormControl>
+    <Tooltip arrow title='Context to the LLM from selected contexts, to give specific context for the of conversation'>
+      <FormControl sx={{ m: 1}} fullWidth disabled={availableContexts.length===0}>
+        <InputLabel htmlFor="contexts-select-label">Additional Context</InputLabel>
+        <Select<string[]> id="contexts-select" labelId="contexts-select-label" label="Additional Contexts" size='small'
+          multiple
+          input={<OutlinedInput label="Tag" />}
+          value={contexts}
+          renderValue={(selected) => selected.join(', ')}
+          onChange={handleContextChange}
+          MenuProps={MenuProps}
+        >
+          {
+            availableContexts.map(c=> <MenuItem key={c.id} value={c.id}>
+              <Checkbox checked={contexts.indexOf(c.id) > -1} />
+              <ListItemText primary={c.name} />
+            </MenuItem>)
+          }
+        </Select>
+      </FormControl>
+    </Tooltip>
   </Grid>
 </Grid>
 }

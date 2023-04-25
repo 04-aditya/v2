@@ -1,5 +1,5 @@
 import { useState, ChangeEvent, useEffect, useCallback } from 'react';
-import { Alert, Box, CircularProgress, Divider, Fade, InputBase, Paper, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, Divider, Fade, InputBase, Paper, Tooltip, Typography } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
 // import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 // import SettingsIcon from '@mui/icons-material/Settings';
@@ -13,6 +13,7 @@ import { Steps, Hints } from "intro.js-react";
 import useSpeechToText from 'react-hook-speech-to-text';
 import { DefaultModelOptions, IModelOptions, ModelOptions } from './ModelOptions';
 import { IModelParameters, ModelParameters } from './ModelParameters';
+import React from 'react';
 interface ChatTextFieldProps {
   sessionid?: string;
   message?: string;
@@ -201,7 +202,13 @@ export function ChatTextField(props: ChatTextFieldProps) {
         <DisplaySettingsIcon color={showParameters?'primary':'inherit'} />
       </IconButton>
       <Box sx={{position:'absolute', right:96, bottom:0}}>
-        <Typography variant='caption' color='secondary'><small>{msgTokens}/4000</small></Typography>
+        <Tooltip arrow title={<React.Fragment>
+            <Typography color="inherit" variant="caption">Tokens can be thought of as pieces of words. Before the API processes the prompts, the input is broken down into tokens.</Typography>
+            <a style={{color:"inherit"}}
+              href='https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them'>read more about token here...</a>
+          </React.Fragment>}>
+          <Typography variant='caption' color='secondary'><small>{msgTokens}/4000</small></Typography>
+        </Tooltip>
       </Box>
     </Paper>
     {showOptions && <ModelOptions options={options} onChange={handleOptionsChange}/>}
