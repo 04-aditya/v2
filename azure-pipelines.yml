@@ -128,6 +128,15 @@ stages:
               arguments: '-k $(System.ArtifactsDirectory)/manifests -n $(Build.SourceBranchName)'
               secretType: 'dockerRegistry'
               containerRegistryType: 'Azure Container Registry'
+          - task: Kubernetes@1
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
+              namespace: '$(Build.SourceBranchName)'
+              command: 'apply'
+              arguments: '-f $(System.ArtifactsDirectory)/manifests/buildtag.yaml -n $(Build.SourceBranchName)'
+              secretType: 'dockerRegistry'
+              containerRegistryType: 'Azure Container Registry'
 # - script: |
 #     pwd
 #     echo Add other tasks to build, test, and deploy your project.
