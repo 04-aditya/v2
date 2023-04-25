@@ -53,7 +53,7 @@ export function useChatSession(id?: string) {
     staleTime:  60 * 60 * 1000 // 1 minute
   });
   const invalidateCache = ()=>{
-    queryClient.invalidateQueries(keys);
+    queryClient.invalidateQueries({queryKey: keys});
   }
   const mutation = useMutation(async (data: unknown) => {
     const res = await axios.post(`${CHATAPI}/`, data);

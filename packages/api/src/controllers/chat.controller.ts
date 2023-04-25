@@ -109,7 +109,8 @@ export class ChatController {
         });
       }
     } catch (ex) {
-      console.error(ex);
+      logger.error(ex);
+      bodhiModel.enabled = false;
     }
 
     const result = new APIResponse<IChatModel[]>();
@@ -137,24 +138,47 @@ export class ChatController {
   @Get('/history')
   @Authorized(['chat.read'])
   @OpenAPI({ summary: 'Return the chat history of the current user' })
-  async getChatHistory(@CurrentUser() currentUser: UserEntity, @QueryParam('offset') offset = 0, @QueryParam('limit') limit = 10) {
+  async getChatHistory(
+    @CurrentUser() currentUser: UserEntity,
+    @QueryParam('offset') offset = 0,
+    @QueryParam('limit') limit = 10,
+    @QueryParam('type') type:string = 'private',
+  ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
+    if (type === 'favourite') {
+      return await this.getChatFavourites(currentUser, offset, limit);
+    }
     const result = new APIResponse<IChatSession[]>();
     result.data = [];
 
     const repo = AppDataSource.getRepository(ChatSessionEntity);
 
-    const sessions: ChatSessionEntity[] = await repo.find({
-      where: {
-        userid: currentUser.email,
-      },
-      order: {
-        updatedAt: 'desc',
-      },
-      skip: offset,
-      take: limit,
-    });
+    let sessions: ChatSessionEntity[];
+
+    if (type === 'public') {
+      sessions = await repo.find({
+        where: {
+          type: 'public',
+        },
+        order: {
+          updatedAt: 'desc',
+        },
+        skip: offset,
+        take: limit,
+      });
+    } else {
+      sessions = await repo.find({
+        where: {
+          userid: currentUser.email,
+        },
+        order: {
+          updatedAt: 'desc',
+        },
+        skip: offset,
+        take: limit,
+      });
+    }
 
     sessions.forEach(s => result.data.push(s.toJSON()));
 
@@ -198,12 +222,40 @@ export class ChatController {
     const result = new APIResponse<Array<{ id: string; timestamp: Date }>>();
     result.data = [];
 
+    logger.debug('fetching favourites');
     const repo = AppDataSource.getRepository(UserDataEntity);
 
     const dataset = await repo.find({
       where: {
-        userid: currentUser.email,
+        userid: currentUser.id,
         key: ChatController.CHATFAVOURITEKEY,
+      },
+      order: {
+        timestamp: 'desc',
+      },
+      skip: offset,
+      take: limit,
+    });
+    dataset.forEach((s: UserDataEntity) => result.data.push({ id: s.value as string, timestamp: s.timestamp }));
+
+    return result;
+  }
+
+  @Get('/public')
+  @OpenAPI({ summary: 'Return the chat sessions that are shared' })
+  async getSharedChatSessions(@CurrentUser() currentUser: UserEntity, @QueryParam('offset') offset = 0, @QueryParam('limit') limit = 10) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+
+    const result = new APIResponse<Array<{ id: string; timestamp: Date }>>();
+    result.data = [];
+
+    logger.debug('fetching public chats');
+    const repo = AppDataSource.getRepository(UserDataEntity);
+
+    const dataset = await repo.find({
+      where: {
+        userid: currentUser.id,
+        type: 'public',
       },
       order: {
         timestamp: 'desc',

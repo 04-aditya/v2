@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Box, Card, Divider, Grid, Paper, Stack, Typography, alpha } from '@mui/material';
 import styles from './home-page.module.css';
 import { ChatTextField } from '../../components/ChatTextField';
-import ChatSessionList from '../../components/ChatSessionList';
+import ChatSessionList, { ChatSessions } from '../../components/ChatSessionList';
 import ForumIcon from '@mui/icons-material/Forum';
 import ChatStatsList from '../../components/StatsList';
 
@@ -25,16 +25,16 @@ export function HomePage() {
       <Grid container spacing={2} sx={{justifyContent:'center',p:1, px:2, flexGrow:1,my:2}} className={'scrollbarv'} >
         <Grid item xs={12} sm={12} md={4}>
           <Paper sx={{width:'100%', height:'100%', p:1}} elevation={4}>
-            <Typography variant='button' color='primary'>Examples</Typography>
+            <Typography variant='button' color='primary'>Shared</Typography>
             <Divider/>
-
+            <ChatSessions type='public' icon={<ForumIcon sx={{color:'#999'}}/>}/>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={12} md={4}>
           <Paper sx={{width:'100%', minHeight:200, height:'100%', p:1}} elevation={4}>
             <Typography variant='button' color='secondary'>Favourites</Typography>
             <Divider/>
-            <ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>
+            <ChatSessions type='favourite' icon={<ForumIcon sx={{color:'#999'}}/>}/>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={12} md={4}>
