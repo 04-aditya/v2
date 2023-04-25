@@ -24,7 +24,7 @@ export interface IModelOptions {
   contexts: string[],
 }
 
-export const DefaultModelOptions: IModelOptions = {model:'gpt35-turbo-test', contexts:new Array<string>(), assistant: systemMessages[0].message};
+export const DefaultModelOptions: IModelOptions = {model:'gpt35-turbo', contexts:new Array<string>(), assistant: systemMessages[0].message};
 
 interface IModelOptionsProps {
   options: IModelOptions,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-inferrable-types */
 import { APIResponse, IChatSession, IChatMessage, IChatModel } from '@sharedtypes';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
@@ -142,7 +143,7 @@ export class ChatController {
     @CurrentUser() currentUser: UserEntity,
     @QueryParam('offset') offset = 0,
     @QueryParam('limit') limit = 10,
-    @QueryParam('type') type:string = 'private',
+    @QueryParam('type') type: string = 'private',
   ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -294,11 +295,10 @@ export class ChatController {
           value: JSON.stringify(id),
         },
       });
-      console.log(exfavdata);
 
       return new APIResponse<boolean>(exfavdata ? true : false);
     } catch (ex) {
-      console.log(ex);
+      logger.debug(ex);
     }
   }
 

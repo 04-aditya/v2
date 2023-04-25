@@ -3,3 +3,4 @@ bases:
 patchesStrategicMerge:
 - set_replicas.yaml
 - set_memory.yaml
+- horizontalautoscaler.yaml
