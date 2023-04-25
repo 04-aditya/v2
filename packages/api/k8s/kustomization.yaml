@@ -2,7 +2,7 @@ namePrefix: psni-api-
 commonLabels:
   app: api
   ENV: BRANCH
-bases:
+resources:
 - ./BRANCH
 images:
 - name: app-image

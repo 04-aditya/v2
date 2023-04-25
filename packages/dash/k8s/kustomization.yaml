@@ -2,7 +2,7 @@ namePrefix: psni-dash-
 commonLabels:
   app: dash
   ENV: BRANCH
-bases:
+resources:
 - ./BRANCH
 images:
 - name: app-image

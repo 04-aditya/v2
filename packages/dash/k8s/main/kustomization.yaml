@@ -1,4 +1,4 @@
-bases:
+resources:
 - ../base
 patchesStrategicMerge:
 - set_replicas.yaml

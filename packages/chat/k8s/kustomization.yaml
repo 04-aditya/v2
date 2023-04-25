@@ -2,7 +2,7 @@ namePrefix: psni-chat-
 commonLabels:
   app: chat
   ENV: BRANCH
-bases:
+resources:
 - ./BRANCH
 images:
 - name: app-image
