@@ -9,7 +9,8 @@
       "options": {
         "commands": [
           "cat ./.env.template > ./packages/chat/.env.local",
-          "echo NX_APP_NAME=PSChat >> ./packages/chat/.env.local"
+          "echo NX_APP_NAME=PSChat >> ./packages/chat/.env.local",
+          "cat ./packages/chat/.env.local"
         ],
         "parallel": false,
         "forwardAllArgs": false

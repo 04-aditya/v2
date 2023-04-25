@@ -8,8 +8,9 @@
       "executor": "nx:run-commands",
       "options": {
         "commands": [
-          "cat ./.env.template > ./packages/chat/.env.local",
-          "echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local"
+          "cat ./.env.template > ./packages/dash/.env.local",
+          "echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local",
+          "cat ./packages/dash/.env.local"
         ],
         "parallel": false,
         "forwardAllArgs": false
