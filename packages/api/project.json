@@ -4,6 +4,18 @@
   "sourceRoot": "packages/api/src",
   "projectType": "application",
   "targets": {
+    "updateversion": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion)",
+          "echo NX_BUILD_DATE=$(date)",
+          "echo NX_APP_NAME=PSNextAPI"
+        ],
+        "parallel": false,
+        "forwardAllArgs": false
+      }
+    },
     "build": {
       "executor": "@nrwl/webpack:webpack",
       "outputs": ["{options.outputPath}"],
