@@ -373,7 +373,7 @@ export class ChatController {
     @BodyParam('name') name_param?: string,
     @BodyParam('group') group_param?: string,
     @BodyParam('type') type_param?: string,
-    @BodyParam('messageid') messageid_param?: string,
+    @BodyParam('messageid') messageid_param?: number,
     @BodyParam('model') model_param?: string,
     @BodyParam('assistant') assistant_param?: string,
     @BodyParam('contexts') contexts_param?: string[],
@@ -387,15 +387,20 @@ export class ChatController {
 
     const message = message_param;
 
-    const session = sessionid_param
-      ? await repo.findOne({
-          where: {
-            id: sessionid_param,
-            userid: currentUser.email,
-          },
-          relations: ['messages'],
-        })
-      : new ChatSessionEntity();
+    let session = new ChatSessionEntity();
+
+    if (sessionid_param) {
+      session = await repo.findOne({
+        where: {
+          id: sessionid_param,
+        },
+        relations: ['messages'],
+      });
+
+      if (!session) throw new HttpError(404);
+
+      if (session.userid !== currentUser.email) throw new HttpError(403);
+    }
 
     //TODO: validate
     if (name_param) session.name = name_param;
@@ -426,7 +431,7 @@ export class ChatController {
     }
 
     const model = model_param || (sessionid_param ? session.options.model : 'gpt35turbo');
-    const model_version = model_version_param || (sessionid_param ? session.options.model_version : process.env['AZ_OPENAI_VERSION']).split(',')[0];
+    const model_version = model_version_param || (sessionid_param ? session.options.model_version : process.env['AZ_OPENAI_VERSION'].split(',')[0]);
     const contexts = contexts_param || (sessionid_param ? session.options.contexts : []);
     session.options = { ...session.options, model, model_version, contexts };
     session.options.usage = session.options.usage ?? { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 };
@@ -500,9 +505,11 @@ export class ChatController {
     assistantMessage.content = response.data.choices[0].message.content;
     messages.push(assistantMessage);
     if (response.data.usage) {
-      session.options.usage.total_tokens += response.data.usage.total_tokens;
-      session.options.usage.prompt_tokens += response.data.usage.prompt_tokens;
-      session.options.usage.completion_tokens += response.data.usage.completion_tokens;
+      const options: any = session.options;
+      options.usage.total_tokens += response.data.usage.total_tokens;
+      options.usage.prompt_tokens += response.data.usage.prompt_tokens;
+      options.usage.completion_tokens += response.data.usage.completion_tokens;
+      session.options = options;
     }
     await AppDataSource.getRepository(ChatMessageEntity).save(messages);
     session.messages = messages;

@@ -47,7 +47,7 @@ export function AboutDialog() {
             <TermsNotice/>
             <br/><br/><br/>
             <Typography variant="caption">for any queries,
-              please contact <a href="mailto:rakesh.ravuri@publicissapient.com">mailto:rakesh.ravuri@publicissapient.com</a>
+              please contact <a href="mailto:psnextsupport@publicissapient.com">mailto:psnextsupport@publicissapient.com</a>
             </Typography>
             <br />
             <Typography variant="caption">

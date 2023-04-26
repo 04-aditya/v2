@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, Avatar, Box, FormControl, Grid, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, TextField, Toolbar, Typography, alpha } from '@mui/material';
+import { Alert, AlertTitle, AppBar, Avatar, Box, FormControl, Grid, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, TextField, Toolbar, Typography, alpha } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
@@ -111,24 +111,26 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
       {isError && <Alert severity='error'>{error.response?.status===404?'Not Found':error.message}</Alert>}
       {session?(
         <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
-          {/* <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
-          </Toolbar> */}
+          <AppBar position='static' sx={{backgroundColor:'transparent'}} elevation={0}>
+            <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
+              <Grid container sx={{mb:0.5}}>
+                <Grid item xs={12} sm={9} sx={{pl:3}}>
+                    <ContentEditable
+                      className="editable"
+                      style={{display:'flex', height:'100%', width:'100%', alignItems:'center', fontSize:'1.5em', fontWeight:'bold' }}
+                      tagName="div"
+                      html={sessionName} // innerHTML of the editable divble edition
+                      onChange={handleSessionNameChange} // handle innerHTML change
+                      onBlur={handleUpdateSessionName}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField label='Group' value={sessionGroup} onChange={handleSessionGroupChange} fullWidth size='small'/>
+                </Grid>
+              </Grid>
+            </Toolbar>
+          </AppBar>
           <Box sx={{flexGrow:1, pt:1}} className="scrollbarv">
-            <Grid container sx={{mb:0.5}}>
-              <Grid item xs={12} sm={9} sx={{pl:3}}>
-                  <ContentEditable
-                    className="editable"
-                    style={{display:'flex', height:'100%', width:'100%', alignItems:'center', fontSize:'1.5em', fontWeight:'bold' }}
-                    tagName="div"
-                    html={sessionName} // innerHTML of the editable divble edition
-                    onChange={handleSessionNameChange} // handle innerHTML change
-                    onBlur={handleUpdateSessionName}
-                  />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField label='Group' value={sessionGroup} onChange={handleSessionGroupChange} fullWidth size='small'/>
-              </Grid>
-            </Grid>
             {messages.map((m,idx)=>( idx===0?(
               <Alert key={idx} severity='info' sx={{mb:1, mx:{xs:0, sm:3}}}>
                 <AlertTitle>Chat Model initial instruction</AlertTitle>
