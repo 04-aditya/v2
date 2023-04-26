@@ -99,7 +99,7 @@ export function ModelOptions(props: IModelOptionsProps) {
     </Tooltip>
   </Grid>
   <Grid item xs={12} sm={3}>
-    <Tooltip arrow title='Context to the LLM from selected contexts, to give specific context for the of conversation'>
+    <Tooltip arrow placement="left" title='Context to the LLM from selected contexts, to give specific context for the of conversation'>
       <FormControl sx={{ m: 1}} fullWidth disabled={availableContexts.length===0}>
         <InputLabel htmlFor="contexts-select-label">Additional Context</InputLabel>
         <Select<string[]> id="contexts-select" labelId="contexts-select-label" label="Additional Contexts" size='small'
