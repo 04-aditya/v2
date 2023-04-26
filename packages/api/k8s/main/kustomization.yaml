@@ -1,5 +1,6 @@
 resources:
 - ../base
+- horizontalautoscaler.yaml
 patchesStrategicMerge:
 - set_replicas.yaml
 - set_memory.yaml
