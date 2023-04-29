@@ -16,7 +16,7 @@ export interface IChatSession {
   createdAt: Date;
   updatedAt: Date;
   messages: Array<IChatMessage>;
-  options?: Record<string, unknown>;
+  options?: Record<string, any>;
   // {
   //   model: string,
   //   model_version: string,
@@ -33,10 +33,16 @@ export interface IChatModel {
   name: string;
   group: string;
   enabled: boolean;
+  tools: {
+    id: string;
+    name: string;
+    description: string;
+  }[],
   contexts: {
     id: string;
     name: string;
     description: string;
     enabled: boolean;
-  }[]
+  }[],
+  call?: (input: {role:string, content: string}[], options?: Record<string, unknown>) => Promise<{ content: string } & Record<string, any>>;
 }

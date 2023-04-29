@@ -166,7 +166,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
     <Hints enabled={introState.hintsEnabled} hints={introState.hints} />
     {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
     {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
-
+    <div id="finalMessage" aria-live="polite" role="status" className="sr-only" aria-hidden="false"></div>
     <Paper className='chat-message-field'
       component="div"
       sx={theme=>({ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%', backgroundColor: theme.palette.background.default, position:'relative' })}

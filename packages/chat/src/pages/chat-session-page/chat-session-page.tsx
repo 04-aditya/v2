@@ -34,7 +34,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
       if (session.messages.length>2 && typeMode) {
         const msgs = session.messages.slice(0,-1);
         const lastmsg = session.messages[session.messages.length-1];
-        console.log(lastmsg.content);
+        // console.log(lastmsg.content);
         const words = lastmsg.content.split(' ');
         //merge consecutive spaces into one word
         for (let i=0; i<words.length-1; i++) {
@@ -44,7 +44,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
             i--;
           }
         }
-        console.log(words);
+        // console.log(words);
         lastmsg.content='';
         setMessages([...msgs,lastmsg]);
         const intervalHandle = setInterval(()=>{
@@ -54,12 +54,20 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
             setMessages([...msgs,lastmsg]);
             return;
           }
+          const srelem = global.window.document.querySelector('#finalMessage');
+          if (srelem) {
+            srelem.textContent=lastmsg.content;
+          }
           clearInterval(intervalHandle);
           setTypeMode(false);
         }, 50);
         return ()=>clearInterval(intervalHandle);
       } else {
         setMessages(session.messages);
+        const srelem = global.window.document.querySelector('#finalMessage');
+        if (srelem && session.messages.length>0) {
+          srelem.textContent=session.messages[session.messages.length-1].content;
+        }
       }
     } else {
       setMessages([]);
@@ -130,13 +138,14 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
               </Grid>
             </Toolbar>
           </AppBar>
-          <Box sx={{flexGrow:1, pt:1}} className="scrollbarv">
+          <Box sx={{flexGrow:1, pt:1}} className="scrollbarv" tabIndex={0}>
             {messages.map((m,idx)=>( idx===0?(
               <Alert key={idx} severity='info' sx={{mb:1, mx:{xs:0, sm:3}}}>
                 <AlertTitle>Chat Model initial instruction</AlertTitle>
                 <p>{m.content}</p>
               </Alert>
             ):<MessageItem key={m.id} message={m}/>))}
+            <EndofChatMessagesBlock lastMsgLength={messages.length>0?messages[messages.length-1].content.length:0}/>
           </Box>
           <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
         </Box>
@@ -147,48 +156,40 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
 
 export default ChatSessionPage;
 
+function EndofChatMessagesBlock(props:{lastMsgLength:number}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [props.lastMsgLength]);
+
+  return <div ref={ref} style={{minHeight:16}}>
+  </div>
+}
+
+function CodeContent(args:any) {
+  const {mode} = useTheme();
+  const {node, inline, className, children, ...props} = args;
+  const match = /language-(\w+)/.exec(className || '')
+  return !inline && match ? (
+    <SyntaxHighlighter
+      {...props}
+      children={String(children).replace(/\n$/, '')}
+      style={mode==='dark'?okaidia:coy}
+      language={match[1]}
+      PreTag="div"
+    />
+  ) : (
+    <code {...props} className={className}>
+      {children}
+    </code>
+  )
+}
 
 function MessageContent(props: { message:IChatMessage}) {
-  const {mode} = useTheme();
   const {message:m} = props;
   const isUser = m.role==='user';
-
-  const darkCode=(args:any) => {
-    const {node, inline, className, children, ...props} = args;
-    const match = /language-(\w+)/.exec(className || '')
-    return !inline && match ? (
-      <SyntaxHighlighter
-        {...props}
-        children={String(children).replace(/\n$/, '')}
-        style={okaidia}
-        language={match[1]}
-        PreTag="div"
-      />
-    ) : (
-      <code {...props} className={className}>
-        {children}
-      </code>
-    )
-  };
-
-  const lightCode=(args:any) => {
-    const {node, inline, className, children, ...props} = args;
-    const match = /language-(\w+)/.exec(className || '')
-    return !inline && match ? (
-      <SyntaxHighlighter
-        {...props}
-        children={String(children).replace(/\n$/, '')}
-        style={coy}
-        language={match[1]}
-        PreTag="div"
-      />
-    ) : (
-      <code {...props} className={className}>
-        {children}
-      </code>
-    )
-  };
-
   return <Paper sx={(theme)=>({px:1, border:'0px solid gray', overflow:'auto',
     ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
     borderRadius: 1,
@@ -196,28 +197,18 @@ function MessageContent(props: { message:IChatMessage}) {
     borderColor:(isUser?theme.palette.primary.light:theme.palette.secondary.light),
     backgroundColor: isUser?theme.palette.background.default:theme.palette.background.paper,
   })}>
-    {mode==='light' ? <ReactMarkdown children={m.content} className='message-content'
+    <ReactMarkdown children={m.content} className='message-content'
       remarkPlugins={[gfm]}
       components={{
-        code: lightCode,
+        code: CodeContent,
       }}
-    />:<ReactMarkdown children={m.content} className='message-content'
-    remarkPlugins={[gfm]}
-    components={{
-      code: darkCode,
-    }}
-  />}
+    />
 </Paper>
 }
 function MessageItem(props: { message:IChatMessage }) {
   const {message:m} = props;
   const ref = useRef<HTMLDivElement>(null);
   const isUser = m.role==='user';
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    }
-  }, [props.message.content]);
 
   return (
     <div ref={ref}>

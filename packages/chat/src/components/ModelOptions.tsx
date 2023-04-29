@@ -81,6 +81,11 @@ export function ModelOptions(props: IModelOptionsProps) {
           {(chatModels?.data||[]).filter(m=>m.group==='Standard').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
           <ListSubheader>Custom</ListSubheader>
           {(chatModels?.data||[]).filter(m=>m.group==='Custom').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
+          <ListSubheader>Experimental</ListSubheader>
+          {(chatModels?.data||[]).filter(m=>m.group==='Experimental').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
+          <ListSubheader>Open Source</ListSubheader>
+          {(chatModels?.data||[]).filter(m=>m.group==='Open Source').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
+
         </Select>
       </FormControl>
     </Tooltip>

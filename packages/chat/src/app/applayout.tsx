@@ -30,7 +30,7 @@ import {formatDistanceToNow, parseJSON} from 'date-fns';
 import useAuth from "psnapi/useAuth";
 import ChatSessionList, { ChatSessions } from "../components/ChatSessionList";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
-import LogoutButton from "../../../shared/ui/src/components/LogoutButton";
+import LogoutButton from "sharedui/components/LogoutButton";
 import { AboutDialog } from "../components/AboutDialog";
 
 const drawerWidth = 280;

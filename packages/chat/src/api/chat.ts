@@ -83,12 +83,12 @@ export function useChatSessionFavourite(id?: string) {
   return {...query, mutation, invalidateCache};
 }
 
-export function useChatStats(type='user') {
+export function useChatStats(type='user', offset=0, limit=10) {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY, 'stats', type];
+  const keys = [CACHEKEY, 'stats', type, offset, limit];
   const query = useQuery<Array<any>, AxiosError>(keys, async ()=>{
-    const res = await axios.get(`${CHATAPI}/stats?type=${type}`);
+    const res = await axios.get(`${CHATAPI}/stats?type=${type}&offset=${offset}&limit=${limit}`);
     return res.data.data as Array<any>;
   },{
     enabled: !!axios,

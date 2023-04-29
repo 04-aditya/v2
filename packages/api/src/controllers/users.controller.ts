@@ -119,6 +119,16 @@ export class UsersController {
     return result;
   }
 
+  @Get('/:id/photo')
+  @OpenAPI({ summary: 'Return user photo matched by the `id`' })
+  @Authorized(['user.read'])
+  async getUserPhotoById(@Param('id') userId: string, @CurrentUser() currentUser: UserEntity) {
+    const result = new APIResponse<IUser>();
+    if (userId === '-1') return result;
+    const matchedUser = await this.getUser(userId, currentUser);
+    return matchedUser.photo;
+  }
+
   @Get('/:id/data')
   async getUserData(
     @Param('id') userId: string,

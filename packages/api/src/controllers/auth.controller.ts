@@ -282,7 +282,7 @@ export class AuthController {
     currentUser.accessTokens = newAccessTokenArray.join(',');
     // Saving refreshToken with current user
     currentUser.refreshTokens = newRefreshTokenArray.join(',');
-    currentUser.adtokens = null;
+    // currentUser.adtokens = null;
     await currentUser.save();
     // const redirect_uri = returnUrl || req.protocol + '://' + req.headers['host'] + '/';
     // return redirect_uri;
@@ -328,20 +328,7 @@ export class AuthController {
     const client_id = CLID;
     // const client_secret = CLIS;
 
-    try {
-      const or = await axios.get(OPENID_CONFIG_URL);
-      console.log(or.data);
-      if (or.status !== 200) {
-        console.error(`unable to get openid configuration from ${OPENID_CONFIG_URL} \n ${or.status} - ${or.data}`);
-        throw new HttpError(500, `Unable to get openid configuration from ${OPENID_CONFIG_URL}`);
-      }
-
-      OAuthConfig = or.data;
-      logger.debug(`fetched openid config from ${OPENID_CONFIG_URL}`);
-    } catch (ex) {
-      logger.error(`unable to get openid configuration from ${OPENID_CONFIG_URL} \n ${ex}`);
-      throw new HttpError(500, `Unable to get openid configuration from ${OPENID_CONFIG_URL}`);
-    }
+    await getOAuthConfig();
     const scopes = [...(qscopes || '').split(','), ...OAuthConfig.scopes_supported].join('%20');
     logger.info(`login for scopes: ${scopes}`);
 
@@ -402,7 +389,8 @@ export class AuthController {
       }
 
       const tokenData = tokenResponse.data;
-      // logger.debug(tokenResponse.data);
+      tokenData.expires_at = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+      logger.debug(tokenResponse.data);
 
       const userInfoResponse = await axios.get(OAuthConfig.userinfo_endpoint, {
         headers: {
@@ -493,3 +481,120 @@ export class AuthController {
     }
   }
 }
+
+export async function checkADTokens(user: UserEntity) {
+  const adtokens: any = JSON.stringify(user.adtokens) || {};
+  if (!adtokens.access_token) return false;
+
+  if (new Date(adtokens.expires_at) > new Date()) return true;
+
+  // try {
+  //   const graphResponse = await axios.get(`https://graph.microsoft.com/v1.0/me/photos/48x48/$value`, {
+  //     headers: {
+  //       Authorization: `Bearer ${adtokens.access_token}`,
+  //     },
+  //     responseType: 'arraybuffer',
+  //   });
+  //   if (graphResponse.status === 200) {
+  //     const photo = graphResponse.data;
+  //     const photoBase64 = photo.toString('base64');
+  //     user.photo = `data:${graphResponse.headers['content-type']};base64,${photoBase64}`;
+  //     await user.save();
+  //     return true;
+  //   }
+  // } catch (ex) {
+  //   logger.debug(ex);
+  // }
+  user.adtokens = JSON.stringify(await refreshADTokens(adtokens));
+  await user.save();
+  return true;
+}
+
+export async function refreshADTokens(adtokens: any) {
+  if (!OAuthConfig) {
+    await getOAuthConfig();
+  }
+  const scopes = [...OAuthConfig.scopes_supported].join('%20');
+  const tokenResponse = await axios.post(
+    `${OAuthConfig.token_endpoint}`,
+    qs.stringify({
+      client_id: CLID,
+      grant_type: 'refresh_token',
+      scope: scopes,
+      refresh_token: adtokens.refresh_token,
+      // client_secret: CLIS,
+    }),
+  );
+
+  if (tokenResponse.status !== 200) {
+    logger.error({ status: tokenResponse.status, data: tokenResponse.data });
+    throw new Error('Invalid response from the token endpoint.');
+  }
+
+  const tokenData = tokenResponse.data;
+  logger.debug(tokenResponse.data);
+  return tokenData;
+}
+
+export async function getOAuthConfig() {
+  try {
+    const or = await axios.get(OPENID_CONFIG_URL);
+    console.log(or.data);
+    if (or.status !== 200) {
+      console.error(`unable to get openid configuration from ${OPENID_CONFIG_URL} \n ${or.status} - ${or.data}`);
+      throw new HttpError(500, `Unable to get openid configuration from ${OPENID_CONFIG_URL}`);
+    }
+
+    OAuthConfig = or.data;
+    logger.debug(`fetched openid config from ${OPENID_CONFIG_URL}`);
+    return OAuthConfig;
+  } catch (ex) {
+    logger.error(`unable to get openid configuration from ${OPENID_CONFIG_URL} \n ${ex}`);
+    throw new HttpError(500, `Unable to get openid configuration from ${OPENID_CONFIG_URL}`);
+  }
+}
+// {
+//   token_endpoint: 'https://login.microsoftonline.com/d52c9ea1-7c21-47b1-82a3-33a74b1f74b8/oauth2/v2.0/token',
+//   token_endpoint_auth_methods_supported: [ 'client_secret_post', 'private_key_jwt', 'client_secret_basic' ],
+//   jwks_uri: 'https://login.microsoftonline.com/d52c9ea1-7c21-47b1-82a3-33a74b1f74b8/discovery/v2.0/keys',
+//   response_modes_supported: [ 'query', 'fragment', 'form_post' ],
+//   subject_types_supported: [ 'pairwise' ],
+//   id_token_signing_alg_values_supported: [ 'RS256' ],
+//   response_types_supported: [ 'code', 'id_token', 'code id_token', 'id_token token' ],
+//   scopes_supported: [ 'openid', 'profile', 'email', 'offline_access' ],
+//   issuer: 'https://login.microsoftonline.com/d52c9ea1-7c21-47b1-82a3-33a74b1f74b8/v2.0',
+//   request_uri_parameter_supported: false,
+//   userinfo_endpoint: 'https://graph.microsoft.com/oidc/userinfo',
+//   authorization_endpoint: 'https://login.microsoftonline.com/d52c9ea1-7c21-47b1-82a3-33a74b1f74b8/oauth2/v2.0/authorize',
+//   device_authorization_endpoint: 'https://login.microsoftonline.com/d52c9ea1-7c21-47b1-82a3-33a74b1f74b8/oauth2/v2.0/devicecode',
+//   http_logout_supported: true,
+//   frontchannel_logout_supported: true,
+//   end_session_endpoint: 'https://login.microsoftonline.com/d52c9ea1-7c21-47b1-82a3-33a74b1f74b8/oauth2/v2.0/logout',
+//   claims_supported: [
+//     'sub',
+//     'iss',
+//     'cloud_instance_name',
+//     'cloud_instance_host_name',
+//     'cloud_graph_host_name',
+//     'msgraph_host',
+//     'aud',
+//     'exp',
+//     'iat',
+//     'auth_time',
+//     'acr',
+//     'nonce',
+//     'preferred_username',
+//     'name',
+//     'tid',
+//     'ver',
+//     'at_hash',
+//     'c_hash',
+//     'email'
+//   ],
+//   kerberos_endpoint: 'https://login.microsoftonline.com/d52c9ea1-7c21-47b1-82a3-33a74b1f74b8/kerberos',
+//   tenant_region_scope: 'NA',
+//   cloud_instance_name: 'microsoftonline.com',
+//   cloud_graph_host_name: 'graph.windows.net',
+//   msgraph_host: 'graph.microsoft.com',
+//   rbac_url: 'https://pas.windows.net'
+// }

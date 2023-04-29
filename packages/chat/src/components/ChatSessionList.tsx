@@ -5,7 +5,7 @@ import InfiniteLoader from "react-window-infinite-loader";
 import { useChatHistory, useChatModels, useChatSession, useChatSessionFavourite } from "../api/chat";
 import { IChatSession } from "sharedtypes";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
-import { Alert, Avatar, Box, Button, Divider, Fade, LinearProgress, List, ListItem, ListItemAvatar, ListItemButton, ListItemText, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Avatar, Box, Button, Divider, Fade, LinearProgress, List, ListItem, ListItemAvatar, ListItemButton, ListItemText, Paper, Stack, Tooltip, Typography } from "@mui/material";
 import { formatDistanceToNow, parseJSON } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import ForumIcon from '@mui/icons-material/Forum';
@@ -17,10 +17,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShareIcon from '@mui/icons-material/Share';
+import { UserAvatar } from "./StatsList";
 export class ChatSessionListProps {
   type?: string = 'private';
   icon?: ReactNode = <ForumIcon/>;
   userid?: string;
+  show?:string;
 }
 
 export function ChatSessions(props: ChatSessionListProps) {
@@ -75,7 +77,7 @@ export function ChatSessions(props: ChatSessionListProps) {
   ) : (
     <>
       {items.map((session:{id:string},i: number) => (
-        <SessionSummary key={session.id} sessionid={session.id} onDelete={()=>queryClient.invalidateQueries({ queryKey: ['chathistory'] })}/>
+        <SessionSummary key={session.id} sessionid={session.id} show={props.show} onDelete={()=>queryClient.invalidateQueries({ queryKey: ['chathistory'] })}/>
       ))}
       <div>
         <Button
@@ -94,7 +96,7 @@ export function ChatSessions(props: ChatSessionListProps) {
   )
 }
 
-export function SessionSummary(props: {sessionid?: string, session?:IChatSession, onDelete?: ()=>void}) {
+export function SessionSummary(props: {show?: string, sessionid?: string, session?:IChatSession, onDelete?: ()=>void}) {
   const axios = useAxiosPrivate();
   const {data: session,mutation, error, isLoading, invalidateCache} = useChatSession(props.sessionid);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -157,7 +159,14 @@ export function SessionSummary(props: {sessionid?: string, session?:IChatSession
     }}>
     {/* <IconButton size="small">{props.icon}</IconButton> */}
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', pl: 0.5 }}>
-      <Typography variant="body2" sx={isDeleted?{textDecoration: "line-through"}:{}} >{session.name}</Typography>
+      <Box sx={{ width: '100%' }}>
+        {(props.show||'').indexOf('user')!==-1? <Tooltip title={session.userid}>
+          <UserAvatar id={session.userid} sx={{display:'inline-block', float:'left', width:24, height:24}}/>
+        </Tooltip>:null}
+        <Typography variant="body2" sx={isDeleted?{textDecoration: "line-through"}:{}} >
+          {session.name}
+        </Typography>
+      </Box>
       <Stack direction="row" display={'flex'} justifyContent="end" alignItems={'flex-end'} spacing={1} sx={{ width: '100%' }}>
         <Typography variant="caption" sx={{ flexGrow: 1, color: 'text.secondary' }}>{formatDistanceToNow(parseJSON(session.updatedAt), { addSuffix: true })}</Typography>
         <IconButton aria-label="toggle favourite" size="small" onClick={toggleFavourite} disabled={isDeleted}>

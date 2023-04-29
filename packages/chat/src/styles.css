@@ -18,6 +18,17 @@ body {
   -moz-animation: bganimation 30s ease infinite;
   animation: bganimation 30s ease infinite; */
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
 
 @-webkit-keyframes bganimation {
   0%{background-position:9% 0%}

@@ -26,6 +26,7 @@ import { OpenAPI } from 'routing-controllers-openapi';
 import { ChatSessionEntity } from '@/entities/chatsession.entity';
 import { ChatMessageEntity } from '@/entities/chatmessage.entity';
 import { UserDataEntity } from '@/entities/userdata.entity';
+import ModelFactory from '@/models/model_factory';
 
 // import { OpenAI } from 'langchain/llms';
 // const openai = new OpenAI();
@@ -89,50 +90,13 @@ export class ChatController {
   @OpenAPI({ summary: 'Return the chat models for the current user' })
   async getChatModels(@CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
-
-    const bodhiModel: IChatModel = {
-      id: 'psbodhi',
-      name: 'PSBodhi',
-      group: 'Custom',
-      enabled: true,
-      contexts: [],
-    };
-    try {
-      const contextsResponse = await psbodhiclient.get('contexts');
-      if (contextsResponse.status === 200) {
-        contextsResponse.data.forEach((c: any) => {
-          bodhiModel.contexts.push({
-            id: c._id,
-            name: c.name,
-            description: c.description,
-            enabled: true,
-          });
-        });
-      }
-    } catch (ex) {
-      logger.error(ex);
-      bodhiModel.enabled = false;
-    }
-
     const result = new APIResponse<IChatModel[]>();
-    result.data = [];
-
-    result.data.push({
-      id: 'gpt35turbo',
-      name: 'GPT 3.5 Turbo',
-      group: 'Standard',
-      enabled: true,
-      contexts: [],
-    });
-    result.data.push({
-      id: 'gpt4-test',
-      name: 'GPT 4 (preview)',
-      group: 'Standard',
-      enabled: false,
-      contexts: [],
-    });
-    result.data.push(bodhiModel);
-
+    try {
+      result.data = [...(await ModelFactory.models()).values()];
+    } catch (ex) {
+      console.error(ex);
+      throw new HttpError(500);
+    }
     return result;
   }
 
@@ -206,8 +170,7 @@ export class ChatController {
         COUNT(*) AS count,
         SUM(cast(options::jsonb->'usage'->'total_tokens' as integer)) AS total_tokens
         FROM chatsession
-        GROUP BY userid
-        ORDER BY count desc
+        GROUP BY userid ORDER BY count desc
         LIMIT ${limit}
       `,
     );
@@ -364,9 +327,9 @@ export class ChatController {
   // }
 
   @Post('/')
-  @OpenAPI({ summary: 'Create or continue a chat session' })
+  @OpenAPI({ summary: 'Create or update/continue a chat session' })
   @Authorized(['chat.write.self'])
-  async createChatSession(
+  async createOrUpdateChatSession(
     @CurrentUser() currentUser: UserEntity,
     @BodyParam('message') message_param?: string,
     @BodyParam('id') sessionid_param?: string,
@@ -377,8 +340,7 @@ export class ChatController {
     @BodyParam('model') model_param?: string,
     @BodyParam('assistant') assistant_param?: string,
     @BodyParam('contexts') contexts_param?: string[],
-    @BodyParam('model_version') model_version_param?: string,
-    @BodyParam('parameters') parameters?: Record<string, unknown>,
+    @BodyParam('parameters') parameters?: Record<string, any>,
   ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -430,10 +392,10 @@ export class ChatController {
       session.messages = [];
     }
 
-    const model = model_param || (sessionid_param ? session.options.model : 'gpt35turbo');
-    const model_version = model_version_param || (sessionid_param ? session.options.model_version : process.env['AZ_OPENAI_VERSION'].split(',')[0]);
+    const modelid = (model_param || (sessionid_param ? session.options.model : 'gpt35turbo')) as string;
+    const model = (await ModelFactory.models()).get(modelid);
     const contexts = contexts_param || (sessionid_param ? session.options.contexts : []);
-    session.options = { ...session.options, model, model_version, contexts };
+    session.options = { ...session.options, model: modelid, contexts };
     session.options.usage = session.options.usage ?? { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 };
 
     const messages: ChatMessageEntity[] = [];
@@ -457,58 +419,30 @@ export class ChatController {
     newMessage.content = message;
     newMessage.role = 'user';
     newMessage.index = messages.length;
-    newMessage.options = { model, model_version, contexts };
+    newMessage.options = { model: modelid, contexts };
     messages.push(newMessage);
 
     const assistantMessage = new ChatMessageEntity();
     assistantMessage.role = 'assistant';
     assistantMessage.index = messages.length;
 
-    const callAPI = async () => {
-      try {
-        const reqparams = { ...(parameters || {}) };
-        reqparams.n = 1;
-        reqparams.stream = false;
-        if (model === 'psbodhi') {
-          return await psbodhiclient.post('/ask/', {
-            sessionid: session.id,
-            messages: messages.map(m => ({
-              role: m.role,
-              content: m.content,
-            })),
-            contexts,
-            model: 'IGNORED',
-            max_tokens: 0,
-            temperature: reqparams.temperature || 0,
-          });
-        } else {
-          return await getAzAPIClient().post(`chat/completions?api-version=${model_version}`, {
-            ...reqparams,
-            messages: messages.map(m => ({
-              role: m.role,
-              content: m.content,
-            })),
-          });
-        }
-      } catch (ex) {
-        console.error(ex);
-        const ar = ex as AxiosError;
-        if (ar) {
-          console.log(ar.response?.data);
-          throw new HttpError(500, 'Unable to create/continue chat session');
-        }
-      }
+    const options: Record<string, any> = {
+      n: 1,
+      stream: false,
+      sessionid: session.id,
+      contexts,
+      ...(parameters || {}),
     };
-    const response: AxiosResponse = await callAPI();
-    logger.debug(response.data);
-    logger.debug(response.data.choices[0].message);
-    assistantMessage.content = response.data.choices[0].message.content;
+
+    const response = await model.call(messages, options);
+    logger.debug(response);
+    assistantMessage.content = response.content;
     messages.push(assistantMessage);
-    if (response.data.usage) {
+    if (response.usage) {
       const options: any = session.options;
-      options.usage.total_tokens += response.data.usage.total_tokens;
-      options.usage.prompt_tokens += response.data.usage.prompt_tokens;
-      options.usage.completion_tokens += response.data.usage.completion_tokens;
+      options.usage.total_tokens += response.usage.total_tokens;
+      options.usage.prompt_tokens += response.usage.prompt_tokens;
+      options.usage.completion_tokens += response.usage.completion_tokens;
       session.options = options;
     }
     await AppDataSource.getRepository(ChatMessageEntity).save(messages);
