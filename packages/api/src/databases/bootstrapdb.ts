@@ -79,7 +79,7 @@ const defaultRoles = [
   {
     name: 'admin',
     description: 'master admin role.',
-    includedRoleNames: ['default', 'user.admin', 'usergroup.admin'],
+    includedRoleNames: ['default', 'user.admin', 'usergroup.admin', 'chat.admin'],
     permissions: ['roles.read.all', 'roles.write.all', 'permissions.read.all', 'permissions.write.all', 'config.write.all'],
   },
 ];

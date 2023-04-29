@@ -26,8 +26,8 @@ export function UserAvatar(props: {id: string | number, sx?: SxProps}) {
     return <Avatar src={photo} alt={`user(${props.id}) photo`} sx={props.sx || {width:32, height:32}}/>;
   }
   return <Box sx={props.sx}>
-    <AccountCircle color='primary'/>;
-  </Box>
+    <AccountCircle color='inherit'/>
+  </Box>;
 }
 export class ChatStatsListProps {
   type?: string = 'user';

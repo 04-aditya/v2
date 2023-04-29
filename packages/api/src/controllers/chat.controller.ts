@@ -20,6 +20,7 @@ import {
   HttpError,
   Param,
   QueryParam,
+  Req,
 } from 'routing-controllers';
 import { Not, MoreThan, Equal, And } from 'typeorm';
 import { OpenAPI } from 'routing-controllers-openapi';
@@ -27,6 +28,7 @@ import { ChatSessionEntity } from '@/entities/chatsession.entity';
 import { ChatMessageEntity } from '@/entities/chatmessage.entity';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import ModelFactory from '@/models/model_factory';
+import { RequestWithUser } from '@/interfaces/auth.interface';
 
 // import { OpenAI } from 'langchain/llms';
 // const openai = new OpenAI();
@@ -328,9 +330,10 @@ export class ChatController {
 
   @Post('/')
   @OpenAPI({ summary: 'Create or update/continue a chat session' })
-  @Authorized(['chat.write.self'])
+  @Authorized(['chat.write'])
   async createOrUpdateChatSession(
     @CurrentUser() currentUser: UserEntity,
+    @Req() req: RequestWithUser,
     @BodyParam('message') message_param?: string,
     @BodyParam('id') sessionid_param?: string,
     @BodyParam('name') name_param?: string,
@@ -361,7 +364,11 @@ export class ChatController {
 
       if (!session) throw new HttpError(404);
 
-      if (session.userid !== currentUser.email) throw new HttpError(403);
+      if (session.userid !== currentUser.email) {
+        if (req.permissions.indexOf('chat.write.all') === -1) {
+          throw new HttpError(403);
+        }
+      }
     }
 
     //TODO: validate
