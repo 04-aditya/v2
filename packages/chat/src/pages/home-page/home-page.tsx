@@ -27,7 +27,7 @@ export function HomePage() {
           <Paper sx={{p:1, display:'flex', flexDirection:'column'}} elevation={4}>
             <Typography variant='button' color='primary'>Shared</Typography>
             <Divider sx={{mb:1}}/>
-            <ChatSessions type='private' show={'user'} icon={<ForumIcon sx={{color:'#999'}}/>}/>
+            <ChatSessions type='public' show={'user'} icon={<ForumIcon sx={{color:'#999'}}/>}/>
           </Paper>
         </Grid>
         <Grid item xs={12} sm={12} md={4} sx={{display:'flex'}}>
