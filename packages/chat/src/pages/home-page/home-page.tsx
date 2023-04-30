@@ -23,24 +23,24 @@ export function HomePage() {
       </Box>
 
       <Grid container spacing={2} sx={{justifyContent:'center',p:1, px:2, flexGrow:1,my:2}} className={'scrollbarv'} >
-        <Grid item xs={12} sm={12} md={4}>
-          <Paper sx={{width:'100%', height:'100%', p:1}} elevation={4}>
+        <Grid item xs={12} sm={12} md={4} sx={{display:'flex'}}>
+          <Paper sx={{p:1, display:'flex', flexDirection:'column'}} elevation={4}>
             <Typography variant='button' color='primary'>Shared</Typography>
-            <Divider/>
-            <ChatSessions type='public' show={'user'} icon={<ForumIcon sx={{color:'#999'}}/>}/>
+            <Divider sx={{mb:1}}/>
+            <ChatSessions type='private' show={'user'} icon={<ForumIcon sx={{color:'#999'}}/>}/>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={12} md={4}>
-          <Paper sx={{width:'100%', minHeight:200, height:'100%', p:1}} elevation={4}>
+        <Grid item xs={12} sm={12} md={4} sx={{display:'flex'}}>
+          <Paper sx={{width:'100%', minHeight:200, height:'100%', p:1, display:'flex', flexDirection:'column'}} elevation={4}>
             <Typography variant='button' color='secondary'>Favourites</Typography>
-            <Divider/>
+            <Divider sx={{mb:1}}/>
             <ChatSessions type='favourite' icon={<ForumIcon sx={{color:'#999'}}/>}/>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={12} md={4}>
-          <Paper sx={{width:'100%', height:'100%', p:1}} elevation={4}>
+        <Grid item xs={12} sm={12} md={4} sx={{display:'flex'}}>
+          <Paper sx={{width:'100%', height:'100%', p:1, display:'flex', flexDirection:'column'}} elevation={4}>
             <Typography variant='button' color='success'>Stats</Typography>
-            <Divider/>
+            <Divider sx={{mb:1}}/>
             <ChatStatsList/>
           </Paper>
         </Grid>

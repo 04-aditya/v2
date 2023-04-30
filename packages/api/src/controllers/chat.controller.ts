@@ -439,11 +439,17 @@ export class ChatController {
       sessionid: session.id,
       contexts,
       ...(parameters || {}),
+      user: currentUser,
     };
 
+    const inputMessages = messages.map(m => m.toJSON());
+    inputMessages[0].content +=
+      `\n Your name is PSChat a LLM powered chatbot developed by publicis sapient's engineers.` +
+      `The forntend was developed in React and the backend in NodeJS and Python.`;
     const response = await model.call(messages, options);
     logger.debug(response);
     assistantMessage.content = response.content;
+    assistantMessage.options = response.options || {};
     messages.push(assistantMessage);
     if (response.usage) {
       const options: any = session.options;

@@ -4,7 +4,7 @@ export interface IChatMessage {
   role: 'user' | 'system' | 'assistant';
   content: string;
   index: number;
-  options?: Record<string, unknown>;
+  options?: Record<string, any>;
 };
 export interface IChatSession {
   id: string;

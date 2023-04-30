@@ -6,6 +6,7 @@ import { AzureChatModel } from './AzureChatModel';
 import { PSBodhiChatModel } from './PSBodhiChatModel';
 import { AutoGPTChatModel } from './AutoGPTChatModel';
 import { BasicAgentChatModel } from './BasicAgentChatModel';
+import { NODE_ENV } from '@/config';
 
 const psbodhiclient = axios.create({
   baseURL: process.env['PSBODHI_URL'],
@@ -58,7 +59,9 @@ export default class ModelFactory {
     //   tools: [],
     // });
 
-    // models.push(new BasicAgentChatModel());
+    if (NODE_ENV !== 'production') {
+      models.push(new BasicAgentChatModel());
+    }
 
     models.forEach(m => ModelFactory._models.set(m.id, m));
 

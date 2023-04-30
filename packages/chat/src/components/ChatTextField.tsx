@@ -99,7 +99,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
   },[results, setResults, isRecording])
   const handleNewMessageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const msg = e.target.value;
-    if (msg.length<2000) {
+    if (msg.length<10000) {
       setErrorMessage(undefined);
       setNewMessage(msg);
       //https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them

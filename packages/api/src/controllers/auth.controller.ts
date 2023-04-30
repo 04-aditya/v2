@@ -160,6 +160,8 @@ export class AuthController {
     // Saving refreshToken with current user
     foundUser.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
     await foundUser.save();
+    //check and update adtokens asyncronoursly as needed
+    checkADTokens(foundUser);
 
     // Creates Secure Cookie with refresh token
     res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });

@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, AppBar, Avatar, Box, FormControl, Grid, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, TextField, Toolbar, Typography, alpha } from '@mui/material';
+import { Alert, AlertTitle, AppBar, Avatar, Box, Button, Dialog, DialogContent, DialogTitle, Divider, FormControl, Grid, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
@@ -12,7 +12,7 @@ import { IChatMessage, IChatSession } from 'sharedtypes';
 import { useEffect, useRef, useState, useMemo, ChangeEvent, useCallback } from 'react';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
-import { useTheme } from 'sharedui/theme';
+import { useTheme as useThemeMode } from 'sharedui/theme';
 import ContentEditable from "react-contenteditable";
 
 /* eslint-disable-next-line */
@@ -169,9 +169,14 @@ function EndofChatMessagesBlock(props:{lastMsgLength:number}) {
 }
 
 function CodeContent(args:any) {
-  const {mode} = useTheme();
+  const {mode} = useThemeMode();
   const {node, inline, className, children, ...props} = args;
   const match = /language-(\w+)/.exec(className || '')
+  if (className==='language-llm-observation') {
+    return <Box sx={{p:1, backgroundColor:'#e8e8e8'}}>
+      <Typography variant='body2'>{children}</Typography>
+    </Box>
+  }
   return !inline && match ? (
     <SyntaxHighlighter
       {...props}
@@ -180,16 +185,42 @@ function CodeContent(args:any) {
       language={match[1]}
       PreTag="div"
     />
-  ) : (
+  ) : (<>
+    {className}
     <code {...props} className={className}>
       {children}
     </code>
+    </>
   )
+}
+
+function PreContent(args:any) {
+  const {node, inline, className, children, ...props} = args;
+  if (className==='language-llm-observation') {
+    return <Box sx={{p:1, backgroundColor:'#e8e8e8'}}>
+      <Typography variant='body2'>{children}</Typography>
+    </Box>
+  }
+  return <pre {...props} className={className}>
+    {children}
+  </pre>
 }
 
 function MessageContent(props: { message:IChatMessage}) {
   const {message:m} = props;
+  const [openReasoning, setOpenReasoning] = useState(false);
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+
+  const handleClickOpen = () => {
+    setOpenReasoning(true);
+  };
+
+  const handleClose = () => {
+    setOpenReasoning(false);
+  };
   const isUser = m.role==='user';
+  const followup_questions = m.options?.followup_questions as string[] || [];
   return <Paper sx={(theme)=>({px:1, border:'0px solid gray', overflow:'auto',
     ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
     borderRadius: 1,
@@ -197,12 +228,38 @@ function MessageContent(props: { message:IChatMessage}) {
     borderColor:(isUser?theme.palette.primary.light:theme.palette.secondary.light),
     backgroundColor: isUser?theme.palette.background.default:theme.palette.background.paper,
   })}>
+    { followup_questions.length > 0 ? <>
+        <Typography variant='body1'>Need more information to further refine my answer.</Typography>
+        <ul>
+          {followup_questions.map((q:string,i:number)=><li key={i}>{q}</li>)}
+        </ul>
+      </>: null}
     <ReactMarkdown children={m.content} className='message-content'
       remarkPlugins={[gfm]}
       components={{
         code: CodeContent,
+        b: (props:any) => <strong>{props.children}</strong>,
       }}
     />
+    {m.options?.intermediate_content ? <>
+      <Button size='small' onClick={handleClickOpen}>
+        show reasoning
+      </Button>
+      <Dialog
+        fullScreen={fullScreen}
+        open={openReasoning}
+        onClose={handleClose}
+        aria-labelledby="reasoning-dialog-title"
+      >
+        <DialogTitle id="reasoning-dialog-title">
+          {"Intermediate reasoning..."}
+        </DialogTitle>
+        <DialogContent>
+          <ReactMarkdown children={m.options.intermediate_content as string} className='message-content'/>
+        </DialogContent>
+      </Dialog>
+    </>: null}
+
 </Paper>
 }
 function MessageItem(props: { message:IChatMessage }) {

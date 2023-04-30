@@ -75,7 +75,7 @@ export function ChatSessions(props: ChatSessionListProps) {
   ) : error ? (
     <Alert severity="error">Unable to load the chat sessions.</Alert>
   ) : (
-    <>
+    <Box sx={{display:'flex', flexDirection:'column'}} className="scrollbarv">
       {items.map((session:{id:string},i: number) => (
         <SessionSummary key={session.id} sessionid={session.id} show={props.show} onDelete={()=>queryClient.invalidateQueries({ queryKey: ['chathistory'] })}/>
       ))}
@@ -92,7 +92,7 @@ export function ChatSessions(props: ChatSessionListProps) {
         </Button>
       </div>
       <div>{isFetching && !isFetchingNextPage ? 'Fetching...' : null}</div>
-    </>
+    </Box>
   )
 }
 
@@ -164,7 +164,7 @@ export function SessionSummary(props: {show?: string, sessionid?: string, sessio
           <UserAvatar id={session.userid} sx={{display:'inline-block', float:'left', width:24, height:24}}/>
         </Tooltip>:null}
         <Typography variant="body2" sx={isDeleted?{textDecoration: "line-through"}:{}} >
-          {session.name}
+          &nbsp;{session.name}
         </Typography>
       </Box>
       <Stack direction="row" display={'flex'} justifyContent="end" alignItems={'flex-end'} spacing={1} sx={{ width: '100%' }}>
