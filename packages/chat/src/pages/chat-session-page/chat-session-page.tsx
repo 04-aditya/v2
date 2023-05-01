@@ -235,6 +235,7 @@ function MessageContent(props: { message:IChatMessage}) {
         </ul>
       </>: null}
     <ReactMarkdown children={m.content} className='message-content'
+      skipHtml={false}
       remarkPlugins={[gfm]}
       components={{
         code: CodeContent,

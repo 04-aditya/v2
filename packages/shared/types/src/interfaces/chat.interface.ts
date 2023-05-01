@@ -5,6 +5,8 @@ export interface IChatMessage {
   content: string;
   index: number;
   options?: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
 };
 export interface IChatSession {
   id: string;

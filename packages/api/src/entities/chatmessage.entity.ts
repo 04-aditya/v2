@@ -1,6 +1,7 @@
 import { IChatMessage } from '@sharedtypes';
-import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { ChatSessionEntity } from './chatsession.entity';
+import { th } from 'date-fns/locale';
 
 @Entity({ name: 'chatmessage' })
 export class ChatMessageEntity extends BaseEntity implements IChatMessage {
@@ -22,6 +23,14 @@ export class ChatMessageEntity extends BaseEntity implements IChatMessage {
   @ManyToOne(() => ChatSessionEntity, session => session.messages)
   session: ChatSessionEntity;
 
+  @Column()
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date;
+
+  @Column()
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
+
   toJSON(): IChatMessage {
     return {
       id: this.id,
@@ -29,6 +38,8 @@ export class ChatMessageEntity extends BaseEntity implements IChatMessage {
       content: this.content,
       options: this.options,
       index: this.index,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
     };
   }
 }
