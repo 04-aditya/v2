@@ -4,7 +4,7 @@
 # https://aka.ms/yaml
 
 trigger:
-- $(ns)
+- dev
 
 variables:
   envName: psnextv2
