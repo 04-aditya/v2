@@ -18,16 +18,16 @@ stages:
     pool:
       vmImage: $(vmImageName)
     steps:
-    - task: Cache@2
-      displayName: Cache 'node_modules' folder
-      inputs:
-        key: 'packagecache-dev'
-        path: 'node_modules'
-    - task: Cache@2
-      displayName: Cache 'dist' folder
-      inputs:
-        key: 'distcache-dev'
-        path: 'dist'
+#    - task: Cache@2
+#      displayName: Cache 'node_modules' folder
+#      inputs:
+#        key: 'packagecache-dev'
+#        path: 'node_modules'
+#    - task: Cache@2
+#      displayName: Cache 'dist' folder
+#      inputs:
+#        key: 'distcache-dev'
+#        path: 'dist'
 #     - task: Kubernetes@1
 #       name: GetBuildTag
 #       inputs:
@@ -44,14 +44,14 @@ stages:
 #         LAST_BUILD_COMMIT_SHA=$(cat LAST_BUILD_COMMIT_SHA)
 #         echo last build $(cat LAST_BUILD_COMMIT_SHA)
 #       displayName: Set Last build tag
-#     - task: NodeTool@0
-#       displayName: 'Ensure node 18.x'
-#       inputs:
-#         versionSpec: '18.x'
-#     - script: |
-#         npm i -g nx
-#         npm i --legacy-peer-deps
-#       displayName: 'Install modules'
+     - task: NodeTool@0
+       displayName: 'Ensure node 18.x'
+       inputs:
+         versionSpec: '18.x'
+     - script: |
+         npm i -g nx
+         npm i --legacy-peer-deps
+       displayName: 'Install modules'
 #     - script: |
 #         git fetch --depth=20
 #         git log --pretty=oneline
