@@ -181,7 +181,7 @@ function EndofChatMessagesBlock(props:{complete: boolean}) {
 
 function CodeContent(args:any) {
   const {mode} = useThemeMode();
-  const {node, inline, className, children, ...props} = args;
+  const {node, inline, className, children, partial, ...props} = args;
   const match = /language-(\w+)/.exec(className || '');
 
   useEffect(()=>{
@@ -189,19 +189,19 @@ function CodeContent(args:any) {
   },[mode]);
 
   useLayoutEffect(()=>{
-    if (className==='language-mermaid') {
+    if (className==='language-mermaid' && !partial) {
       const mermaid: any = (global.window as any).mermaid;
       mermaid.contentLoaded();
       mermaid.run();
     }
-  },[className]);
+  },[className, partial]);
 
   if (className === 'language-llm-observation') {
     return <Box sx={{p:1, backgroundColor:'#e8e8e8'}}>
       <Typography variant='body2'>{children}</Typography>
     </Box>
   }
-  if (className === 'language-mermaid') {
+  if (className === 'language-mermaid' && !partial) {
     return <Grid container>
       <Grid item xs={12} sm={6}>
         <pre className='mermaid'>
@@ -217,7 +217,7 @@ function CodeContent(args:any) {
       </pre>
       </Grid>
       <Grid item xs={12} sm={6}>
-        <pre style={{}}>{children}</pre>
+        <pre>{children}</pre>
       </Grid>
     </Grid>
   }
@@ -241,13 +241,14 @@ function CodeContent(args:any) {
 
 const csscolor = new RegExp(/[#]([a-fA-F\d]{6}|[a-fA-F\d]{3})/gi);
 function MarkDown(props:any) {
+  const partial = props.partial;
   let text = props.children as string;
   text = text.replace(csscolor, '`#$1`');
   return <ReactMarkdown children={text} className='message-content'
     skipHtml={false}
     remarkPlugins={[gfm]}
     components={{
-      code: (props)=><CodeContent {...props}/>,
+      code: (props)=><CodeContent {...props} partial={partial}/>,
     }}
     rehypePlugins={[
       rehypeRaw,
@@ -285,7 +286,7 @@ function MessageContent(props: { message:IChatMessage}) {
           {followup_questions.map((q:string,i:number)=><li key={i}>{q}</li>)}
         </ul>
       </>: null}
-    <MarkDown children={m.content}/>
+    <MarkDown children={m.content} partial={m.partial}/>
     {m.options?.intermediate_content ? <>
       <Button size='small' onClick={handleClickOpen}>
         show reasoning
