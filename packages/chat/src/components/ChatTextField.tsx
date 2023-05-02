@@ -71,10 +71,12 @@ export function ChatTextField(props: ChatTextFieldProps) {
   });
 
   useEffect (()=>{
+    console.log('useEffect: '+__filename);
     setNewMessage(props.message||'');
   },[props.message]);
 
   useEffect(()=>{
+    console.log('useEffect: '+__filename);
     if (chatsession) {
       //setIntroState(prev=>({...prev, stepsEnabled: true}));
       if (chatsession.options) {
@@ -87,16 +89,18 @@ export function ChatTextField(props: ChatTextFieldProps) {
     }
   }, [chatsession])
 
-  useEffect(()=>{
-    if (!isRecording) {
-      setNewMessage(msg=>{
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const newMsg = msg + results.map((r: any)=>r.transcript+' ').join('\n');
-        setResults([]);
-        return newMsg;
-      });
-    }
-  },[results, setResults, isRecording])
+  // useEffect(()=>{
+  //   console.log('useEffect: '+__filename);
+  //   if (!isRecording) {
+  //     setNewMessage(msg=>{
+  //       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  //       const newMsg = msg + results.map((r: any)=>r.transcript+' ').join('\n');
+  //       setResults([]);
+  //       return newMsg;
+  //     });
+  //   }
+  // },[results, setResults, isRecording])
+
   const handleNewMessageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const msg = e.target.value;
     if (msg.length<10000) {
@@ -187,11 +191,11 @@ export function ChatTextField(props: ChatTextFieldProps) {
         onKeyUp={handleMessageKeyUp}
         disabled={isBusy}
       />
-      {!speechError ? <IconButton sx={{ p: '10px' }} aria-label="settings" disabled={isBusy}
+      {/* {!speechError ? <IconButton sx={{ p: '10px' }} aria-label="settings" disabled={isBusy}
         onMouseDown={()=>{startSpeechToText();}}
         onMouseUp={handleStopSpeaking}>
         <MicIcon color={isRecording?'secondary':'inherit'}/>
-      </IconButton> : null}
+      </IconButton> : null} */}
       {isBusy?<CircularProgress/>:(
       <IconButton sx={{ p: '10px' }} color={newMessage !== '' ? 'primary' : 'inherit'} disabled={newMessage === ''}
         aria-label="send message" onClick={onSend}>

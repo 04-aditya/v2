@@ -14,6 +14,9 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 import { useTheme as useThemeMode } from 'sharedui/theme';
 import ContentEditable from "react-contenteditable";
+import rehypeRaw from "rehype-raw";
+import rehypeColorChips from 'rehype-color-chips';
+import rehypeExternalLinks from 'rehype-external-links';
 
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
@@ -145,7 +148,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
                 <p>{m.content}</p>
               </Alert>
             ):<MessageItem key={m.id} message={m}/>))}
-            <EndofChatMessagesBlock lastMsgLength={messages.length>0?messages[messages.length-1].content.length:0}/>
+            <EndofChatMessagesBlock key={messages.length} lastMsgLength={messages.length>0?messages[messages.length-1].content.length:0}/>
           </Box>
           <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
         </Box>
@@ -162,7 +165,7 @@ function EndofChatMessagesBlock(props:{lastMsgLength:number}) {
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [props.lastMsgLength]);
+  }, []);
 
   return <div ref={ref} style={{minHeight:16}}>
   </div>
@@ -206,6 +209,33 @@ function PreContent(args:any) {
   </pre>
 }
 
+const csscolor = new RegExp(/[#]([a-fA-F\d]{6}|[a-fA-F\d]{3})/gi);
+function MarkDown(props:any) {
+  let text = props.children as string;
+  text = text.replace(csscolor, '`#$1`');
+  // const matches = csscolor.exec(text);
+  // if (matches){
+  //   for (let i=0; i < matches.length; i++) {
+  //     const match =matches[i];
+  //     const color = match[0];
+  //     // text = text.replace(color, `<span class="color-chip" style="background-color: ${color}"></span>${color}`);
+  //     text = match.replace(color, `\`${color}\``);
+  //   }
+  // }
+  return <ReactMarkdown children={text} className='message-content'
+    skipHtml={false}
+    remarkPlugins={[gfm]}
+    components={{
+      code: CodeContent,
+    }}
+    rehypePlugins={[
+      rehypeRaw,
+      [rehypeExternalLinks, {rel: ['nofollow']}],
+      [rehypeColorChips, { customClassName: 'color-chip' }]
+    ]}
+  />
+}
+
 function MessageContent(props: { message:IChatMessage}) {
   const {message:m} = props;
   const [openReasoning, setOpenReasoning] = useState(false);
@@ -234,14 +264,7 @@ function MessageContent(props: { message:IChatMessage}) {
           {followup_questions.map((q:string,i:number)=><li key={i}>{q}</li>)}
         </ul>
       </>: null}
-    <ReactMarkdown children={m.content} className='message-content'
-      skipHtml={false}
-      remarkPlugins={[gfm]}
-      components={{
-        code: CodeContent,
-        b: (props:any) => <strong>{props.children}</strong>,
-      }}
-    />
+    <MarkDown children={m.content}/>
     {m.options?.intermediate_content ? <>
       <Button size='small' onClick={handleClickOpen}>
         show reasoning
@@ -256,7 +279,7 @@ function MessageContent(props: { message:IChatMessage}) {
           {"Intermediate reasoning..."}
         </DialogTitle>
         <DialogContent>
-          <ReactMarkdown children={m.options.intermediate_content as string} className='message-content'/>
+          <MarkDown children={m.options.intermediate_content}/>
         </DialogContent>
       </Dialog>
     </>: null}

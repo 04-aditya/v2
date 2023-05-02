@@ -54,6 +54,7 @@ export function ChatSessions(props: ChatSessionListProps) {
   })
 
   useEffect(()=>{
+    console.log('useEffect: '+__filename);
     const newItems: {id:string}[] = [];
     data?.pages.forEach((group)=>{ group.forEach((item:{id:string})=>{newItems.push(item)})});
     setItems(newItems);
@@ -160,9 +161,8 @@ export function SessionSummary(props: {show?: string, sessionid?: string, sessio
     {/* <IconButton size="small">{props.icon}</IconButton> */}
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', pl: 0.5 }}>
       <Box sx={{ width: '100%' }}>
-        {(props.show||'').indexOf('user')!==-1? <Tooltip title={session.userid}>
-          <UserAvatar id={session.userid} sx={{display:'inline-block', float:'left', width:24, height:24}}/>
-        </Tooltip>:null}
+        {(props.show||'').indexOf('user')!==-1? <UserAvatar
+          id={session.userid} sx={{display:'inline-block', float:'left', width:24, height:24}}/>:null}
         <Typography variant="body2" sx={isDeleted?{textDecoration: "line-through"}:{}} >
           &nbsp;{session.name}
         </Typography>
