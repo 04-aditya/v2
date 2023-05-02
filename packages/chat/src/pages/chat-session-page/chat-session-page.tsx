@@ -9,7 +9,7 @@ import { ChatTextField } from '../../components/ChatTextField';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter'
 import {dark, coy, okaidia} from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { IChatMessage, IChatSession } from 'sharedtypes';
-import { useEffect, useRef, useState, useMemo, ChangeEvent, useCallback } from 'react';
+import { useEffect, useRef, useState, ChangeEvent, useCallback, useLayoutEffect } from 'react';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 import { useTheme as useThemeMode } from 'sharedui/theme';
@@ -37,6 +37,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
       if (session.messages.length>2 && typeMode) {
         const msgs = session.messages.slice(0,-1);
         const lastmsg = session.messages[session.messages.length-1];
+        lastmsg.partial = true;
         // console.log(lastmsg.content);
         const words = lastmsg.content.split(' ');
         //merge consecutive spaces into one word
@@ -63,6 +64,8 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
           }
           clearInterval(intervalHandle);
           setTypeMode(false);
+          lastmsg.partial = false;
+          setMessages([...msgs,lastmsg]);
         }, 50);
         return ()=>clearInterval(intervalHandle);
       } else {
@@ -76,6 +79,11 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
       setMessages([]);
     }
   }, [session, typeMode]);
+
+  // useLayoutEffect(()=>{
+  //   console.log('useLayoutEffect ' + __filename);
+  //   mermaid.contentLoaded();
+  // },[]);
 
   const handleSessionUpdate = (session: IChatSession) => {
     setTypeMode(true);
@@ -147,8 +155,8 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
                 <AlertTitle>Chat Model initial instruction</AlertTitle>
                 <p>{m.content}</p>
               </Alert>
-            ):<MessageItem key={m.id} message={m}/>))}
-            <EndofChatMessagesBlock key={messages.length} lastMsgLength={messages.length>0?messages[messages.length-1].content.length:0}/>
+            ):<MessageItem key={m.id} message={m} />))}
+            <EndofChatMessagesBlock key={messages.length} complete={!typeMode}/>
           </Box>
           <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
         </Box>
@@ -159,7 +167,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
 
 export default ChatSessionPage;
 
-function EndofChatMessagesBlock(props:{lastMsgLength:number}) {
+function EndofChatMessagesBlock(props:{complete: boolean}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (ref.current) {
@@ -167,19 +175,53 @@ function EndofChatMessagesBlock(props:{lastMsgLength:number}) {
     }
   }, []);
 
-  return <div ref={ref} style={{minHeight:16}}>
+  return <div ref={ref} style={{minHeight:props.complete?16:48}}>
   </div>
 }
 
 function CodeContent(args:any) {
   const {mode} = useThemeMode();
   const {node, inline, className, children, ...props} = args;
-  const match = /language-(\w+)/.exec(className || '')
-  if (className==='language-llm-observation') {
+  const match = /language-(\w+)/.exec(className || '');
+
+  useEffect(()=>{
+    console.log(mode);
+  },[mode]);
+
+  useLayoutEffect(()=>{
+    if (className==='language-mermaid') {
+      const mermaid: any = (global.window as any).mermaid;
+      mermaid.contentLoaded();
+      mermaid.run();
+    }
+  },[className]);
+
+  if (className === 'language-llm-observation') {
     return <Box sx={{p:1, backgroundColor:'#e8e8e8'}}>
       <Typography variant='body2'>{children}</Typography>
     </Box>
   }
+  if (className === 'language-mermaid') {
+    return <Grid container>
+      <Grid item xs={12} sm={6}>
+        <pre className='mermaid'>
+        {`%%{
+  init: {
+    'theme': ${mode === 'dark' ? 'dark' : 'default'}
+  }
+}%%
+
+`}
+
+        {children}
+      </pre>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <pre style={{}}>{children}</pre>
+      </Grid>
+    </Grid>
+  }
+
   return !inline && match ? (
     <SyntaxHighlighter
       {...props}
@@ -197,36 +239,15 @@ function CodeContent(args:any) {
   )
 }
 
-function PreContent(args:any) {
-  const {node, inline, className, children, ...props} = args;
-  if (className==='language-llm-observation') {
-    return <Box sx={{p:1, backgroundColor:'#e8e8e8'}}>
-      <Typography variant='body2'>{children}</Typography>
-    </Box>
-  }
-  return <pre {...props} className={className}>
-    {children}
-  </pre>
-}
-
 const csscolor = new RegExp(/[#]([a-fA-F\d]{6}|[a-fA-F\d]{3})/gi);
 function MarkDown(props:any) {
   let text = props.children as string;
   text = text.replace(csscolor, '`#$1`');
-  // const matches = csscolor.exec(text);
-  // if (matches){
-  //   for (let i=0; i < matches.length; i++) {
-  //     const match =matches[i];
-  //     const color = match[0];
-  //     // text = text.replace(color, `<span class="color-chip" style="background-color: ${color}"></span>${color}`);
-  //     text = match.replace(color, `\`${color}\``);
-  //   }
-  // }
   return <ReactMarkdown children={text} className='message-content'
     skipHtml={false}
     remarkPlugins={[gfm]}
     components={{
-      code: CodeContent,
+      code: (props)=><CodeContent {...props}/>,
     }}
     rehypePlugins={[
       rehypeRaw,
@@ -253,7 +274,7 @@ function MessageContent(props: { message:IChatMessage}) {
   const followup_questions = m.options?.followup_questions as string[] || [];
   return <Paper sx={(theme)=>({px:1, border:'0px solid gray', overflow:'auto',
     ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
-    borderRadius: 1,
+    borderRadius: 1, width:'100%',
     borderLeftWidth:isUser?'0px':'2px', borderRightWidth:isUser?'2px':'0px',
     borderColor:(isUser?theme.palette.primary.light:theme.palette.secondary.light),
     backgroundColor: isUser?theme.palette.background.default:theme.palette.background.paper,
@@ -297,12 +318,12 @@ function MessageItem(props: { message:IChatMessage }) {
         <Avatar alt='user avatar' sx={{mt:2, width: 24, height: 24, boxShadow:"0px 6px 10px 0px rgba(0,0,0,0.14)", background:'transparent', display:{xs:'none', sm:'block'}}}>
           <PsychologyAltIcon color='primary'/>
         </Avatar>
-        <MessageContent message={m} />
+        <MessageContent message={m}/>
       </Box>:<Box key={m.id} sx={{display:'flex', flexDirection:'row', alignItems:'flex-start',my:1}}>
         <Avatar alt='bot avatar' sx={{mt:1, width: 24, height: 24, background:'transparent', display:{xs:'none', sm:'block'}}}>
           <PsychologyIcon color='secondary' sx={{transform:'scale(-1,1)'}}/>
         </Avatar>
-        <MessageContent message={m} />
+        <MessageContent message={m}/>
       </Box>}
     </div>
   );

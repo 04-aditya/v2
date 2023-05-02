@@ -7,28 +7,29 @@ import { useNavigate } from "react-router-dom";
 import PersonIcon from '@mui/icons-material/Person';
 import { useChatStats } from "../api/chat";
 import AccountCircle from '@mui/icons-material/AccountCircle';
+import { UserAvatar } from "./UserAvatar";
 
 
-export function UserAvatar(props: {id: string | number, sx?: SxProps}) {
-  const axios = useAxiosPrivate();
-  const [photo, setPhoto] = useState<string|undefined>(undefined);
-  useEffect(()=>{
-    axios.get(`/api/users/${props.id}/photo`)
-      .then(res=>{
-        console.log(res.data);
-        setPhoto(res.data);
-      })
-      .catch(ex=>{
-        console.error(ex);
-      })
-  }, [props.id, axios]);
-  if (photo) {
-    return <Avatar src={photo} alt={`user(${props.id}) photo`} sx={props.sx || {width:32, height:32}}/>;
-  }
-  return <Box sx={props.sx}>
-    <AccountCircle color='inherit'/>
-  </Box>;
-}
+// export function UserAvatar(props: {id: string | number, sx?: SxProps}) {
+//   const axios = useAxiosPrivate();
+//   const [photo, setPhoto] = useState<string|undefined>(undefined);
+//   useEffect(()=>{
+//     axios.get(`/api/users/${props.id}/photo`)
+//       .then(res=>{
+//         console.log(res.data);
+//         setPhoto(res.data);
+//       })
+//       .catch(ex=>{
+//         console.error(ex);
+//       })
+//   }, [props.id, axios]);
+//   if (photo) {
+//     return <Avatar src={photo} alt={`user(${props.id}) photo`} sx={props.sx || {width:32, height:32}}/>;
+//   }
+//   return <Box sx={props.sx}>
+//     <AccountCircle color='inherit'/>
+//   </Box>;
+// }
 export class ChatStatsListProps {
   type?: string = 'user';
   icon?: ReactNode = <PersonIcon/>;

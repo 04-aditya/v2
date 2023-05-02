@@ -7,6 +7,7 @@ export interface IChatMessage {
   options?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
+  partial?: boolean;
 };
 export interface IChatSession {
   id: string;

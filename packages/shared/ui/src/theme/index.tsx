@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { PaletteMode } from '@mui/material';
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -9,6 +9,7 @@ export const ColorModeContext = React.createContext({ toggleColorMode: () => {} 
 export function useTheme() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [mode, setMode] = React.useState<PaletteMode>(prefersDarkMode ? 'dark' : 'light');
+
   const colorMode = React.useMemo(
     () => ({
       // The dark mode switch would invoke this method
@@ -21,9 +22,10 @@ export function useTheme() {
     [],
   );
   // Update the theme only if the mode changes
-  const theme = React.useMemo(() =>
-    responsiveFontSizes(createTheme(getDesignTokens(mode))),
-  [mode]);
+  const theme = useMemo(() => {
+    console.log(mode);
+    return responsiveFontSizes(createTheme(getDesignTokens(mode)));
+  }, [mode]);
 
   return {theme, colorMode, mode};
 }

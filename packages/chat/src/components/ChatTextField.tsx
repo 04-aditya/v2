@@ -71,12 +71,10 @@ export function ChatTextField(props: ChatTextFieldProps) {
   });
 
   useEffect (()=>{
-    console.log('useEffect: '+__filename);
     setNewMessage(props.message||'');
   },[props.message]);
 
   useEffect(()=>{
-    console.log('useEffect: '+__filename);
     if (chatsession) {
       //setIntroState(prev=>({...prev, stepsEnabled: true}));
       if (chatsession.options) {

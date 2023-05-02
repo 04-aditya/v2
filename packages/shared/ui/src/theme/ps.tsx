@@ -35,7 +35,7 @@ export const getDesignTokens = (mode: PaletteMode) => ({
           border-top-style: solid;
           border-top-color: #b1b1b1;
         }
-        .message-content tbody tr:nth-child(odd) {
+        .message-content tbody tr:nth-of-type(2n) {
           background-color: #eeeeee;
         }
         .message-content td {
@@ -63,7 +63,7 @@ export const getDesignTokens = (mode: PaletteMode) => ({
           border-top-style: solid;
           border-top-color: #828282;
         }
-        .message-content tbody tr:nth-child(odd) {
+        .message-content tbody tr:nth-of-type(2n) {
           background-color: #030303;
         }
         .message-content td {
