@@ -10,7 +10,8 @@
     "src/components/ChatTextField.tsx",
     "src/components/AboutDialog.tsx",
     "src/components/TermsNotice.tsx",
-    "src/components/ModelParameters.tsx"
+    "src/components/ModelParameters.tsx",
+    "src/components/UserAvatar.tsx"
   ],
   "exclude": [
     "jest.config.ts",

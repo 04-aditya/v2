@@ -17,7 +17,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShareIcon from '@mui/icons-material/Share';
-import { UserAvatar } from "./StatsList";
+import { UserAvatar } from "./UserAvatar";
 export class ChatSessionListProps {
   type?: string = 'private';
   icon?: ReactNode = <ForumIcon/>;
@@ -54,7 +54,6 @@ export function ChatSessions(props: ChatSessionListProps) {
   })
 
   useEffect(()=>{
-    console.log('useEffect: '+__filename);
     const newItems: {id:string}[] = [];
     data?.pages.forEach((group)=>{ group.forEach((item:{id:string})=>{newItems.push(item)})});
     setItems(newItems);

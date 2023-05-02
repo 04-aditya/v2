@@ -1,5 +1,5 @@
 import React from "react";
-import { AppBar, Avatar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography, alpha } from "@mui/material";
+import { AppBar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography, alpha } from "@mui/material";
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -22,7 +22,6 @@ import logo4light from 'sharedui/assets/PS_Logo_RGB_light.png';
 import logo from '../assets/appicon.svg'
 import { useTheme } from "sharedui/theme";
 import { Outlet, useNavigate } from "react-router-dom";
-import {useUser} from 'psnapi/users';
 import { useChatHistory } from "../api/chat";
 import ForumIcon from '@mui/icons-material/Forum';
 import AccountCircle from '@mui/icons-material/AccountCircle';
@@ -32,6 +31,7 @@ import ChatSessionList, { ChatSessions } from "../components/ChatSessionList";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import LogoutButton from "sharedui/components/LogoutButton";
 import { AboutDialog } from "../components/AboutDialog";
+import { UserAvatar } from "../components/UserAvatar";
 
 const drawerWidth = 280;
 
@@ -225,11 +225,4 @@ export default function AppLayout(props: Props) {
   </ThemeProvider>
 }
 
-function UserAvatar() {
-  const {data: user} = useUser();
-  if (user) {
-    return  <Avatar alt={user.email}  src={user.photo} sx={{width:32, height: 32}} />
-  }
-  return <AccountCircle color='primary'/>;
-}
 
