@@ -58,12 +58,14 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
             setMessages([...msgs,lastmsg]);
             return;
           }
+          //add final word
           const srelem = global.window.document.querySelector('#finalMessage');
           if (srelem) {
             srelem.textContent=lastmsg.content;
           }
           clearInterval(intervalHandle);
           setTypeMode(false);
+          lastmsg.content+='\n';
           lastmsg.partial = false;
           setMessages([...msgs,lastmsg]);
         }, 50);
@@ -156,7 +158,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
                 <p>{m.content}</p>
               </Alert>
             ):<MessageItem key={m.id} message={m} />))}
-            <EndofChatMessagesBlock key={messages.length} complete={!typeMode}/>
+            <EndofChatMessagesBlock key={messages.slice(-1)[0]?.content.length+''+typeMode} complete={!typeMode}/>
           </Box>
           <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
         </Box>
@@ -175,6 +177,15 @@ function EndofChatMessagesBlock(props:{complete: boolean}) {
     }
   }, []);
 
+  useEffect(()=>{
+    if (props.complete) {
+      setTimeout(()=>{
+        const mermaid: any = (global.window as any).mermaid;
+        mermaid.contentLoaded();
+        mermaid.run();
+      }, 500)
+    }
+  },[props.complete]);
   return <div ref={ref} style={{minHeight:props.complete?16:48}}>
   </div>
 }
@@ -184,17 +195,13 @@ function CodeContent(args:any) {
   const {node, inline, className, children, partial, ...props} = args;
   const match = /language-(\w+)/.exec(className || '');
 
-  useEffect(()=>{
-    console.log(mode);
-  },[mode]);
-
-  useLayoutEffect(()=>{
-    if (className==='language-mermaid' && !partial) {
-      const mermaid: any = (global.window as any).mermaid;
-      mermaid.contentLoaded();
-      mermaid.run();
-    }
-  },[className, partial]);
+  // useLayoutEffect(()=>{
+  //   if (className === 'language-mermaid' && !partial) {
+  //     const mermaid: any = (global.window as any).mermaid;
+  //     mermaid.contentLoaded();
+  //     mermaid.run();
+  //   }
+  // },[partial, className]);
 
   if (className === 'language-llm-observation') {
     return <Box sx={{p:1, backgroundColor:'#e8e8e8'}}>

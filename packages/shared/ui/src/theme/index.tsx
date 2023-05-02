@@ -23,7 +23,6 @@ export function useTheme() {
   );
   // Update the theme only if the mode changes
   const theme = useMemo(() => {
-    console.log(mode);
     return responsiveFontSizes(createTheme(getDesignTokens(mode)));
   }, [mode]);
 

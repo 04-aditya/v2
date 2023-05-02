@@ -5,7 +5,7 @@ import { MenuProps } from "./MenuProps";
 import Tooltip, { TooltipProps, tooltipClasses } from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
-const defaultprompt = 'You are a helpful AI assistant. Respond in markdown format when possible.code parts should start with ```langauge and end with ``` . if asked for uml generate mermaid code and start the plant uml code with ```mermaid , if generating graphwiz code start with ```dot . If you do not know the answer to a question, respond by saying "I do not know the answer to your question."';
+const defaultprompt = 'You are a helpful AI assistant. Respond in markdown format when possible.code parts should start with ```langauge and end with ``` . if asked for uml generate mermaid code and start the mermaid code with ```mermaid , if generating graphwiz code start with ```dot . If you do not know the answer to a question, respond by saying "I do not know the answer to your question."';
 export const systemMessages = [
   {name:'AI Assistant', message: defaultprompt},
   {name:'divider', message: ''},
