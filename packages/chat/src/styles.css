@@ -18,6 +18,14 @@ body {
   -moz-animation: bganimation 30s ease infinite;
   animation: bganimation 30s ease infinite; */
 }
+.color-chip {
+  margin-left: 0.125rem;
+  display: inline-block;
+  height: 0.625rem;
+  width: 0.625rem;
+  border-radius: 9999px;
+  border: 1px solid gray;
+}
 .sr-only {
   position: absolute;
   width: 1px;

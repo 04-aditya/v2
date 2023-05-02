@@ -1,0 +1,140 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- dev
+
+variables:
+  envName: psnextv2
+  vmImageName: ubuntu-latest
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    # - task: Cache@2
+    #   displayName: Cache 'node_modules' folder
+    #   inputs:
+    #     key: 'packagecache'
+    #     path: 'node_modules'
+    # - task: Cache@2
+    #   displayName: Cache 'dist' folder
+    #   inputs:
+    #     key: 'distcache'
+    #     path: 'dist'
+    - task: Kubernetes@1
+      name: GetBuildTag
+      inputs:
+        connectionType: 'Kubernetes Service Connection'
+        kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
+        namespace: $(ns)
+        command: 'get'
+        arguments: 'secret buildtag'
+        secretType: 'dockerRegistry'
+        containerRegistryType: 'Azure Container Registry'
+        outputFormat: 'jsonpath="{.data.LAST_BUILD_SHA}"'
+    - script: |
+        echo -n $(GetBuildTag.KubectlOutput) | base64 --decode > LAST_BUILD_COMMIT_SHA
+        LAST_BUILD_COMMIT_SHA=$(cat LAST_BUILD_COMMIT_SHA)
+        echo last build $(cat LAST_BUILD_COMMIT_SHA)
+      displayName: Set Last build tag
+    - task: NodeTool@0
+      displayName: 'Ensure node 18.x'
+      inputs:
+        versionSpec: '18.x'
+    - script: |
+        echo $(ns)
+        npm i -g nx
+        npm i --legacy-peer-deps
+      displayName: 'Install modules'
+#     - script: |
+#         git fetch --depth=20
+#         git log --pretty=oneline
+#         echo NX_API_URL=$(APIURL) > ./.env.template
+#         echo NX_EMAILDOMAINS=$(EmailDomains) >> ./.env.template
+#         echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./.env.template
+#         echo NX_BUILD_DATE=$(date) >> ./.env.template
+#         # echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local
+#         # echo ----
+#         # echo NX_API_URL=$(APIURL) > ./packages/chat/.env.local
+#         # echo NX_EMAILDOMAINS=$(EmailDomains) >> ./packages/chat/.env.local
+#         # echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./packages/chat/.env.local
+#         # echo NX_BUILD_DATE=$(date) >> ./packages/chat/.env.local
+#         # echo NX_APP_NAME=PSChat >> ./packages/chat/.env.local
+#         nx affected --target=updateversion --base=$(cat LAST_BUILD_COMMIT_SHA) --prod
+#         nx affected --target=build --base=$(cat LAST_BUILD_COMMIT_SHA) --prod
+#       displayName: 'Build affected'
+#     - task: Docker@2
+#       displayName: Login to DockerHub
+#       inputs:
+#         command: login
+#         containerRegistry: 'rrdockerconn'
+#     - task: Bash@3
+#       displayName: 'Build and Push docker images'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           nx affected --target=build-docker --base=$(cat LAST_BUILD_COMMIT_SHA) --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+#           # nx run api:build-docker --args=" --registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+#     - task: Bash@3
+#       displayName: 'Build k8s manifests'
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           nx affected --target=build-k8s-manifests --base=$(cat LAST_BUILD_COMMIT_SHA) --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+#           # nx run api:build-k8s-manifests --args="--registry=$(containerRegistry) --projectid=psnextv2 --branch=$(Build.SourceBranchName) --sha=$(Build.SourceVersion)"
+#           tree ./manifests
+#           find ./manifests -name buildtag.yaml -type f -exec sed -i 's/BUILDCOMMITTAG/$(Build.SourceVersion)/g' {} \;
+#           cat ./manifests/buildtag.yaml
+#     - task: PublishPipelineArtifact@1
+#       displayName: 'Publish Manifest Artifacts'
+#       inputs:
+#         artifactName: 'manifests'
+#         path: 'manifests'
+# - stage: Deploy
+#   displayName: Deploy stage
+#   dependsOn: Build
+#   jobs:
+#   - deployment: Deploy
+#     displayName: Deploy job
+#     pool:
+#       vmImage: $(vmImageName)
+#     environment: 'psnextv2.main' #customize with your environment
+#     strategy:
+#       runOnce:
+#         deploy:
+#           steps:
+#           - task: DownloadPipelineArtifact@2
+#             inputs:
+#               artifactName: 'manifests'
+#               downloadPath: '$(System.ArtifactsDirectory)/manifests'
+#           - task: Bash@3
+#             displayName: 'List manifests'
+#             inputs:
+#               targetType: 'inline'
+#               script: |
+#                 tree $(System.ArtifactsDirectory)/manifests
+#           - task: Kubernetes@1
+#             inputs:
+#               connectionType: 'Kubernetes Service Connection'
+#               kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
+#               namespace: '$(Build.SourceBranchName)'
+#               command: 'apply'
+#               arguments: '-k $(System.ArtifactsDirectory)/manifests -n $(Build.SourceBranchName)'
+#               secretType: 'dockerRegistry'
+#               containerRegistryType: 'Azure Container Registry'
+#           - task: Kubernetes@1
+#             inputs:
+#               connectionType: 'Kubernetes Service Connection'
+#               kubernetesServiceEndpoint: 'psdppsnextaksdev-main'
+#               namespace: '$(Build.SourceBranchName)'
+#               command: 'apply'
+#               arguments: '-f $(System.ArtifactsDirectory)/manifests/buildtag.yaml -n $(Build.SourceBranchName)'
+#               secretType: 'dockerRegistry'
+#               containerRegistryType: 'Azure Container Registry'
