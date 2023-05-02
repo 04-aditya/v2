@@ -5,7 +5,8 @@
 
 trigger:
 - main
-
+# no PR triggers
+pr: none
 variables:
   envName: psnextv2
   vmImageName: ubuntu-latest
