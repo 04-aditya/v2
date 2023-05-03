@@ -2,6 +2,7 @@ import { logger } from '@/utils/logger';
 import { IChatModel } from '@sharedtypes';
 import { AgentActionOutputParser, AgentExecutor, LLMSingleActionAgent } from 'langchain/agents';
 import { LLMChain } from 'langchain/chains';
+import { ConversationSummaryMemory } from 'langchain/memory';
 import { ChatOpenAI, OpenAIInput } from 'langchain/chat_models/openai';
 import { BaseChatPromptTemplate, BasePromptTemplate, SerializedBasePromptTemplate, renderTemplate } from 'langchain/prompts';
 import { AgentAction, AgentFinish, AgentStep, BaseChatMessage, HumanChatMessage, InputValues, PartialValues } from 'langchain/schema';
@@ -36,6 +37,8 @@ Thought: I now know the final answer
 Final Answer: the final answer to the original input question`;
 
 const SUFFIX = `Begin!
+Current conversation:
+{chat_history}
 
 Human: {input}
 Thought: {agent_scratchpad}`;
@@ -111,7 +114,13 @@ class CustomOutputParser extends AgentActionOutputParser {
     const match = /Action: (.*)\nAction Input: (.*)/s.exec(text);
     if (!match) {
       // throw new Error(`Could not parse LLM output: ${text}`);
-      return { log: text, returnValues: { output: `Stopping here as I am unable to determine next action.\n\n ${text}` } };
+      return {
+        log: text,
+        returnValues: {
+          // output: `Stopping here as I am unable to determine next action.\n\n ${text}`,
+          output: `${text}`,
+        },
+      };
     }
 
     return {
@@ -137,7 +146,10 @@ export class BasicAgentChatModel implements IChatModel {
   async call(input: { role?: string; content: string }[], options?: Record<string, any>): Promise<{ content: string } & Record<string, any>> {
     // const model = new ChatOpenAI({ temperature: options.temperature as number });
     const model = new AzureOpenAI({});
-
+    const memory = new ConversationSummaryMemory({
+      memoryKey: 'chat_history',
+      llm: model,
+    });
     //an array to store a set of followup questions
     const followupQuestions: string[] = [];
 
@@ -173,11 +185,12 @@ export class BasicAgentChatModel implements IChatModel {
     const llmChain = new LLMChain({
       prompt: new CustomPromptTemplate({
         tools,
-        inputVariables: ['input', 'agent_scratchpad'],
+        inputVariables: ['input', 'chat_history', 'agent_scratchpad'],
         setLastInput: msg => (lastIntermediateSet = msg),
         currentUser: options?.user,
       }),
       llm: model,
+      memory: memory,
       verbose: true,
     });
 

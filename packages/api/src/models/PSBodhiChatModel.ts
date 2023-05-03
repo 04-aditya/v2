@@ -32,12 +32,13 @@ export class PSBodhiChatModel implements IChatModel {
       const contextsResponse = await psbodhiclient.get('/contexts/');
       if (contextsResponse.status === 200) {
         contextsResponse.data.forEach((c: any) => {
-          if (c.display) {
+          //if (c.display)
+          {
             this.contexts.push({
               id: c._id,
               name: c.name,
               description: c.description,
-              enabled: true,
+              enabled: c.display,
             });
           }
         });

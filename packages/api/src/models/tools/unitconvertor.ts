@@ -85,5 +85,5 @@ export class UnitConvertorTool extends Tool {
     }
   }
 
-  description = `Useful for getting the converting unittypes like m, km, ft, miles, C, F, kg, lb, g, oz. The input to this tool should be a in the format "value unittype to unittype"`;
+  description = `Useful for getting the converting length unit types like m, km, ft, miles, temperature units like C, F, weight units like  kg, lb, g, oz and time units like h, min, sec. The input to this tool should be a in the format "value unittype to unittype"`;
 }

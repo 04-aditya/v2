@@ -5,9 +5,11 @@ import { ChatTextField } from '../../components/ChatTextField';
 import ChatSessionList, { ChatSessions } from '../../components/ChatSessionList';
 import ForumIcon from '@mui/icons-material/Forum';
 import ChatStatsList from '../../components/StatsList';
+import { useEffect } from 'react';
 
 export function HomePage() {
   const navigate = useNavigate();
+
   return (
     <Paper elevation={4}
       sx={theme=>({display:'flex', height:'100%', backgroundColor: alpha(theme.palette.background.paper, 0.5),

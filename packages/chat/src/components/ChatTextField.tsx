@@ -43,7 +43,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const {data:chatsession, error, mutation} = useChatSession(sessionid);
   const [newMessage, setNewMessage] = useState<string>('');
   const [isBusy, setIsBusy] = useState(false);
-  const [showOptions, setShowOptions] = useState(false);
+  const [showOptions, setShowOptions] = useState(true);
   const [options, setOptions] = useState(DefaultModelOptions);
   const [showParameters, setShowParameters] = useState(false);
   const [parameters, setParameters] = useState<IModelParameters>({temperature:0, max_tokens: 400});
@@ -179,7 +179,13 @@ export function ChatTextField(props: ChatTextFieldProps) {
       <InputBase multiline rows={rowCount}
         sx={{ ml: 1, flex: 1 }} autoFocus
         placeholder="Type your message here..."
-        inputProps={{ 'aria-label': 'chat message box' }}
+        inputProps={{
+          'aria-label': 'chat message box' ,
+          speech: 'speech',
+          'x-webkit-speech': 'x-webkit-speech',
+          'x-webkit-grammar': 'builtin:translate',
+          lang: 'en'
+        }}
         value={newMessage + (interimResult||'')}
         onClick={()=>{
           // const context = new AudioContext();

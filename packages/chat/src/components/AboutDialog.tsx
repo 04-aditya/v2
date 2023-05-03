@@ -45,9 +45,13 @@ export function AboutDialog() {
           <DialogContentText>
             PSChat - LLM powered ChatBot for Publicis Sapient employees.<br />
             <TermsNotice/>
-            <br/><br/><br/>
+            <br/>
             <Typography variant="caption">for any queries,
               please contact <a href="mailto:psnextsupport@publicissapient.com">mailto:psnextsupport@publicissapient.com</a>
+            </Typography>
+            <br />
+            <Typography variant="caption">for any bugs or support requests,
+              please log a ticket <a href=" https://tools.publicis.sapient.com/jira/servicedesk/customer/portal/752">PS Chat support portal</a>
             </Typography>
             <br />
             <Typography variant="caption">
