@@ -24,7 +24,7 @@ export function HomePage() {
 
       <Grid container spacing={2} sx={{justifyContent:'center',p:1, px:2, flexGrow:1,my:2}} className={'scrollbarv'} >
         <Grid item xs={12} sm={12} md={4} sx={{display:'flex'}}>
-          <Paper sx={{p:1, display:'flex', flexDirection:'column'}} elevation={4}>
+          <Paper sx={{width:'100%', minHeight:200, p:1, display:'flex', flexDirection:'column'}} elevation={4}>
             <Typography variant='button' color='primary'>Shared</Typography>
             <Divider sx={{mb:1}}/>
             <ChatSessions type='public' show={'user'} icon={<ForumIcon sx={{color:'#999'}}/>}/>
