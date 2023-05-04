@@ -56,18 +56,18 @@ stages:
     - script: |
         git fetch --depth=20
         git log --pretty=oneline
-        # echo NX_API_URL=$(APIURL) > ./.env.template
-        # echo NX_EMAILDOMAINS=$(EmailDomains) >> ./.env.template
-        # echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./.env.template
-        # echo NX_BUILD_DATE=$(date) >> ./.env.template
-        # echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local
+        echo NX_API_URL=$(APIURL) > ./.env.template
+        echo NX_EMAILDOMAINS=$(EmailDomains) >> ./.env.template
+        echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./.env.template
+        echo NX_BUILD_DATE=$(date) >> ./.env.template
+        echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local
         # echo ----
-        # echo NX_API_URL=$(APIURL) > ./packages/chat/.env.local
-        # echo NX_EMAILDOMAINS=$(EmailDomains) >> ./packages/chat/.env.local
-        # echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./packages/chat/.env.local
-        # echo NX_BUILD_DATE=$(date) >> ./packages/chat/.env.local
-        # echo NX_APP_NAME=PSChat >> ./packages/chat/.env.local
-        nx affected --target=updateversion --base=$(cat LAST_BUILD_COMMIT_SHA) --prod --args="--apiurl=$(API_URL) --projectid=psnextv2 --emaildomains=$(EmailDomains) --branch=$(Build.SourceBranchName) --version=$(Build.SourceVersion)"
+        echo NX_API_URL=$(APIURL) > ./packages/chat/.env.local
+        echo NX_EMAILDOMAINS=$(EmailDomains) >> ./packages/chat/.env.local
+        echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./packages/chat/.env.local
+        echo NX_BUILD_DATE=$(date) >> ./packages/chat/.env.local
+        echo NX_APP_NAME=PSChat >> ./packages/chat/.env.local
+        # nx affected --target=updateversion --base=$(cat LAST_BUILD_COMMIT_SHA) --prod --args="--apiurl=$(API_URL) --projectid=psnextv2 --emaildomains=$(EmailDomains) --branch=$(Build.SourceBranchName) --version=$(Build.SourceVersion)"
         nx affected --target=build --base=$(cat LAST_BUILD_COMMIT_SHA) --prod
       displayName: 'Build affected'
     - task: Docker@2
