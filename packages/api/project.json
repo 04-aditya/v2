@@ -8,8 +8,7 @@
       "executor": "nx:run-commands",
       "options": {
         "commands": [
-          "cat ./.env.template",
-          "echo NX_APP_NAME=PSNextAPI"
+          "echo Updating version for PSNextAPI..."
         ],
         "parallel": false,
         "forwardAllArgs": false
