@@ -13,8 +13,7 @@
           "echo NX_EMAILDOMAINS={args.emaildomains} >> ./packages/dash/.env.local",
           "echo NX_BUILD_VERSION={args.branch}-{args.version} >> ./packages/dash/.env.local",
           "echo NX_BUILD_DATE=$(date) >> ./packages/dash/.env.local",
-          "echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local",
-          "cat ./packages/dash/.env.local"
+          "echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local"
         ],
         "parallel": false,
         "forwardAllArgs": false
