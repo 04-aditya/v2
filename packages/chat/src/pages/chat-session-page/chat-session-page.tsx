@@ -214,7 +214,7 @@ function CodeContent(args:any) {
         <pre className='mermaid'>
         {`%%{
   init: {
-    'theme': ${mode === 'dark' ? 'dark' : 'default'}
+    'theme': ${mode === 'dark' ? 'dark' : 'default'}, 'htmlLabels': true
   }
 }%%
 

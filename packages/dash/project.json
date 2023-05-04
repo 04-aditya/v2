@@ -8,7 +8,10 @@
       "executor": "nx:run-commands",
       "options": {
         "commands": [
-          "cat ./.env.template > ./packages/dash/.env.local",
+          "echo NX_API_URL=$(APIURL) > ./packages/dash/.env.local",
+          "echo NX_EMAILDOMAINS=$(EmailDomains) >> ./packages/dash/.env.local",
+          "echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./packages/dash/.env.local",
+          "echo NX_BUILD_DATE=$(date) >> ./packages/dash/.env.local",
           "echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local",
           "cat ./packages/dash/.env.local"
         ],

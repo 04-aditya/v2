@@ -8,7 +8,10 @@
       "executor": "nx:run-commands",
       "options": {
         "commands": [
-          "cat ./.env.template > ./packages/chat/.env.local",
+          "echo NX_API_URL=$(APIURL) > ./packages/chat/.env.local",
+          "echo NX_EMAILDOMAINS=$(EmailDomains) >> ./packages/chat/.env.local",
+          "echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./packages/chat/.env.local",
+          "echo NX_BUILD_DATE=$(date) >> ./packages/chat/.env.local",
           "echo NX_APP_NAME=PSChat >> ./packages/chat/.env.local",
           "cat ./packages/chat/.env.local"
         ],

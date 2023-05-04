@@ -56,10 +56,10 @@ stages:
     - script: |
         git fetch --depth=20
         git log --pretty=oneline
-        echo NX_API_URL=$(APIURL) > ./.env.template
-        echo NX_EMAILDOMAINS=$(EmailDomains) >> ./.env.template
-        echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./.env.template
-        echo NX_BUILD_DATE=$(date) >> ./.env.template
+        # echo NX_API_URL=$(APIURL) > ./.env.template
+        # echo NX_EMAILDOMAINS=$(EmailDomains) >> ./.env.template
+        # echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./.env.template
+        # echo NX_BUILD_DATE=$(date) >> ./.env.template
         # echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local
         # echo ----
         # echo NX_API_URL=$(APIURL) > ./packages/chat/.env.local

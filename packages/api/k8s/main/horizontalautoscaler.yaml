@@ -8,7 +8,14 @@ spec:
     kind: Deployment
     name: psni-api-dep
   minReplicas: 1
-  maxReplicas: 3
-  targetCPUUtilizationPercentage: 50
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 75
+  metrics:
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 75
 
 ## https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
