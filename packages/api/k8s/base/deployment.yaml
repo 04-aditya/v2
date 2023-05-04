@@ -18,6 +18,7 @@ spec:
         image: app-image
         ports:
           - containerPort: 8080
+            name: web
         imagePullPolicy: Always
         resources:
           requests:
