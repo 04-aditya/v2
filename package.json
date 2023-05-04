@@ -154,6 +154,7 @@
     "multer-azure-blob-storage": "^1.2.0",
     "pg": "^8.10.0",
     "plotly.js": "^2.20.0",
+    "prom-client": "^14.2.0",
     "react": "18.2.0",
     "react-contenteditable": "^3.3.7",
     "react-dom": "18.2.0",

@@ -16,16 +16,29 @@ import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import { bootstrapDB } from '../databases/bootstrapdb';
 import { HttpErrorHandler } from '@/utils/HttpErrorHandler';
-
+import promClient from 'prom-client';
 class App {
   public app: express.Application;
   public env: string;
   public port: string | number;
+  public register = new promClient.Registry();
 
   constructor(Controllers: Function[]) {
     this.app = express();
     this.env = NODE_ENV || 'development';
     this.port = PORT || 3000;
+
+    promClient.collectDefaultMetrics({
+      prefix: 'PSNextAPI_',
+      gcDurationBuckets: [0.1, 1, 2, 5],
+      register: this.register,
+      labels: {
+        K8S_NODE_NAME: process.env.K8S_NODE_NAME,
+        K8S_POD_NAME: process.env.K8S_POD_NAME,
+        K8S_POD_NAMESPACE: process.env.K8S_POD_NAMESPACE,
+        K8S_POD_IP: process.env.K8S_POD_IP,
+      },
+    });
 
     this.initializeMiddlewares();
     this.initializeRoutes(Controllers);
@@ -134,7 +147,13 @@ class App {
     this.app.use('/openapi.json', (_req, res) => {
       res.json(spec);
     });
+
     this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(spec));
+
+    this.app.get('/metrics', async (req, res) => {
+      res.setHeader('Content-Type', this.register.contentType);
+      res.send(await this.register.metrics());
+    });
   }
 
   private initializeErrorHandling() {
