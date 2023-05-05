@@ -410,7 +410,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       const readPerms = req.permissions.filter(p => p.startsWith('user.read'));
       const canRead = await currentUser.canRead(matchedUser, readPerms);
       if (canRead === false) {
-        logger.warn(`user ${currentUser.email} does not have permission to read user ${matchedUser.email}}`);
+        logger.warn(`user ${currentUser.email} does not have permission to read stats for user ${matchedUser.email}}`);
         throw new HttpError(403);
       }
       const { users: groupUsers, allowedGroups } = await matchedUser.loadOrg(reqdate, groups);
