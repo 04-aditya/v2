@@ -445,10 +445,12 @@ export class ChatController {
     const inputMessages = messages.map(m => m.toJSON());
     inputMessages[0].content +=
       `\n Your name is PSChat a LLM powered chatbot developed by publicis sapient's engineers.` +
-      `The forntend was developed in React and the backend in NodeJS and Python.`;
+      `The forntend was developed in React and the backend in NodeJS and Python.` +
+      `Your are helping a Human named maskedhumanname, who is working at Publicis as ${currentUser.business_title}.`;
+
     const response = await model.call(messages, options);
     logger.debug(response);
-    assistantMessage.content = response.content;
+    assistantMessage.content = response.content.replace(/maskedhumanname/g, `${currentUser.first_name || 'user'}`);
     assistantMessage.options = response.options || {};
     messages.push(assistantMessage);
     if (response.usage) {
@@ -466,7 +468,7 @@ export class ChatController {
   }
 
   @Delete('/:id')
-  @OpenAPI({ summary: 'Share or unshare a chat session identified by the id' })
+  @OpenAPI({ summary: 'Share or unshare a chat session identified by the session `id`' })
   @Authorized(['chat.write.self'])
   async deleteChatSession(@Param('id') id: string, @CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
@@ -486,9 +488,14 @@ export class ChatController {
   }
 
   @Post('/:id/sharing')
-  @OpenAPI({ summary: 'Share or unshare a chat session identified by the id' })
+  @OpenAPI({ summary: 'Share or unshare a chat session identified by the session `id`' })
   @Authorized(['chat.write.self'])
-  async updateChatSessionSharing(@Param('id') id: string, @CurrentUser() currentUser: UserEntity, @BodyParam('type') type_param?: string) {
+  async updateChatSessionSharing(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: UserEntity,
+    @Req() req: RequestWithUser,
+    @BodyParam('type') type_param: string,
+  ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
     const repo = AppDataSource.getRepository(ChatSessionEntity);
@@ -496,10 +503,15 @@ export class ChatController {
     const session = await repo.findOne({
       where: {
         id,
-        userid: currentUser.email,
       },
     });
     if (!session) return new HttpError(404);
+
+    if (session.userid !== currentUser.email) {
+      if (!req.permissions.includes('chat.write.admin')) {
+        return new HttpError(403, 'Insufficient permissions.');
+      }
+    }
 
     let newtype = session.type;
     if (type_param) {
@@ -512,7 +524,7 @@ export class ChatController {
           break;
       }
     }
-    const ures = await repo.update(session.id, {
+    await repo.update(session.id, {
       type: newtype,
       updatedAt: () => '"updatedAt"',
     });
@@ -520,6 +532,7 @@ export class ChatController {
     result.data = { ...session.toJSON(), type: newtype };
     return result;
   }
+
   @Post('/:id/favourite')
   @OpenAPI({ summary: 'Share or unshare a chat session identified by the id' })
   @Authorized(['chat.write.self'])
