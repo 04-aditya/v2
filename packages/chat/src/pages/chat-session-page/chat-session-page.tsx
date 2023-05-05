@@ -17,11 +17,13 @@ import ContentEditable from "react-contenteditable";
 import rehypeRaw from "rehype-raw";
 import rehypeColorChips from 'rehype-color-chips';
 import rehypeExternalLinks from 'rehype-external-links';
+import useAuth from "psnapi/useAuth";
 
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
 
 export function ChatSessionPage(props: ChatSessionPageProps) {
+  const { auth } = useAuth();
   const { chatId } = useParams();
   const {data:session, isLoading, isError, error, mutation, invalidateCache} = useChatSession(chatId||'');
   const [messages, setMessages] = useState<IChatMessage[]>([]);
@@ -160,7 +162,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
             ):<MessageItem key={m.id} message={m} />))}
             <EndofChatMessagesBlock key={messages.slice(-1)[0]?.content.length+''+typeMode} complete={!typeMode}/>
           </Box>
-          <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/>
+          {auth.user?.email===session?.userid ? <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/> : null}
         </Box>
       ) : null}
     </Paper>
