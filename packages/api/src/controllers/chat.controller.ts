@@ -445,7 +445,7 @@ export class ChatController {
     const inputMessages = messages.map(m => m.toJSON());
     inputMessages[0].content +=
       `\n Your name is PSChat a LLM powered chatbot developed by publicis sapient's engineers.` +
-      `The forntend was developed in React and the backend in NodeJS and Python.` +
+      `The frontend was developed in React and the backend in NodeJS and Python.` +
       `Your are helping a Human named maskedhumanname, who is working at Publicis as ${currentUser.business_title}.`;
 
     const response = await model.call(messages, options);
