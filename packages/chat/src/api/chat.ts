@@ -15,7 +15,7 @@ export function useChatHistory(offset = 0, limit = 20) {
     return res.data.data as IChatSession[];
   },{
     enabled: !!axios,
-    staleTime:  60 * 60 * 1000 // 1 minute
+    staleTime:  5 * 60 * 1000 // 5 minute
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);
@@ -33,7 +33,7 @@ export function useChatModels() {
     return res.data.data as IChatModel[];
   },{
     enabled: !!axios,
-    staleTime:  60 * 60 * 1000 // 1 minute
+    staleTime:  5 * 60 * 1000 // 5 minute
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);
@@ -50,7 +50,7 @@ export function useChatSession(id?: string) {
     return res.data.data as IChatSession;
   },{
     enabled: !!axios && id !== undefined,
-    staleTime:  60 * 60 * 1000 // 1 minute
+    staleTime: 60 * 1000 // 1 minute
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries({queryKey: keys});
@@ -71,7 +71,7 @@ export function useChatSessionFavourite(id?: string) {
     return res.data.data ? true : false;
   },{
     enabled: !!axios && id !== undefined,
-    staleTime:  60 * 60 * 1000 // 1 minute
+    staleTime: 60 * 60 * 1000 // 1 hour
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);
@@ -92,7 +92,7 @@ export function useChatStats(type='user', offset=0, limit=10) {
     return res.data.data as Array<any>;
   },{
     enabled: !!axios,
-    staleTime:  60 * 60 * 1000 // 1 minute
+    staleTime:  60 * 60 * 1000 // 1 hour
   });
   const invalidateCache = ()=>{
     queryClient.invalidateQueries(keys);

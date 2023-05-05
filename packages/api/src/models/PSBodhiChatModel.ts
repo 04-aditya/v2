@@ -27,7 +27,7 @@ export class PSBodhiChatModel implements IChatModel {
   readonly tools = [];
   enabled = true;
 
-  async init() {
+  async refresh() {
     try {
       const contextsResponse = await psbodhiclient.get('/contexts/');
       if (contextsResponse.status === 200) {

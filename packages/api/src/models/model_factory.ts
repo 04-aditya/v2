@@ -46,7 +46,7 @@ export default class ModelFactory {
     });
 
     const psmodel = new PSBodhiChatModel();
-    await psmodel.init();
+    await psmodel.refresh();
     models.push(psmodel);
 
     //models.push(new AutoGPTChatModel());
