@@ -422,7 +422,7 @@ export class AuthController {
         logger.warn(userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7);
         accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
       } catch (ex) {
-        logger.error('Unable to get the detailed user profile');
+        logger.error('Unable to get the detailed user profile for ' + email);
         console.log(ex);
       }
       // const accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
@@ -458,7 +458,7 @@ export class AuthController {
           user.photo = `data:${graphResponse.headers['content-type']};base64,${photoBase64}`;
         }
       } catch (ex) {
-        logger.error('Unable to get the photo');
+        logger.error('Unable to get the photo for ' + email);
         logger.debug(ex);
       }
 
