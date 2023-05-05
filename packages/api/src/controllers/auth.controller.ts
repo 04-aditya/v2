@@ -30,7 +30,7 @@ import { IUserRole } from '@sharedtypes';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import crypto from 'crypto';
 import cache from '@/utils/cache';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import qs from 'qs';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { RequestWithUser } from '@/interfaces/auth.interface';
@@ -413,18 +413,26 @@ export class AuthController {
       tokenData.expires_at = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
       logger.debug(tokenResponse.data);
 
-      logger.debug('calling  userinfo endpoint: ' + OAuthConfig.userinfo_endpoint);
-      const userInfoResponse = await axiosclient.get(OAuthConfig.userinfo_endpoint, {
-        headers: {
-          Authorization: `Bearer ${tokenData.access_token}`,
-        },
-      });
+      let userInfoResponse: AxiosResponse;
+      try {
+        logger.debug('calling  userinfo endpoint: ' + OAuthConfig.userinfo_endpoint);
+        userInfoResponse = await axiosclient.get(OAuthConfig.userinfo_endpoint, {
+          headers: {
+            Authorization: `Bearer ${tokenData.access_token}`,
+          },
+        });
 
-      if (userInfoResponse.status !== 200) {
-        console.error({ status: userInfoResponse.status, data: userInfoResponse.data });
-        throw new HttpError(403);
+        if (userInfoResponse.status !== 200) {
+          logger.error({ status: userInfoResponse.status, data: userInfoResponse.data });
+          throw new HttpError(403);
+        }
+        logger.debug(userInfoResponse.data);
+      } catch (ex) {
+        logger.error('Unable to get the basic user profile');
+        logger.error(JSON.stringify(ex));
+        throw new HttpError(403, 'Unable to read user profile. Please try again.');
       }
-      logger.debug(userInfoResponse.data);
+
       const email = userInfoResponse.data.email.toLocaleLowerCase().trim();
 
       let accessAllowed = false;
@@ -436,13 +444,13 @@ export class AuthController {
         });
         logger.debug(userProfileResponse.data);
 
-        const email = userProfileResponse.data.mail.toLocaleLowerCase();
-        logger.warn(email);
-        logger.warn(userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7);
+        // const email = userProfileResponse.data.mail.toLocaleLowerCase();
+        // logger.warn(email);
+        // logger.warn(userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7);
         accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
       } catch (ex) {
         logger.error('Unable to get the detailed user profile for ' + email);
-        console.log(ex);
+        logger.error(JSON.stringify(ex));
       }
       // const accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
 
@@ -478,7 +486,7 @@ export class AuthController {
         }
       } catch (ex) {
         logger.error('Unable to get the photo for ' + email);
-        logger.debug(ex);
+        logger.error(ex);
       }
 
       // create JWTs
