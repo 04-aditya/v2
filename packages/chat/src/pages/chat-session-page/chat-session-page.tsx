@@ -155,7 +155,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
             {messages.map((m,idx)=>( idx===0?(
               <Alert key={idx} severity='info' sx={{mb:1, mx:{xs:0, sm:3}}}>
                 <AlertTitle>Chat Model initial instruction</AlertTitle>
-                <p>{m.content}</p>
+                <p>{m.content.split('\n')[0]}</p>
               </Alert>
             ):<MessageItem key={m.id} message={m} />))}
             <EndofChatMessagesBlock key={messages.slice(-1)[0]?.content.length+''+typeMode} complete={!typeMode}/>

@@ -51,6 +51,7 @@ export default function AppLayout(props: Props) {
   const { window } = props;
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [isMouseOver, setIsMouseOver] = React.useState(true);
 
   const isProfileMenuOpen = Boolean(anchorEl);
 
@@ -65,8 +66,19 @@ export default function AppLayout(props: Props) {
     setMobileOpen(!mobileOpen);
   };
 
-  const DrawerContent = (props: any)=>(
-    auth.user ? <Box sx={{display:'flex', flexDirection:'column'}}>
+  const DrawerContent = (props: any)=>{
+    if (!props.auth.user) {
+      return <Box/>;
+    }
+    // if (dprops.onlyIcons) {
+    //   return <Box sx={{display:'flex', flexDirection:'column', alignContent:'center', justifyContent:'center'}}>
+    //     <IconButton>
+    //       {mode==='dark'?<LightModeIcon/>:<DarkModeIcon/>}
+    //     </IconButton>
+    //   </Box>
+    // }
+
+    return <Box sx={{display:'flex', flexDirection:'column'}}>
       <Toolbar>
         <img src={logo} height={48} alt={`${process.env['NX_APP_NAME']} logo`} onClick={()=>navigate('/')} style={{cursor: 'pointer'}}/>
         <Typography variant="h6" noWrap component="div" sx={{ml:2, cursor: 'pointer'}} onClick={()=>navigate('/')}>
@@ -110,8 +122,8 @@ export default function AppLayout(props: Props) {
         </ListItem>
       </List>
       </Paper>
-    </Box> : <Box/>
-  );
+    </Box>
+  };
 
   const container = window !== undefined ? () => window().document.body : undefined;
   const menuId = 'primary-search-account-menu';
@@ -179,7 +191,7 @@ export default function AppLayout(props: Props) {
     {renderProfileMenu}
     <Box
       component="nav"
-      sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+      sx={{ width: { sm: isMouseOver ? drawerWidth : 32 }, overflow:'hidden', flexShrink: { sm: 0 } }}
       aria-label="chat options"
     >
       <Drawer
@@ -201,14 +213,18 @@ export default function AppLayout(props: Props) {
         variant="permanent"
         sx={{
           display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': {borderRadius:2, boxSizing: 'border-box', maxHeight:'calc(100% - 16px)', width: drawerWidth, borderRight:'0px',overflowY:'hidden', },
+          '& .MuiDrawer-paper': {borderRadius:2, boxSizing: 'border-box', maxHeight:'calc(100% - 16px)',
+          width: isMouseOver ? drawerWidth : 48,
+          borderRight:'0px',overflowY:'hidden', },
         }}
         PaperProps={{
           sx:{backgroundColor:'transparent'}
         }}
         open
+        onMouseEnter={()=>setIsMouseOver(true)}
+        onMouseLeave={()=>setIsMouseOver(true)}
       >
-          <DrawerContent auth={auth}/>
+          <DrawerContent auth={auth} onlyIcons={!isMouseOver}/>
       </Drawer>
     </Box>
     <Box

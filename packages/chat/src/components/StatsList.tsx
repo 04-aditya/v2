@@ -51,6 +51,7 @@ export default function ChatStatsList(props: ChatStatsListProps) {
         overflowX: 'hidden',
         overflowY: 'auto',
         maxHeight: 300,
+        borderRadius: '4px',
         '& ul': { padding: 0 },
       }}
       subheader={<li />}
