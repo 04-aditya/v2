@@ -152,18 +152,18 @@ export function SessionSummary(props: {show?: string, sessionid?: string, sessio
   if (isLoading) return <LinearProgress/>;
   if (!session) return <Typography variant="body2">?</Typography>;
   return <Fade in timeout={500}><Box sx={theme=>({
-      mb: 1, p: 0.5, minHeight: 56, display: 'flex', flexDirection: 'row', alignItems: 'center', cursor: 'pointer',
+      mb: 1, p: 0.5, minHeight: 72, display: 'flex', flexDirection: 'row', alignItems: 'flex-start', cursor: 'pointer',
       borderRadius: '3px', border: `1px solid #ccc`, borderColor:theme.palette.divider, '&:hover': { borderColor: theme.palette.action.active },
     })} onClick={()=>{
       !isDeleted && navigate(`/chat/${session.id}`)
     }}>
     {/* <IconButton size="small">{props.icon}</IconButton> */}
     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', pl: 0.5 }}>
-      <Box sx={{ width: '100%' }}>
+      <Box sx={{ width: '100%', display:'flex', flexDirection: 'row', justifyContent: 'flex-start', flexGrow: 1 }}>
         {(props.show||'').indexOf('user')!==-1? <UserAvatar
-          id={session.userid} sx={{display:'inline-block', float:'left', width:24, height:24}}/>:null}
-        <Typography variant="body2" sx={isDeleted?{textDecoration: "line-through"}:{}} >
-          &nbsp;{session.name}
+          id={session.userid} sx={{display:'block', flexShrink:1, width:24, height:24, mr:0.5}}/>:null}
+        <Typography variant="body2" component={"span"} sx={isDeleted?{textDecoration: "line-through"}:{flexGrow: 1}} >
+          {session.name}
         </Typography>
       </Box>
       <Stack direction="row" display={'flex'} justifyContent="end" alignItems={'flex-end'} spacing={1} sx={{ width: '100%' }}>

@@ -394,28 +394,44 @@ export class AuthController {
       tokenData.expires_at = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
       logger.debug(tokenResponse.data);
 
-      const userInfoResponse = await axios.get(OAuthConfig.userinfo_endpoint, {
+      // console.log('calling  userinfo endpoint: ' + OAuthConfig.userinfo_endpoint);
+      // const userInfoResponse = await axios.get(OAuthConfig.userinfo_endpoint, {
+      //   headers: {
+      //     Authorization: `Bearer ${tokenData.access_token}`,
+      //   },
+      // });
+
+      // if (userInfoResponse.status !== 200) {
+      //   console.error({ status: userInfoResponse.status, data: userInfoResponse.data });
+      //   throw new HttpError(403);
+      // }
+      // logger.debug(userInfoResponse.data);
+      // const email = userInfoResponse.data.email.toLocaleLowerCase().trim();
+
+      const userProfileResponse = await axios.get(`https://graph.microsoft.com/beta/me`, {
         headers: {
           Authorization: `Bearer ${tokenData.access_token}`,
         },
       });
+      logger.debug(userProfileResponse.data);
 
-      if (userInfoResponse.status !== 200) {
-        console.error({ status: userInfoResponse.status, data: userInfoResponse.data });
-        return '/';
-      }
-      // logger.debug(userInfoResponse.data);
-      const email = userInfoResponse.data.email.toLocaleLowerCase().trim();
+      const email = userProfileResponse.data.mail.toLocaleLowerCase();
+      logger.debug(email);
+      logger.debug(userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7);
 
-      const emailParts = email.split('@');
+      const accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
 
-      if (emailParts.length < 2) {
-        throw new HttpException(400, 'Invalid email');
-      }
+      if (!accessAllowed) {
+        const emailParts = email.split('@');
 
-      if (MAILDOMAINS.split(',').includes(emailParts[1]) === false) {
-        res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
-        return (stateData.redirect_url || '/') + `?error=Unsupported Domain: (${emailParts[1]})`;
+        if (emailParts.length < 2) {
+          throw new HttpException(400, 'Invalid email');
+        }
+
+        if (MAILDOMAINS.split(',').includes(emailParts[1]) === false) {
+          res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
+          return (stateData.redirect_url || '/') + `?error=Unsupported Domain: (${emailParts[1]})`;
+        }
       }
 
       const user = await UserEntity.CreateUser(email, false);
