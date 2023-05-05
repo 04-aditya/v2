@@ -66,17 +66,18 @@ export default function AppLayout(props: Props) {
     setMobileOpen(!mobileOpen);
   };
 
-  const DrawerContent = (props: any)=>{
-    if (!props.auth.user) {
+  const DrawerContent = (dprops: any)=>{
+    if (!dprops.auth.user) {
       return <Box/>;
     }
-    // if (dprops.onlyIcons) {
-    //   return <Box sx={{display:'flex', flexDirection:'column', alignContent:'center', justifyContent:'center'}}>
-    //     <IconButton>
-    //       {mode==='dark'?<LightModeIcon/>:<DarkModeIcon/>}
-    //     </IconButton>
-    //   </Box>
-    // }
+
+    if (dprops.onlyIcons) {
+      return <Box sx={{display:'flex', flexDirection:'column', alignContent:'center', justifyContent:'center'}}>
+        <IconButton>
+          {mode==='dark'?<LightModeIcon/>:<DarkModeIcon/>}
+        </IconButton>
+      </Box>
+    }
 
     return <Box sx={{display:'flex', flexDirection:'column'}}>
       <Toolbar>

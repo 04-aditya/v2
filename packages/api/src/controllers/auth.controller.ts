@@ -394,7 +394,7 @@ export class AuthController {
       tokenData.expires_at = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
       logger.debug(tokenResponse.data);
 
-      console.log('calling  userinfo endpoint: ' + OAuthConfig.userinfo_endpoint);
+      logger.debug('calling  userinfo endpoint: ' + OAuthConfig.userinfo_endpoint);
       const userInfoResponse = await axios.get(OAuthConfig.userinfo_endpoint, {
         headers: {
           Authorization: `Bearer ${tokenData.access_token}`,
@@ -408,20 +408,24 @@ export class AuthController {
       logger.debug(userInfoResponse.data);
       const email = userInfoResponse.data.email.toLocaleLowerCase().trim();
 
-      // const userProfileResponse = await axios.get(`https://graph.microsoft.com/beta/me`, {
-      //   headers: {
-      //     Authorization: `Bearer ${tokenData.access_token}`,
-      //   },
-      // });
-      // logger.debug(userProfileResponse.data);
+      let accessAllowed = false;
+      try {
+        const userProfileResponse = await axios.get(`https://graph.microsoft.com/beta/me`, {
+          headers: {
+            Authorization: `Bearer ${tokenData.access_token}`,
+          },
+        });
+        logger.debug(userProfileResponse.data);
 
-      // const email = userProfileResponse.data.mail.toLocaleLowerCase();
-      // logger.debug(email);
-      // logger.debug(userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7);
-
+        const email = userProfileResponse.data.mail.toLocaleLowerCase();
+        logger.warn(email);
+        logger.warn(userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7);
+        accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
+      } catch (ex) {
+        logger.error('Unable to get the detailed user profile');
+        console.log(ex);
+      }
       // const accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
-
-      const accessAllowed = false;
 
       if (!accessAllowed) {
         const emailParts = email.split('@');
