@@ -35,6 +35,25 @@ import qs from 'qs';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 
+import axiosRetry from 'axios-retry';
+
+const axiosclient = axios.create({
+  // baseURL: process.env['PSBODHI_URL'],
+  // headers: {
+  //   'access-token': process.env['PSBODHI_KEY'],
+  // },
+  timeout: 60000,
+});
+axiosRetry(axiosclient, {
+  retries: 2,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: error => {
+    logger.error(error);
+    logger.error('Retrying...');
+    return true;
+  },
+});
+
 const REFRESHTOKENCOOKIE = 'rt';
 
 function generateCODE(count: number): string {
@@ -373,7 +392,7 @@ export class AuthController {
       const code_verifier = stateData.code_verifier;
       cache.del(state as string);
       const redirect_uri = `${(req.headers.host.startsWith('localhost') ? 'http' : 'https') + '://' + req.headers.host + '/auth/' + callbackType}`;
-      const tokenResponse = await axios.post(
+      const tokenResponse = await axiosclient.post(
         `${OAuthConfig.token_endpoint}`,
         qs.stringify({
           grant_type: 'authorization_code',
@@ -395,7 +414,7 @@ export class AuthController {
       logger.debug(tokenResponse.data);
 
       logger.debug('calling  userinfo endpoint: ' + OAuthConfig.userinfo_endpoint);
-      const userInfoResponse = await axios.get(OAuthConfig.userinfo_endpoint, {
+      const userInfoResponse = await axiosclient.get(OAuthConfig.userinfo_endpoint, {
         headers: {
           Authorization: `Bearer ${tokenData.access_token}`,
         },
@@ -410,7 +429,7 @@ export class AuthController {
 
       let accessAllowed = false;
       try {
-        const userProfileResponse = await axios.get(`https://graph.microsoft.com/beta/me`, {
+        const userProfileResponse = await axiosclient.get(`https://graph.microsoft.com/beta/me`, {
           headers: {
             Authorization: `Bearer ${tokenData.access_token}`,
           },
