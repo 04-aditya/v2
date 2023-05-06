@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, SxProps, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Popover, Select, Stack, SxProps, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
@@ -22,10 +22,64 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { UserAvatar } from '../../components/UserAvatar';
 import SaveIcon from '@mui/icons-material/Save';
 import SaveAsIcon from '@mui/icons-material/SaveAs';
-import TagsTextField from '../../components/TagsTextField';
-
+import LabelImportantIcon from '@mui/icons-material/LabelImportant';
+import ReviewsIcon from '@mui/icons-material/Reviews';
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
+
+
+export function InitialInstructionPopover(props:{message:IChatMessage}) {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handlePopoverClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
+  return (
+    <div>
+      <Stack direction={'row'} spacing={1} sx={{pl:1}}>
+        <ReviewsIcon/>
+        <Typography
+          aria-owns={open ? 'chatinstruction-popover' : undefined}
+          aria-haspopup="true"
+          onMouseEnter={handlePopoverOpen}
+          onMouseLeave={handlePopoverClose}
+        >
+          Initial chat instructions...
+        </Typography>
+      </Stack>
+      <Popover
+        id="chatinstruction-popover"
+        sx={{
+          pointerEvents: 'none',
+        }}
+        open={open}
+        anchorEl={anchorEl}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        onClose={handlePopoverClose}
+        disableRestoreFocus
+      >
+        <Alert severity='info' sx={{}}>
+          <AlertTitle>Initial instruction</AlertTitle>
+          <p>{props.message.content}</p>
+        </Alert>
+      </Popover>
+    </div>
+  );
+}
 
 export function ChatSessionPage(props: ChatSessionPageProps) {
   const { auth } = useAuth();
@@ -148,7 +202,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
                 easing: theme.transitions.easing.sharp,
                 duration: isMouseOver ? theme.transitions.duration.leavingScreen : theme.transitions.duration.enteringScreen,
               }),
-            })} elevation={0}
+            })} elevation={isMouseOver?6:0}
             onMouseEnter={()=>setIsMouseOver(true)}
             onMouseLeave={()=>setIsMouseOver(false)}>
             <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row',ml:-2, mr:-2, py:0.5}}>
@@ -203,10 +257,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
           </AppBar>
           <Box sx={{flexGrow:1, pt:2}} className="scrollbarv" tabIndex={0}>
             {messages.map((m,idx)=>( idx===0?(
-              <Alert key={idx} severity='info' sx={{mb:1, mx:{xs:0, sm:3}}}>
-                <AlertTitle>Chat Model initial instruction</AlertTitle>
-                <p>{m.content.split('\n')[0]}</p>
-              </Alert>
+              <InitialInstructionPopover message={m}/>
             ):<MessageItem key={m.id} message={m} />))}
             <EndofChatMessagesBlock key={messages.slice(-1)[0]?.content.length+''+typeMode} complete={!typeMode}/>
           </Box>
