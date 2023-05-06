@@ -186,7 +186,8 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
     setNewtag(newTag);
   },[setNewtag]);
 
-  const isSaveButtonDisabled = !(sessionName!==session?.name || sessionTags!==session?.tags);
+  const canEdit = auth.user?.email===session?.userid;
+  const isSaveButtonDisabled = !canEdit || !(sessionName!==session?.name || sessionTags !==session?.tags);
 
   return (
     <Paper elevation={2}
@@ -197,12 +198,12 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
       {session?(
         <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
           <AppBar position='static' sx={theme => ({
-              borderRadius:1, backgroundColor: isMouseOver?theme.palette.background.paper:'transparent',
+              borderRadius:1, backgroundColor: isMouseOver && canEdit?theme.palette.background.paper:'transparent',
               transition: theme.transitions.create('height', {
                 easing: theme.transitions.easing.sharp,
                 duration: isMouseOver ? theme.transitions.duration.leavingScreen : theme.transitions.duration.enteringScreen,
               }),
-            })} elevation={isMouseOver?6:0}
+            })} elevation={isMouseOver && canEdit?6:0}
             onMouseEnter={()=>setIsMouseOver(true)}
             onMouseLeave={()=>setIsMouseOver(false)}>
             <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row',ml:-2, mr:-2, py:0.5}}>
@@ -218,7 +219,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
                       onChange={handleSessionNameChange} // handle innerHTML change
                     />
                 </Grid>
-                {isMouseOver ? <Grid item xs={12} sx={{display:'flex', flexDirection:'row', alignItems:'center'}}>
+                {isMouseOver && canEdit ? <Grid item xs={12} sx={{display:'flex', flexDirection:'row', alignItems:'center'}}>
                   <Autocomplete fullWidth
                     multiple size='small'
                     id={'session-tags'}
@@ -261,7 +262,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
             ):<MessageItem key={m.id} message={m} />))}
             <EndofChatMessagesBlock key={messages.slice(-1)[0]?.content.length+''+typeMode} complete={!typeMode}/>
           </Box>
-          {auth.user?.email===session?.userid ? <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/> : null}
+          {canEdit ? <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/> : null}
         </Box>
       ) : null}
     </Paper>
