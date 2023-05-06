@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>PS Chat</title>
+    <title>%NX_APP_NAME%</title>
     <base href="/" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -11,6 +11,9 @@
   <body data-prismjs-copy="Copy">
     <div id="root"></div>
   </body>
+  <script>
+    window.BUILDVERSION = '%NX_BUILD_VERSION%';
+  </script>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
     mermaid.initialize({ startOnLoad: false });

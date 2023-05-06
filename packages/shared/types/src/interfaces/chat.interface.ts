@@ -14,8 +14,7 @@ export interface IChatSession {
   userid: string;
   name?: string;
   type: string;
-  path: string;
-  group: string;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
   messages: Array<IChatMessage>;

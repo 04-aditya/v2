@@ -114,8 +114,8 @@ export class AuthController {
     };
 
     if (process.env.SKIP_MAIL) {
-      logger.info('skipped mail');
-      logger.info(msg);
+      logger.debug('skipped mail');
+      logger.debug(msg);
     } else {
       try {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -351,7 +351,7 @@ export class AuthController {
 
     await getOAuthConfig();
     const scopes = [...(qscopes || '').split(','), ...OAuthConfig.scopes_supported].join('%20');
-    logger.info(`login for scopes: ${scopes}`);
+    logger.debug(`login for scopes: ${scopes}`);
 
     res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true, domain: DOMAIN });
     const code_challenge = base64URLEncode(sha256(code_verifier));
@@ -450,7 +450,8 @@ export class AuthController {
         accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
       } catch (ex) {
         logger.error('Unable to get the detailed user profile for ' + email);
-        logger.error(JSON.stringify(ex));
+        logger.error(userInfoResponse.data);
+        logger.debug(JSON.stringify(ex));
       }
       // const accessAllowed = userProfileResponse.data.onPremisesExtensionAttributes.extensionAttribute7 === 'PBS';
 
@@ -463,7 +464,9 @@ export class AuthController {
 
         if (MAILDOMAINS.split(',').includes(emailParts[1]) === false) {
           res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
-          return (stateData.redirect_url || '/') + `?error=Unsupported Domain: (${emailParts[1]})`;
+          const rurl = new URL(stateData.redirect_url || '/');
+          rurl.searchParams.append('error', 'Unsupported Domain: ' + emailParts[1]);
+          return rurl.href;
         }
       }
 

@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, AppBar, Avatar, Box, Button, Dialog, DialogContent, DialogTitle, Divider, FormControl, Grid, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Select, SxProps, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
@@ -18,6 +18,11 @@ import rehypeRaw from "rehype-raw";
 import rehypeColorChips from 'rehype-color-chips';
 import rehypeExternalLinks from 'rehype-external-links';
 import useAuth from "psnapi/useAuth";
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import { UserAvatar } from '../../components/UserAvatar';
+import SaveIcon from '@mui/icons-material/Save';
+import SaveAsIcon from '@mui/icons-material/SaveAs';
+import TagsTextField from '../../components/TagsTextField';
 
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
@@ -29,12 +34,14 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   const [messages, setMessages] = useState<IChatMessage[]>([]);
   const [typeMode, setTypeMode] = useState(false);
   const [sessionName, setSessionName] = useState('');
-  const [sessionGroup, setSessionGroup] = useState('');
+  const [sessionTags, setSessionTags] = useState<string[]>([]);
+  const [newTag, setNewtag] = useState('');
+  const [isMouseOver, setIsMouseOver] = useState(false);
 
   useEffect(() => {
     if (session) {
       setSessionName(session.name||'');
-      setSessionGroup(session.group||'');
+      setSessionTags(session.tags||[]);
 
       if (session.messages.length>2 && typeMode) {
         const msgs = session.messages.slice(0,-1);
@@ -100,15 +107,18 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
     console.log(newName);
   },[setSessionName]);
 
-  const handleUpdateSessionName = ()=>{
+  const handleUpdateSessionAttrs = ()=>{
     if (session) {
-      //const newSession = {...session, name:sessionName, group:sessionGroup};
-      const data = { id:session.id, name: sessionName};
+      const data = { id:session.id, name: sessionName, tags: sessionTags};
       console.log(data);
       mutation.mutate(data,
       {
-        onSuccess: ()=>{
-          invalidateCache();
+        onSuccess: (updatedSession)=>{
+          console.log(updatedSession);
+          session.name = sessionName;
+          session.tags = sessionTags;
+          // not required avoid refresh jank
+          // invalidateCache()
         },
         onError: (err)=>{
           console.error(err);
@@ -117,14 +127,12 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
     }
   };
 
-  const handleSessionGroupChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const newGroup = e.target.value;
-    if (newGroup.length<45) {
-      setSessionGroup(newGroup);
-    } else {
-      setSessionGroup(newGroup.substring(0,45));
-    }
-  }
+  const handleNewTagChange = useCallback((e: {target:{value:string}}) => {
+    const newTag = e.target.value.substring(0,32);
+    setNewtag(newTag);
+  },[setNewtag]);
+
+  const isSaveButtonDisabled = !(sessionName!==session?.name || sessionTags!==session?.tags);
 
   return (
     <Paper elevation={2}
@@ -134,26 +142,66 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
       {isError && <Alert severity='error'>{error.response?.status===404?'Not Found':error.message}</Alert>}
       {session?(
         <Box sx={{flex:1, display:'flex', flexDirection:'column', maxHeight:'100%', p:2}}>
-          <AppBar position='static' sx={{backgroundColor:'transparent'}} elevation={0}>
-            <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row'}}>
-              <Grid container sx={{mb:0.5}}>
-                <Grid item xs={12} sm={9} sx={{pl:3}}>
+          <AppBar position='static' sx={theme => ({
+              borderRadius:1, backgroundColor: isMouseOver?theme.palette.background.paper:'transparent',
+              transition: theme.transitions.create('height', {
+                easing: theme.transitions.easing.sharp,
+                duration: isMouseOver ? theme.transitions.duration.leavingScreen : theme.transitions.duration.enteringScreen,
+              }),
+            })} elevation={0}
+            onMouseEnter={()=>setIsMouseOver(true)}
+            onMouseLeave={()=>setIsMouseOver(false)}>
+            <Toolbar variant='dense' sx={{display:'flex', justifyContent:'space-around', flexDirection:'row',ml:-2, mr:-2, py:0.5}}>
+              <Grid container>
+                <Grid item xs={12} sm={9} sx={{display:'flex', flexDirection:'row', alignItems:'center'}}>
+                    <UserAvatar id={session.userid}/>
+                    &nbsp;
                     <ContentEditable
                       className="editable"
                       style={{display:'flex', height:'100%', width:'100%', alignItems:'center', fontSize:'1.5em', fontWeight:'bold' }}
                       tagName="div"
                       html={sessionName} // innerHTML of the editable divble edition
                       onChange={handleSessionNameChange} // handle innerHTML change
-                      onBlur={handleUpdateSessionName}
                     />
                 </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField label='Group' value={sessionGroup} onChange={handleSessionGroupChange} fullWidth size='small'/>
-                </Grid>
+                {isMouseOver ? <Grid item xs={12} sx={{display:'flex', flexDirection:'row', alignItems:'center'}}>
+                  <Autocomplete fullWidth
+                    multiple size='small'
+                    id={'session-tags'}
+                    options={['strategy', 'product', 'experience', 'engineering', 'data']}
+                    defaultValue={[]}
+                    value={sessionTags}
+                    onChange={(event: any, newValue: string[] | null) => {
+                      setSessionTags(newValue || []);
+                    }}
+                    freeSolo
+                    sx={{pl:4.5, pt:1}}
+                    renderTags={(value: readonly string[], getTagProps) =>
+                      value.map((option: string, index: number) => (
+                        <Chip variant={'outlined'} size='small' label={option} {...getTagProps({ index })} />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        variant={'standard'}
+                        label={'tags'}
+                        placeholder={'category tags ...'}
+                      />
+                    )}
+                  />
+                </Grid> : <Grid item xs={12} sm={3} sx={{display:'flex', flexDirection:'row', alignItems:'center'}}>
+                  {sessionTags.map((tag,idx)=>(
+                    <Chip size='small' label={tag}/>
+                  ))}
+                </Grid>}
               </Grid>
+              <IconButton onClick={handleUpdateSessionAttrs} disabled={isSaveButtonDisabled}>
+                <SaveAsIcon/>
+              </IconButton>
             </Toolbar>
           </AppBar>
-          <Box sx={{flexGrow:1, pt:1}} className="scrollbarv" tabIndex={0}>
+          <Box sx={{flexGrow:1, pt:2}} className="scrollbarv" tabIndex={0}>
             {messages.map((m,idx)=>( idx===0?(
               <Alert key={idx} severity='info' sx={{mb:1, mx:{xs:0, sm:3}}}>
                 <AlertTitle>Chat Model initial instruction</AlertTitle>
@@ -267,7 +315,7 @@ function MarkDown(props:any) {
   />
 }
 
-function MessageContent(props: { message:IChatMessage}) {
+function MessageContent(props: { message: IChatMessage}) {
   const {message:m} = props;
   const [openReasoning, setOpenReasoning] = useState(false);
   const theme = useTheme();
@@ -282,13 +330,14 @@ function MessageContent(props: { message:IChatMessage}) {
   };
   const isUser = m.role==='user';
   const followup_questions = m.options?.followup_questions as string[] || [];
-  return <Paper sx={(theme)=>({px:1, border:'0px solid gray', overflow:'auto',
-    ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
-    borderRadius: 1, width:'100%',
-    borderLeftWidth:isUser?'0px':'2px', borderRightWidth:isUser?'2px':'0px',
-    borderColor:(isUser?theme.palette.primary.light:theme.palette.secondary.light),
-    backgroundColor: isUser?theme.palette.background.default:theme.palette.background.paper,
-  })}>
+  return <Paper sx={(theme)=>({
+      px:1, border:'0px solid gray', overflow:'auto',
+      ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
+      borderRadius: 1, width:'95%',
+      borderLeftWidth: isUser ? '0px' : '2px', borderRightWidth:isUser?'2px':'0px',
+      borderColor: (isUser ? theme.palette.primary.light : theme.palette.secondary.light),
+      backgroundColor: isUser?theme.palette.background.default:theme.palette.background.paper,
+    })}>
     { followup_questions.length > 0 ? <>
         <Typography variant='body1'>Need more information to further refine my answer.</Typography>
         <ul>
@@ -324,13 +373,21 @@ function MessageItem(props: { message:IChatMessage }) {
 
   return (
     <div ref={ref}>
-      {isUser?<Box key={m.id} sx={{display:'flex', flexGrow:1, flexDirection:'row-reverse', alignItems:'flex-start',}}>
-        <Avatar alt='user avatar' sx={{mt:2, width: 24, height: 24, boxShadow:"0px 6px 10px 0px rgba(0,0,0,0.14)", background:'transparent', display:{xs:'none', sm:'block'}}}>
+      {isUser?<Box key={m.id} sx={{display:'flex', pr:1, flexGrow:1, flexDirection:'column', alignItems:'flex-end',}}>
+        <Avatar alt='user avatar' sx={theme=>({mt:1, mr:-1, mb:-1.5,
+          width: 24, height: 24,
+          background: theme.palette.background.default,
+          borderWidth:1, borderStyle: 'solid', borderColor: theme.palette.primary.main,
+          display:{xs:'none', sm:'block'}})}>
           <PsychologyAltIcon color='primary'/>
         </Avatar>
         <MessageContent message={m}/>
-      </Box>:<Box key={m.id} sx={{display:'flex', flexDirection:'row', alignItems:'flex-start',my:1}}>
-        <Avatar alt='bot avatar' sx={{mt:1, width: 24, height: 24, background:'transparent', display:{xs:'none', sm:'block'}}}>
+      </Box>:<Box key={m.id} sx={{display:'flex',pl:1, flexDirection:'column', alignItems:'flex-start',my:1}}>
+        <Avatar alt='bot avatar' sx={theme=>({mt:1, ml:-1, mb:-1.5,
+          width: 28, height: 28,
+          background: theme.palette.background.paper,
+          borderWidth:2, borderStyle: 'solid', borderColor: theme.palette.secondary.main,
+          display:{xs:'none', sm:'block'}})}>
           <PsychologyIcon color='secondary' sx={{transform:'scale(-1,1)'}}/>
         </Avatar>
         <MessageContent message={m}/>

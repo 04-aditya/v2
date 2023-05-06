@@ -337,7 +337,7 @@ export class ChatController {
     @BodyParam('message') message_param?: string,
     @BodyParam('id') sessionid_param?: string,
     @BodyParam('name') name_param?: string,
-    @BodyParam('group') group_param?: string,
+    @BodyParam('tags') tags_param?: string[],
     @BodyParam('type') type_param?: string,
     @BodyParam('messageid') messageid_param?: number,
     @BodyParam('model') model_param?: string,
@@ -373,7 +373,7 @@ export class ChatController {
 
     //TODO: validate
     if (name_param) session.name = name_param;
-    if (group_param) session.group = group_param;
+    if (tags_param) session.tags = tags_param;
     if (type_param) {
       switch (type_param.toLowerCase()) {
         case 'public':
@@ -384,8 +384,8 @@ export class ChatController {
           break;
       }
     }
-    // if (path) session.name = path;
 
+    // if message and session id is specified updated the attributes and return
     if (!message_param && sessionid_param) {
       await repo.save(session);
       result.data = session.toJSON();
@@ -393,6 +393,7 @@ export class ChatController {
       return result;
     }
 
+    //if session is is not specified create a new session
     if (!sessionid_param) {
       session.name = name_param || message.substring(0, 45);
       session.userid = currentUser.email;

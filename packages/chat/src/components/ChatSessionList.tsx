@@ -153,7 +153,8 @@ export function SessionSummary(props: {show?: string, sessionid?: string, sessio
   if (!session) return <Typography variant="body2">?</Typography>;
   return <Fade in timeout={500}><Box sx={theme=>({
       mb: 1, p: 0.5, minHeight: 72, display: 'flex', flexDirection: 'row', alignItems: 'flex-start', cursor: 'pointer',
-      borderRadius: '3px', border: `1px solid #ccc`, borderColor:theme.palette.divider, '&:hover': { borderColor: theme.palette.action.active },
+      borderRadius: '3px', borderWidth: `1px`, borderStyle: 'solid', borderColor:theme.palette.divider,
+      '&:hover': { borderColor: theme.palette.action.active },
     })} onClick={()=>{
       !isDeleted && navigate(`/chat/${session.id}`)
     }}>

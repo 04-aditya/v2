@@ -8,7 +8,7 @@ import { useTheme } from "sharedui/theme";
 import ReactMarkdown from "react-markdown";
 import { TermsNotice } from "./TermsNotice";
 
-export function AboutDialog() {
+export function AboutDialog(props:{showText:boolean}) {
   const [open, setOpen] = React.useState(false);
   const { theme } = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
@@ -23,11 +23,11 @@ export function AboutDialog() {
 
   return (
     <>
-      <ListItemButton onClick={handleClickOpen}>
+      <ListItemButton onClick={handleClickOpen} sx={{maxHeight:'48px'}}>
         <ListItemIcon>
           <InfoIcon />
         </ListItemIcon>
-        <ListItemText primary={`About ${process.env['NX_APP_NAME']}`} />
+        {props.showText && <ListItemText primary={`About ${process.env['NX_APP_NAME']}`} />}
       </ListItemButton>
       <Dialog
         fullScreen={fullScreen}

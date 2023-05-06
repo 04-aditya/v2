@@ -60,6 +60,7 @@ stages:
         echo NX_EMAILDOMAINS=$(EmailDomains) >> ./.env.template
         echo NX_BUILD_VERSION=$(Build.SourceBranchName)-$(Build.SourceVersion) >> ./.env.template
         echo NX_BUILD_DATE=$(date) >> ./.env.template
+        echo { \"build_version\": \"$(Build.SourceBranchName)-$(Build.SourceVersion)\", \"build_date\": \"$(date)\" } > ./build.json
         # echo NX_APP_NAME=PSNextDash >> ./packages/dash/.env.local
         # echo ----
         # echo NX_API_URL=$(APIURL) > ./packages/chat/.env.local

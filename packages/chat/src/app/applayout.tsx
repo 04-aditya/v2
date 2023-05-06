@@ -1,5 +1,5 @@
 import React from "react";
-import { AppBar, Box, CssBaseline, Menu, MenuItem, Paper, TextField, ThemeProvider, Typography, alpha } from "@mui/material";
+import { AppBar, Box, Collapse, CssBaseline, Fade, Menu, MenuItem, Paper, Stack, TextField, ThemeProvider, Typography, alpha } from "@mui/material";
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
@@ -25,6 +25,8 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useChatHistory } from "../api/chat";
 import ForumIcon from '@mui/icons-material/Forum';
 import AccountCircle from '@mui/icons-material/AccountCircle';
+import InfoIcon from '@mui/icons-material/Info';
+import HistoryIcon from '@mui/icons-material/History';
 import {formatDistanceToNow, parseJSON} from 'date-fns';
 import useAuth from "psnapi/useAuth";
 import ChatSessionList, { ChatSessions } from "../components/ChatSessionList";
@@ -43,6 +45,64 @@ interface Props {
   window?: () => Window;
 }
 
+
+const DrawerContent = (dprops: any)=>{
+  const navigate = useNavigate();
+  const [open, setOpen] = React.useState(true);
+  const [openHistory, setOpenHistory] = React.useState(false);
+
+  const handleClick = () => {
+    setOpen(!open);
+  };
+  if (!dprops.auth.user) {
+    return <Box/>;
+  }
+
+  //if (dprops.onlyIcons) {
+    return <Box sx={{display:'flex', flexDirection:'column', height:'100vh', alignContent:'center', justifyContent:'space-between', overflow:'hidden'}}>
+      <Toolbar sx={{ml:-1.5, mb:3}}>
+        <img src={logo} height={32} alt={`${process.env['NX_APP_NAME']} logo`} onClick={()=>navigate('/')}
+        style={{cursor: 'pointer'}}/>
+        {dprops.onlyIcons?null:<Typography variant="h6" noWrap component="div" sx={{ml:2, cursor: 'pointer'}}
+          onClick={()=>navigate('/')}>
+          {process.env['NX_APP_NAME']}
+        </Typography>}
+      </Toolbar>
+      <Box>
+        <ListItemButton sx={{maxHeight:'48px'}} onClick={()=>navigate('/')}>
+          <ListItemIcon>
+            <AddCommentIcon/>
+          </ListItemIcon>
+          {dprops.onlyIcons?null:<ListItemText>New Chat</ListItemText>}
+        </ListItemButton>
+        <ListItemButton sx={{maxHeight:'48px'}} onClick={()=>setOpenHistory(!openHistory)}>
+          <ListItemIcon>
+            <HistoryIcon/>
+          </ListItemIcon>
+          {dprops.onlyIcons?null:<ListItemText>Chat History</ListItemText>}
+        </ListItemButton>
+        <Collapse sx={{}} in={openHistory && !dprops.onlyIcons} timeout="auto">
+          <Paper sx={
+            theme=>( {height:'50vh',m:1, p:1, backgroundColor:alpha(theme.palette.background.paper,0.5) })
+            } className="scrollbarv">
+          {dprops.auth.user?<ChatSessions type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>:null}
+          </Paper>
+        </Collapse>
+        <Divider/>
+        <ListItem disablePadding>
+          <ListItemButton onClick={dprops.colorMode.toggleColorMode}>
+            <ListItemIcon>
+              {dprops.mode==='dark'?<LightModeIcon/>:<DarkModeIcon/>}
+            </ListItemIcon>
+            {dprops.onlyIcons?null:<ListItemText primary={dprops.mode==='dark' ? 'Light Mode' : 'Dark Mode'} />}
+          </ListItemButton>
+        </ListItem>
+        <AboutDialog showText={!dprops.onlyIcons}/>
+      </Box>
+      <Box sx={{height:24}}/>
+    </Box>
+};
+
 export default function AppLayout(props: Props) {
   const axios = useAxiosPrivate();
   const { auth, setAuth } = useAuth();
@@ -51,7 +111,7 @@ export default function AppLayout(props: Props) {
   const { window } = props;
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [isMouseOver, setIsMouseOver] = React.useState(true);
+  const [isMouseOver, setIsMouseOver] = React.useState(false);
 
   const isProfileMenuOpen = Boolean(anchorEl);
 
@@ -64,66 +124,6 @@ export default function AppLayout(props: Props) {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
-  };
-
-  const DrawerContent = (dprops: any)=>{
-    if (!dprops.auth.user) {
-      return <Box/>;
-    }
-
-    if (dprops.onlyIcons) {
-      return <Box sx={{display:'flex', flexDirection:'column', alignContent:'center', justifyContent:'center'}}>
-        <IconButton>
-          {mode==='dark'?<LightModeIcon/>:<DarkModeIcon/>}
-        </IconButton>
-      </Box>
-    }
-
-    return <Box sx={{display:'flex', flexDirection:'column'}}>
-      <Toolbar>
-        <img src={logo} height={48} alt={`${process.env['NX_APP_NAME']} logo`} onClick={()=>navigate('/')} style={{cursor: 'pointer'}}/>
-        <Typography variant="h6" noWrap component="div" sx={{ml:2, cursor: 'pointer'}} onClick={()=>navigate('/')}>
-          {process.env['NX_APP_NAME']}
-        </Typography>
-      </Toolbar>
-      {/*
-      <Toolbar/>
-      <img src={mode==='dark'?logo4dark:logo4light} height={48} alt="PS logo"/>
-
-      <Divider />
-      */}
-
-      <Paper sx={theme=>({p:1, height:'100%',mt:2, mb:1,ml:1,mr:1, backgroundColor:alpha(theme.palette.background.paper,0.5)})} elevation={6}>
-      <Box sx={{flexGrow:1, maxHeight:600,}} className="scrollbarv">
-        <List dense>
-          <ListItem disablePadding>
-            <ListItemButton onClick={()=>navigate('/')}>
-              <ListItemIcon>
-                <AddCommentIcon/>
-              </ListItemIcon>
-              <ListItemText primary={'New Chat'} />
-            </ListItemButton>
-          </ListItem>
-          {/* {auth.user?<ChatSessionList type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>:null} */}
-          {auth.user?<ChatSessions type='private' icon={<ForumIcon sx={{color:'#999'}}/>}/>:null}
-        </List>
-      </Box>
-      <Divider />
-      <List>
-        <ListItem disablePadding>
-          <ListItemButton onClick={colorMode.toggleColorMode}>
-            <ListItemIcon>
-              {mode==='dark'?<LightModeIcon/>:<DarkModeIcon/>}
-            </ListItemIcon>
-            <ListItemText primary={mode==='dark' ? 'Light Mode' : 'Dark Mode'} />
-          </ListItemButton>
-        </ListItem>
-        <ListItem disablePadding>
-          <AboutDialog/>
-        </ListItem>
-      </List>
-      </Paper>
-    </Box>
   };
 
   const container = window !== undefined ? () => window().document.body : undefined;
@@ -208,24 +208,30 @@ export default function AppLayout(props: Props) {
           '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, },
         }}
       >
-        <DrawerContent auth={auth}/>
+        <DrawerContent auth={auth} colorMode={colorMode} mode={mode}/>
       </Drawer>
       <Drawer
         variant="permanent"
         sx={{
           display: { xs: 'none', sm: 'block' },
-          '& .MuiDrawer-paper': {borderRadius:2, boxSizing: 'border-box', maxHeight:'calc(100% - 16px)',
-          width: isMouseOver ? drawerWidth : 48,
-          borderRight:'0px',overflowY:'hidden', },
+          '& .MuiDrawer-paper': {
+            borderRadius:2, boxSizing: 'border-box', maxHeight:'calc(100% - 16px)',
+            width: isMouseOver ? drawerWidth : 48,
+            borderRight:'0px',overflowY:'hidden',
+            transition: theme.transitions.create('width', {
+              easing: theme.transitions.easing.sharp,
+              duration: isMouseOver ? theme.transitions.duration.leavingScreen : theme.transitions.duration.enteringScreen,
+            }),
+          },
         }}
         PaperProps={{
           sx:{backgroundColor:'transparent'}
         }}
         open
         onMouseEnter={()=>setIsMouseOver(true)}
-        onMouseLeave={()=>setIsMouseOver(true)}
+        onMouseLeave={()=>setIsMouseOver(false)}
       >
-          <DrawerContent auth={auth} onlyIcons={!isMouseOver}/>
+          <DrawerContent auth={auth} onlyIcons={!isMouseOver} colorMode={colorMode} mode={mode}/>
       </Drawer>
     </Box>
     <Box

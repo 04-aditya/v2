@@ -34,11 +34,8 @@ export class ChatSessionEntity extends BaseEntity implements IChatSession {
   @Column({ default: 'private' })
   type: string;
 
-  @Column({ default: '' })
-  path: string;
-
-  @Column({ default: '' })
-  group: string;
+  @Column({ type: 'simple-array', default: '' })
+  tags: string[];
 
   @Column()
   @CreateDateColumn({ type: 'timestamptz' })
@@ -63,8 +60,7 @@ export class ChatSessionEntity extends BaseEntity implements IChatSession {
       userid: this.userid,
       name: this.name,
       type: this.type,
-      path: this.path,
-      group: this.group,
+      tags: this.tags,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       options: this.options,

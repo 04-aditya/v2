@@ -28,9 +28,9 @@ export default class ModelFactory {
   private static _models: Map<string, IChatModel>;
 
   static async models() {
-    if (ModelFactory._models) {
-      return ModelFactory._models;
-    }
+    // if (ModelFactory._models) {
+    //   return ModelFactory._models;
+    // }
 
     ModelFactory._models = new Map<string, IChatModel>();
     const models: IChatModel[] = [];

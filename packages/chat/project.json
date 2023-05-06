@@ -11,7 +11,9 @@
           "echo Updating version for PSChat...",
           "cp ./.env.template ./packages/chat/.env.local",
           "echo NX_APP_NAME=PSChat >> ./packages/chat/.env.local",
-          "cat ./packages/chat/.env.local"
+          "cat ./packages/chat/.env.local",
+          "cp ./build.json ./packages/chat/src/assets/build.json",
+          "cat ./packages/chat/src/assets/build.json"
         ],
         "parallel": false,
         "forwardAllArgs": false
