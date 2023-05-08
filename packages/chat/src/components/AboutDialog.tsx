@@ -47,6 +47,10 @@ export function AboutDialog(props:{showText:boolean}) {
             <TermsNotice/>
             <br/>
             <Typography variant="caption">for any queries,
+            <a href="/releases">Release history</a>
+            </Typography>
+            <br />
+            <Typography variant="caption">for any queries,
               please contact <a href="mailto:psnextsupport@publicissapient.com">mailto:psnextsupport@publicissapient.com</a>
             </Typography>
             <br />

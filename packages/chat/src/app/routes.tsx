@@ -31,6 +31,9 @@ const HomePage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Home/
 const ChatSession = React.lazy(() => import("../pages/chat-session-page/chat-session-page"));
 const ChatSessionPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><ChatSession/></React.Suspense>
 
+const Releases = React.lazy(() => import("../pages/releases-page/releases-page"));
+const ReleasesPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Releases/></React.Suspense>
+
 const Terms = React.lazy(() => import("../pages/terms-page/terms-page"));
 const TermsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Terms/></React.Suspense>
 
@@ -48,6 +51,7 @@ const routeMap:RouteMap = {
         {path:'/unauthorized', element:<Unauthorized/>},
         {path:'/terms', element:<TermsPage/>},
         {path:'/privacy', element:<PrivacyPage/>},
+        {path:'/releases', element:<ReleasesPage/>},
       ]
     },
     {
