@@ -46,11 +46,11 @@ export function AboutDialog(props:{showText:boolean}) {
             PSChat - LLM powered ChatBot for Publicis Sapient employees.<br />
             <TermsNotice/>
             <br/>
-            <Typography variant="caption">for any queries,
-            <a href="/releases">Release history</a>
+            <Typography variant="caption">releases:&nbsp;
+              <a href="/releases">Release history</a>
             </Typography>
             <br />
-            <Typography variant="caption">for any queries,
+            <Typography variant="caption">for any queries:
               please contact <a href="mailto:psnextsupport@publicissapient.com">mailto:psnextsupport@publicissapient.com</a>
             </Typography>
             <br />

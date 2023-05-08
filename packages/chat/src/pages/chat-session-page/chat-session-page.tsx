@@ -1,15 +1,15 @@
-import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Popover, Select, Stack, SxProps, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Popover, Select, Snackbar, Stack, SxProps, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
 import gfm from 'remark-gfm'
 import CodeBlock from "sharedui/components/CodeBlock";
-import { useChatSession } from '../../api/chat';
+import { useChatSession, useChatSessionFavourite } from '../../api/chat';
 import { ChatTextField } from '../../components/ChatTextField';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter'
 import {dark, coy, okaidia} from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { IChatMessage, IChatSession } from 'sharedtypes';
-import { useEffect, useRef, useState, ChangeEvent, useCallback, useLayoutEffect } from 'react';
+import { useEffect, useRef, useState, ChangeEvent, useCallback, useLayoutEffect, SyntheticEvent, useMemo } from 'react';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 import { useTheme as useThemeMode } from 'sharedui/theme';
@@ -28,6 +28,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShareIcon from '@mui/icons-material/Share';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import useAxiosPrivate from 'psnapi/useAxiosPrivate';
+import { useQueryClient } from '@tanstack/react-query';
 
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
@@ -87,6 +90,8 @@ export function InitialInstructionPopover(props:{message:IChatMessage}) {
 }
 
 export function ChatSessionPage(props: ChatSessionPageProps) {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
   const { auth } = useAuth();
   const { chatId } = useParams();
   const {data:serverSession, isLoading, isError, error, mutation, invalidateCache} = useChatSession(chatId||'');
@@ -97,6 +102,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   const [newTag, setNewtag] = useState('');
   const [isMouseOver, setIsMouseOver] = useState(false);
   const [session, setSession] = useState<IChatSession>();
+  const {data:isFavourite, mutation:favMutation, invalidateCache: favInvalidateCache} = useChatSessionFavourite(session?.id);
 
   useEffect(()=>{
     setSession(serverSession);
@@ -197,6 +203,33 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
     setNewtag(newTag);
   },[setNewtag]);
 
+  const toggleFavourite = useCallback((e: SyntheticEvent) => {
+    e.stopPropagation();
+    if (!session) return;
+    favMutation.mutateAsync(!isFavourite)
+      .then(() => {
+        favInvalidateCache();
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+      return true;
+  },[favInvalidateCache, favMutation, isFavourite, session]);
+
+  const toggleSharing = useCallback((e: SyntheticEvent) => {
+    if (!session) return;
+    axios.post(`/api/chat/${session.id}/sharing`,{
+      type: session.type==='public'?'private':'public'
+    })
+    .then(() => {
+      setSession({...session, type:session.type==='public'?'private':'public'});
+    })
+    .catch((err)=>console.error(err));
+
+    return true;
+  }, [axios, session]);
+
+  const isShared = useMemo(()=>(session?.type==='public'),[session?.type]);
   const canEdit = auth.user?.email===session?.userid;
   const isSaveButtonDisabled = !canEdit || !(sessionName!==session?.name || sessionTags !==session?.tags);
 
@@ -263,14 +296,14 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
                 </Grid>}
               </Grid>
               <Stack direction={'row'} spacing={1}>
-                <IconButton onClick={handleUpdateSessionAttrs} disabled={isSaveButtonDisabled}>
+                <IconButton size='small' onClick={handleUpdateSessionAttrs} disabled={isSaveButtonDisabled}>
                   <SaveAsIcon/>
                 </IconButton>
-                <IconButton onClick={handleUpdateSessionAttrs} disabled={!canEdit}>
-                  <FavoriteBorderIcon/>
+                <IconButton size='small' onClick={toggleFavourite} disabled={!canEdit}>
+                  {isFavourite?<FavoriteIcon color='secondary'/>:<FavoriteBorderIcon/>}
                 </IconButton>
-                <IconButton onClick={handleUpdateSessionAttrs} disabled={isSaveButtonDisabled}>
-                  <ShareIcon/>
+                <IconButton size='small' onClick={toggleSharing} disabled={!canEdit}>
+                  <ShareIcon color={isShared?'info':'inherit'}/>
                 </IconButton>
               </Stack>
             </Toolbar>
@@ -391,6 +424,19 @@ function MessageContent(props: { message: IChatMessage}) {
   const [openReasoning, setOpenReasoning] = useState(false);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  const handleSnackbarClose = (event: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setSnackbarMessage('')
+  };
+
+  const showSnackbar = (msg: string)=>{
+    setSnackbarMessage(msg);
+  }
 
   const handleClickOpen = () => {
     setOpenReasoning(true);
@@ -402,9 +448,9 @@ function MessageContent(props: { message: IChatMessage}) {
   const isUser = m.role==='user';
   const followup_questions = m.options?.followup_questions as string[] || [];
   return <Paper sx={(theme)=>({
-      px:1, border:'0px solid gray', overflow:'auto',
+      px:1,pt:isUser?0:2, border:'0px solid gray', overflow:'auto',
       ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
-      borderRadius: 1, width:'95%',
+      borderRadius: 1, width: '95%', position: 'relative',
       borderLeftWidth: isUser ? '0px' : '2px', borderRightWidth:isUser?'2px':'0px',
       borderColor: (isUser ? theme.palette.primary.light : theme.palette.secondary.light),
       backgroundColor: isUser?theme.palette.background.default:theme.palette.background.paper,
@@ -416,6 +462,21 @@ function MessageContent(props: { message: IChatMessage}) {
         </ul>
       </>: null}
     <MarkDown children={m.content} partial={m.partial}/>
+    {isUser?null:<IconButton size='small' sx={{position:'absolute', top:0, right:0}} onClick={()=>{
+      navigator.clipboard.writeText(m.content);
+      showSnackbar('Copied to clipboard');
+    }}>
+      <ContentCopyIcon/>
+    </IconButton>}
+    <Snackbar
+      anchorOrigin={{ vertical:'top', horizontal:'center' }}
+      open={snackbarMessage !== ''}
+      autoHideDuration={6000}
+      onClose={handleSnackbarClose}>
+      <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: '100%' }}>
+        {snackbarMessage}
+      </Alert>
+    </Snackbar>
     {m.options?.intermediate_content ? <>
       <Button size='small' onClick={handleClickOpen}>
         show reasoning
@@ -446,7 +507,7 @@ function MessageItem(props: { message:IChatMessage }) {
     <div ref={ref}>
       {isUser?<Box key={m.id} sx={{display:'flex', pr:1, flexGrow:1, flexDirection:'column', alignItems:'flex-end',}}>
         <Avatar alt='user avatar' sx={theme=>({mt:1, mr:-1, mb:-1.5,
-          width: 24, height: 24,
+          width: 24, height: 24, zIndex:1,
           background: theme.palette.background.default,
           borderWidth:1, borderStyle: 'solid', borderColor: theme.palette.primary.main,
           display:{xs:'none', sm:'block'}})}>
@@ -455,7 +516,7 @@ function MessageItem(props: { message:IChatMessage }) {
         <MessageContent message={m}/>
       </Box>:<Box key={m.id} sx={{display:'flex',pl:1, flexDirection:'column', alignItems:'flex-start',my:1}}>
         <Avatar alt='bot avatar' sx={theme=>({mt:1, ml:-1, mb:-1.5,
-          width: 28, height: 28,
+          width: 28, height: 28, zIndex:1,
           background: theme.palette.background.paper,
           borderWidth:2, borderStyle: 'solid', borderColor: theme.palette.secondary.main,
           display:{xs:'none', sm:'block'}})}>

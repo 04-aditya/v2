@@ -16,8 +16,18 @@ export function ReleasesPage(props: ReleasesPageProps) {
       <Box sx={{maxWidth:{xs:'100%', sm:'600'}, p:2}}>
         {/* <ReleaseInfo date={'**Date**'} content={'**Description**'}/>
         <Divider/> */}
-        <Box sx={{maxHeight:'400px'}} className='scrollbarv'>
-          <ReleaseInfo date={'2023-05-08'} content={` * Releases Pages link in About Dialog \n * Added \`Regenerate\` button \n![Regenerate](/assets/releases/regenrate_btn.jpg)`}/>
+        <Box sx={{maxHeight:'450px'}} className='scrollbarv'>
+          <ReleaseInfo date={'2023-05-09'} content={
+            ` * Added copy to clipboard button, for generated content \n\n` +
+            `![Copy btn image](/assets/releases/copy_btn.jpg)\n\n` +
+            ` * Fixed the Share button, and the favourite button \n\n` +
+            `![Share and Favourite btn image](/assets/releases/fav-share_btn.jpg)`
+          }/>
+          <ReleaseInfo date={'2023-05-08'} content={
+            ` * Releases Pages link in About Dialog \n`+
+            ` * Add support for shift+enter or alt+enter in add a new line in the chatbox \n`+
+            `* Added \`Regenerate\` button \n\n`+
+            `![Regenerate](/assets/releases/regenrate_btn.jpg)`}/>
           <ReleaseInfo date={'2023-05-06'} content={`Updated UI`}/>
           <ReleaseInfo date={'2023-05-04'} content={`Release to all`}/>
           <ReleaseInfo date={'2023-04-28'} content={`Release to beta users`}/>
