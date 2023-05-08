@@ -24,6 +24,11 @@ import SaveIcon from '@mui/icons-material/Save';
 import SaveAsIcon from '@mui/icons-material/SaveAs';
 import LabelImportantIcon from '@mui/icons-material/LabelImportant';
 import ReviewsIcon from '@mui/icons-material/Reviews';
+import DeleteIcon from '@mui/icons-material/Delete';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import ShareIcon from '@mui/icons-material/Share';
+
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
 
@@ -84,13 +89,18 @@ export function InitialInstructionPopover(props:{message:IChatMessage}) {
 export function ChatSessionPage(props: ChatSessionPageProps) {
   const { auth } = useAuth();
   const { chatId } = useParams();
-  const {data:session, isLoading, isError, error, mutation, invalidateCache} = useChatSession(chatId||'');
+  const {data:serverSession, isLoading, isError, error, mutation, invalidateCache} = useChatSession(chatId||'');
   const [messages, setMessages] = useState<IChatMessage[]>([]);
   const [typeMode, setTypeMode] = useState(false);
   const [sessionName, setSessionName] = useState('');
   const [sessionTags, setSessionTags] = useState<string[]>([]);
   const [newTag, setNewtag] = useState('');
   const [isMouseOver, setIsMouseOver] = useState(false);
+  const [session, setSession] = useState<IChatSession>();
+
+  useEffect(()=>{
+    setSession(serverSession);
+  },[serverSession])
 
   useEffect(() => {
     if (session) {
@@ -150,9 +160,10 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   //   mermaid.contentLoaded();
   // },[]);
 
-  const handleSessionUpdate = (session: IChatSession) => {
+  const handleSessionUpdate = (updatedSession: IChatSession) => {
     setTypeMode(true);
-    invalidateCache();
+    //invalidateCache();
+    setSession(updatedSession);
   }
 
   const handleSessionNameChange = useCallback((e: {target:{value:string}}) => {
@@ -245,15 +256,23 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
                       />
                     )}
                   />
-                </Grid> : <Grid item xs={12} sm={3} sx={{display:'flex', flexDirection:'row', alignItems:'center'}}>
+                </Grid> : <Grid item xs={12} sm={3} sx={{display:'flex', flexDirection:'row', flexWrap:'wrap', alignItems:'center'}}>
                   {sessionTags.map((tag,idx)=>(
-                    <Chip size='small' label={tag}/>
+                    <Chip size='small' variant='outlined' label={tag} sx={{ml:1, mb:0.5}}/>
                   ))}
                 </Grid>}
               </Grid>
-              <IconButton onClick={handleUpdateSessionAttrs} disabled={isSaveButtonDisabled}>
-                <SaveAsIcon/>
-              </IconButton>
+              <Stack direction={'row'} spacing={1}>
+                <IconButton onClick={handleUpdateSessionAttrs} disabled={isSaveButtonDisabled}>
+                  <SaveAsIcon/>
+                </IconButton>
+                <IconButton onClick={handleUpdateSessionAttrs} disabled={!canEdit}>
+                  <FavoriteBorderIcon/>
+                </IconButton>
+                <IconButton onClick={handleUpdateSessionAttrs} disabled={isSaveButtonDisabled}>
+                  <ShareIcon/>
+                </IconButton>
+              </Stack>
             </Toolbar>
           </AppBar>
           <Box sx={{flexGrow:1, pt:2}} className="scrollbarv" tabIndex={0}>
@@ -262,7 +281,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
             ):<MessageItem key={m.id} message={m} />))}
             <EndofChatMessagesBlock key={messages.slice(-1)[0]?.content.length+''+typeMode} complete={!typeMode}/>
           </Box>
-          {canEdit ? <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate}/> : null}
+          {canEdit ? <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate} showRegenerate={canEdit}/> : null}
         </Box>
       ) : null}
     </Paper>

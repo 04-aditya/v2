@@ -1,5 +1,5 @@
 import { useState, ChangeEvent, useEffect, useCallback } from 'react';
-import { Alert, Box, CircularProgress, Divider, Fade, InputBase, Paper, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Divider, Fade, InputBase, Paper, Tooltip, Typography } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
 // import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 // import SettingsIcon from '@mui/icons-material/Settings';
@@ -14,11 +14,13 @@ import useSpeechToText from 'react-hook-speech-to-text';
 import { DefaultModelOptions, IModelOptions, ModelOptions } from './ModelOptions';
 import { IModelParameters, ModelParameters } from './ModelParameters';
 import React from 'react';
+import SyncIcon from '@mui/icons-material/Sync';
 interface ChatTextFieldProps {
   sessionid?: string;
   message?: string;
   messageid?: string;
   onSuccess?: (session: IChatSession) => void;
+  showRegenerate?: boolean;
 }
 
 export function ChatTextField(props: ChatTextFieldProps) {
@@ -142,7 +144,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
 
   const handleMessageKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      if (e.ctrlKey) {
+      if (e.shiftKey || e.altKey) {
         setNewMessage(prev => prev + '\n');
       }
       else {
@@ -158,6 +160,36 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const onExit = () => {
     setIntroState((prev) => ({...prev, stepsEnabled: false }));
   };
+
+  const handleRegenerate = async () => {
+    if (!chatsession) return;
+    const lastUserMsg = chatsession.messages.slice(-2)[0];
+    if (!lastUserMsg) return;
+    setIsBusy(true);
+    setErrorMessage(undefined);
+    mutation.mutate({
+      id:sessionid,
+      model: options.model, assistant: options.assistant, contexts: options.contexts,
+      messageid: lastUserMsg.id,
+      message: lastUserMsg.content,
+      parameters,
+    },{
+      onSuccess: (updatedSession:IChatSession)=>{
+        setNewMessage('');
+        if (props.onSuccess) {
+          props.onSuccess(updatedSession);
+        }
+        setIsBusy(false);
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onError: (err: any)=>{
+        const res = err.response?.data?.message;
+        setErrorMessage(res || 'Unable to send message. Please try again!');
+        setIsBusy(false);
+      }
+    });
+  }
+
   const rowCount = newMessage.split('').filter(c => c === '\n').length + 1;
   return (<Box>
     <Steps
@@ -166,6 +198,10 @@ export function ChatTextField(props: ChatTextFieldProps) {
       initialStep={introState.initialStep}
       onExit={onExit}/>
     <Hints enabled={introState.hintsEnabled} hints={introState.hints} />
+
+    {props.showRegenerate && <Box sx={{display:'flex',p:1, flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
+      <Button variant='outlined' endIcon={<SyncIcon/>} onClick={handleRegenerate}>Regenerate</Button>
+    </Box>}
     {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
     {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
     <div id="finalMessage" aria-live="polite" role="status" className="sr-only" aria-hidden="false"></div>
@@ -178,7 +214,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
       </IconButton>
       <InputBase multiline rows={rowCount}
         sx={{ ml: 1, flex: 1 }} autoFocus
-        placeholder="Type your message here..."
+        placeholder="Type your message here (use shift/alt+enter for a new line)..."
         inputProps={{
           'aria-label': 'chat message box' ,
           speech: 'speech',

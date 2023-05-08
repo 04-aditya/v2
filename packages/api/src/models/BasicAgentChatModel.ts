@@ -213,7 +213,7 @@ export class BasicAgentChatModel implements IChatModel {
     }
 
     try {
-      const response = await executor.call({ input: inputMsg });
+      const response = await executor.call({ input: inputMsg, chat_history: '' });
 
       logger.debug(`Got response`);
 

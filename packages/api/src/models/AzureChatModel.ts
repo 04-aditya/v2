@@ -4,6 +4,42 @@ import axios, { AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
 import { BaseLLM, BaseLLMParams, LLM } from 'langchain/llms/base';
 
+let currentAzAPIClientIndex = -1;
+const azAPIclients: AxiosInstance[] = [];
+const api_versions: string[] = (process.env['AZ_OPENAI_VERSION'] || '').split(',');
+
+function getAzAPIClient() {
+  if (azAPIclients.length === 0) {
+    const keys = process.env['AZ_OPENAI_KEY'].split(',');
+    const baseURLs = process.env['AZ_OPENAI_URL'].split(',');
+    const deployments = process.env['AZ_OPENAI_DEPLOYMENT'].split(',');
+    for (let i = 0; i < keys.length; i++) {
+      logger.info(`creating azure client ${i}...`);
+      const client = axios.create({
+        baseURL: `${baseURLs[i]}openai/deployments/${deployments[i]}/`,
+        headers: {
+          'api-key': keys[i],
+        },
+        timeout: 60000,
+      });
+      axiosRetry(client, {
+        retries: 2,
+        retryDelay: axiosRetry.exponentialDelay,
+        retryCondition: error => {
+          console.log(error);
+          return true;
+        },
+      });
+      azAPIclients.push(client);
+    }
+  }
+  currentAzAPIClientIndex += 1; // round robin
+  if (currentAzAPIClientIndex >= azAPIclients.length) currentAzAPIClientIndex = 0;
+  logger.debug('Using AZ OpenAI API client', currentAzAPIClientIndex);
+  const client = azAPIclients[currentAzAPIClientIndex];
+  return client;
+}
+
 export class AzureChatModel implements IChatModel {
   readonly id = 'gpt35turbo';
   readonly name = 'GPT 3.5 Turbo';
@@ -11,51 +47,11 @@ export class AzureChatModel implements IChatModel {
   readonly enabled = true;
   readonly contexts = [];
   readonly tools = [];
-  readonly api_versions: string[];
-
-  readonly azAPIclients: AxiosInstance[] = [];
-  currentAzAPIClientIndex = -1;
-
-  constructor() {
-    this.api_versions = (process.env['AZ_OPENAI_VERSION'] || '').split(',');
-  }
-
-  getAzAPIClient() {
-    if (this.azAPIclients.length === 0) {
-      const keys = process.env['AZ_OPENAI_KEY'].split(',');
-      const baseURLs = process.env['AZ_OPENAI_URL'].split(',');
-      const deployments = process.env['AZ_OPENAI_DEPLOYMENT'].split(',');
-      for (let i = 0; i < keys.length; i++) {
-        logger.info(`creating azure client ${i}...`);
-        const client = axios.create({
-          baseURL: `${baseURLs[i]}openai/deployments/${deployments[i]}/`,
-          headers: {
-            'api-key': keys[i],
-          },
-          timeout: 60000,
-        });
-        axiosRetry(client, {
-          retries: 2,
-          retryDelay: axiosRetry.exponentialDelay,
-          retryCondition: error => {
-            console.log(error);
-            return true;
-          },
-        });
-        this.azAPIclients.push(client);
-      }
-    }
-    this.currentAzAPIClientIndex += 1; // round robin
-    if (this.currentAzAPIClientIndex >= this.azAPIclients.length) this.currentAzAPIClientIndex = 0;
-    logger.debug('Using AZ OpenAI API client', this.currentAzAPIClientIndex);
-    const client = this.azAPIclients[this.currentAzAPIClientIndex];
-    return client;
-  }
 
   async call(input: { role?: string; content: string }[], options?: Record<string, unknown>): Promise<{ content: string } & Record<string, any>> {
     let result: { content: string } & Record<string, any>;
-    const client = this.getAzAPIClient();
-    const response = await client.post(`chat/completions?api-version=${this.api_versions[this.currentAzAPIClientIndex]}`, {
+    const client = getAzAPIClient();
+    const response = await client.post(`chat/completions?api-version=${api_versions[currentAzAPIClientIndex]}`, {
       n: options.n,
       stream: false,
       temperature: options.temperature,

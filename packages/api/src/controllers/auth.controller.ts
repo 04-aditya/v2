@@ -537,7 +537,7 @@ export class AuthController {
 }
 
 export async function checkADTokens(user: UserEntity) {
-  const adtokens: any = JSON.stringify(user.adtokens) || {};
+  const adtokens: any = JSON.parse(user.adtokens) || {};
   if (!adtokens.access_token) return false;
 
   if (new Date(adtokens.expires_at) > new Date()) return true;

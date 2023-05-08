@@ -29,60 +29,61 @@ import { ChatMessageEntity } from '@/entities/chatmessage.entity';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import ModelFactory from '@/models/model_factory';
 import { RequestWithUser } from '@/interfaces/auth.interface';
+import { checkADTokens } from './auth.controller';
 
 // import { OpenAI } from 'langchain/llms';
 // const openai = new OpenAI();
 // openai.generate(['Tell me a joke.']).then(console.log).catch(console.error);
 
-const azAPIclients: AxiosInstance[] = [];
-let currentAzAPIClientIndex = 0;
-function getAzAPIClient(): AxiosInstance {
-  if (azAPIclients.length === 0) {
-    const keys = process.env['AZ_OPENAI_KEY'].split(',');
-    const baseURLs = process.env['AZ_OPENAI_URL'].split(',');
-    const deployments = process.env['AZ_OPENAI_DEPLOYMENT'].split(',');
-    for (let i = 0; i < keys.length; i++) {
-      logger.info(`creating azure client ${i}...`);
-      const client = axios.create({
-        baseURL: `${baseURLs[i]}openai/deployments/${deployments[i]}/`,
-        headers: {
-          'api-key': keys[i],
-        },
-        timeout: 60000,
-      });
-      axiosRetry(client, {
-        retries: 2,
-        retryDelay: axiosRetry.exponentialDelay,
-        retryCondition: error => {
-          console.log(error);
-          return true;
-        },
-      });
-      azAPIclients.push(client);
-    }
-  }
-  if (currentAzAPIClientIndex >= azAPIclients.length) currentAzAPIClientIndex = 0;
-  logger.debug('Using AZ OpenAI API client', currentAzAPIClientIndex);
-  const client = azAPIclients[currentAzAPIClientIndex];
-  currentAzAPIClientIndex += 1; // round robin
-  return client;
-}
+// const azAPIclients: AxiosInstance[] = [];
+// let currentAzAPIClientIndex = 0;
+// function getAzAPIClient(): AxiosInstance {
+//   if (azAPIclients.length === 0) {
+//     const keys = process.env['AZ_OPENAI_KEY'].split(',');
+//     const baseURLs = process.env['AZ_OPENAI_URL'].split(',');
+//     const deployments = process.env['AZ_OPENAI_DEPLOYMENT'].split(',');
+//     for (let i = 0; i < keys.length; i++) {
+//       logger.info(`creating azure client ${i}...`);
+//       const client = axios.create({
+//         baseURL: `${baseURLs[i]}openai/deployments/${deployments[i]}/`,
+//         headers: {
+//           'api-key': keys[i],
+//         },
+//         timeout: 60000,
+//       });
+//       axiosRetry(client, {
+//         retries: 2,
+//         retryDelay: axiosRetry.exponentialDelay,
+//         retryCondition: error => {
+//           console.log(error);
+//           return true;
+//         },
+//       });
+//       azAPIclients.push(client);
+//     }
+//   }
+//   if (currentAzAPIClientIndex >= azAPIclients.length) currentAzAPIClientIndex = 0;
+//   logger.debug('Using AZ OpenAI API client', currentAzAPIClientIndex);
+//   const client = azAPIclients[currentAzAPIClientIndex];
+//   currentAzAPIClientIndex += 1; // round robin
+//   return client;
+// }
 
-const psbodhiclient = axios.create({
-  baseURL: process.env['PSBODHI_URL'],
-  headers: {
-    'access-token': process.env['PSBODHI_KEY'],
-  },
-  timeout: 60000,
-});
-axiosRetry(psbodhiclient, {
-  retries: 2,
-  retryDelay: axiosRetry.exponentialDelay,
-  retryCondition: error => {
-    console.log(error);
-    return true;
-  },
-});
+// const psbodhiclient = axios.create({
+//   baseURL: process.env['PSBODHI_URL'],
+//   headers: {
+//     'access-token': process.env['PSBODHI_KEY'],
+//   },
+//   timeout: 60000,
+// });
+// axiosRetry(psbodhiclient, {
+//   retries: 2,
+//   retryDelay: axiosRetry.exponentialDelay,
+//   retryCondition: error => {
+//     console.log(error);
+//     return true;
+//   },
+// });
 
 @JsonController('/api/chat')
 @UseBefore(authMiddleware)
@@ -344,6 +345,7 @@ export class ChatController {
     @BodyParam('assistant') assistant_param?: string,
     @BodyParam('contexts') contexts_param?: string[],
     @BodyParam('parameters') parameters?: Record<string, any>,
+    @BodyParam('tooloptions') tooloptions?: Record<string, any>,
   ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -529,6 +531,36 @@ export class ChatController {
       type: newtype,
       updatedAt: () => '"updatedAt"',
     });
+    // if (newtype === 'public') {
+    //   try {
+    //     const hasTokens = await checkADTokens(currentUser);
+    //     const adtokens = JSON.parse(currentUser.adtokens);
+    //     console.log(adtokens);
+    //     if (hasTokens) {
+    //       axios
+    //         .post(
+    //           `https://graph.microsoft.com/v1.0/teams/${process.env.TEAMID}/channels/${process.env.TEAMCHANNEL}/messages`,
+    //           {
+    //             body: {
+    //               content: 'share test',
+    //             },
+    //           },
+    //           {
+    //             headers: {
+    //               Authorization: `Bearer ${adtokens.access_token}`,
+    //             },
+    //           },
+    //         )
+    //         .then(ar => {
+    //           console.log(ar.status);
+    //           console.log(ar.data);
+    //         })
+    //         .catch(ex => console.error(ex));
+    //     }
+    //   } catch (ex) {
+    //     logger.error(JSON.stringify(ex));
+    //   }
+    // }
     const result = new APIResponse<IChatSession>();
     result.data = { ...session.toJSON(), type: newtype };
     return result;
