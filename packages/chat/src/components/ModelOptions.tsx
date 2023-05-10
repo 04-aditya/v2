@@ -5,7 +5,7 @@ import { MenuProps } from "./MenuProps";
 import Tooltip from '@mui/material/Tooltip';
 
 const defaultprompt = (actas:string) => `You are a helpful AI assistant. If you do not know the answer to a question, respond by saying "I do not know the answer to your question.". ${actas}
-Respond in markdown format when possible.code parts should start with \`\`\`langauge and end with \`\`\` . if asked for uml generate mermaid code and start the mermaid code with \`\`\`mermaid , if generating graphwiz code start with \`\`\`dot .`;
+Respond in markdown format when possible.code parts should start with \`\`\`langauge and end with \`\`\` . if asked for uml generate mermaid code and start the mermaid code with \`\`\`mermaid .`;
 
 export const systemMessages = [
   {name:'AI Assistant', message: defaultprompt('')},
@@ -37,6 +37,7 @@ export function ModelOptions(props: IModelOptionsProps) {
   const [model, setModel] = useState('gpt35turbo');
   const [assistant, setAssistant] = useState(systemMessages[0].message);
   const [contexts, setContext] = useState<string[]>([]);
+  const [openPromptDlg, setPromptDlg] = useState(false);
 
   useEffect(()=>{
     if (!chatModels) return;
@@ -67,6 +68,11 @@ export function ModelOptions(props: IModelOptionsProps) {
     setAssistant(e.target.value as string);
     props.onChange({...props.options, assistant: e.target.value as string});
   }
+  const handleAddCustomPrompt = () => {
+    setPromptDlg(true);
+  }
+  const handlePromptDlgClose = () => setPromptDlg(false);
+
   const availableModels = chatModels.data || [];
   const availableContexts = availableModels.find(m=>m.id===model)?.contexts||[];
   return <Grid container sx={{ml:-1, mt:0.5}}>
@@ -99,7 +105,15 @@ export function ModelOptions(props: IModelOptionsProps) {
           value={assistant}
           onChange={handleAssistantChange}
         >
-          {systemMessages.map((m,i)=>(m.name==='divider')?<Divider key={i}/>:<MenuItem key={i} value={m.message}>{m.name}</MenuItem>)}
+          {systemMessages.map((m,i)=>(m.name==='divider')?<Divider key={i}/>:(
+            <MenuItem key={i} value={m.message}>
+              <Tooltip title={m.message} arrow>
+                <span>{m.name}</span>
+              </Tooltip>
+            </MenuItem>
+          ))}
+          <Divider/>
+          <MenuItem value='custom' onClick={handleAddCustomPrompt}>Custom</MenuItem>
         </Select>
       </FormControl>
     </Tooltip>

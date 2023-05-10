@@ -55,7 +55,7 @@ export class PSBodhiChatModel implements IChatModel {
       sessionid: options.sessionid,
       contexts: options.contexts,
       model: 'IGNORED',
-      max_tokens: 0,
+      max_tokens: options.max_tokens || 0,
       temperature: options.temperature || 0,
       messages: input.map(m => ({
         role: m.role,

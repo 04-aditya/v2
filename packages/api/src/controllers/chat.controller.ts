@@ -451,6 +451,8 @@ export class ChatController {
       `The frontend was developed in React and the backend in NodeJS and Python.` +
       `Your are helping a Human named maskedhumanname, who is working at Publicis as ${currentUser.business_title}.`;
 
+    logger.debug(inputMessages[0].content);
+
     const response = await model.call(messages, options);
     logger.debug(response);
     assistantMessage.content = response.content.replace(/maskedhumanname/g, `${currentUser.first_name || 'user'}`);

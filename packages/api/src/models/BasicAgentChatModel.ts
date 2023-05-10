@@ -15,40 +15,46 @@ import { AzureOpenAI } from './AzureChatModel';
 import { format as formatDate } from 'date-fns';
 import { UserEntity } from '@/entities/user.entity';
 import { BingAPI } from './tools/BingAPI';
+import { DallETool } from './tools/DallETool';
 
 const PREFIX = (date: Date, user?: UserEntity) =>
   `Answer the following questions as best you can. Your a AI assistant called PSChat that uses Large Language Models (LLM)` +
   ` You should know that current year is ${formatDate(date, 'yyyy')} ` +
   `and today is ${formatDate(date, 'iiii')} ${formatDate(date, 'do')} of ${formatDate(date, 'MMMM')}. ` +
-  `Your are helping a Human named maskedhumanname, who is working at Publicis Sapient${user ? `, as ${user.business_title}` : ''}.` +
+  `Your are helping a Human named maskedhumanname, who is working at Publicis Sapient${user ? `, as ${user.business_title}` : ''}.\n\n` +
+  `Use previous conversation summary for additional context:` +
+  `{chat_history}\n\n` +
   ` You have access to the following tools:`;
 
 const formatInstructions = (
   toolNames: string,
 ) => `First try to provide a initial answer, if unable to provide a answer, Try to arrive at the Final Answer by using the following format:
 
-Human: the input question you must answer
+Question: the input question you must answer
 Thought: you should always think about what to do
 Action: the action to take, should be one of [${toolNames}]
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat 0 or N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question`;
+Thought: I now know the final answer or I will stop here with most likely answer
+Final Answer: the final answer or most likely answer to the original input question`;
 
 const SUFFIX = `Begin!
-Current conversation:
-{chat_history}
 
-Human: {input}
+Question: {input}
 Thought: {agent_scratchpad}`;
 
 class CustomPromptTemplate extends BaseChatPromptTemplate {
   tools: Tool[];
   maxIterations: number;
-  setLastInput?: (msg: string) => void;
+  setLastInput?: (msg: string, intermediateSteps: AgentStep[]) => void;
   currentUser?: UserEntity;
-  constructor(args: { tools: Tool[]; inputVariables: string[]; setLastInput?: (msg: string) => void; currentUser?: UserEntity }) {
+  constructor(args: {
+    tools: Tool[];
+    inputVariables: string[];
+    setLastInput?: (msg: string, intermediateSteps: AgentStep[]) => void;
+    currentUser?: UserEntity;
+  }) {
     super({ inputVariables: args.inputVariables });
     this.tools = args.tools;
     this.setLastInput = args.setLastInput;
@@ -82,13 +88,13 @@ class CustomPromptTemplate extends BaseChatPromptTemplate {
           thoughts +
           [
             action.log.split('Action:')[0],
-            `\n🤔 I will \`${action.tool}\` to process \n\`${action.toolInput}\`\n`,
+            `\n🤔 I will use \`${action.tool}\` to process \n\`${action.toolInput}\`\n`,
             '\n*Observation:* ' + observation + '\n',
-            i < intermediateSteps.length - 1 ? '💡 \n' : '🧠',
+            i < intermediateSteps.length - 1 ? '💡 \n' : '',
           ].join('\n'),
         '',
       );
-      this.setLastInput(lastInput);
+      this.setLastInput(lastInput, intermediateSteps);
     }
     return [new HumanChatMessage(formatted)];
   }
@@ -106,7 +112,8 @@ class CustomOutputParser extends AgentActionOutputParser {
   async parse(text: string): Promise<AgentAction | AgentFinish> {
     if (text.includes('Final Answer:')) {
       const parts = text.split('Final Answer:');
-      const input = parts.slice(-1)[0].trim();
+      const input = '🧠 ' + text.replace(/Final Answer:/g, '\n\n').trim();
+      // const input = parts.slice(-1)[0].trim();
       const finalAnswers = { output: input };
       return { log: text, returnValues: finalAnswers };
     }
@@ -146,10 +153,10 @@ export class BasicAgentChatModel implements IChatModel {
   async call(input: { role?: string; content: string }[], options?: Record<string, any>): Promise<{ content: string } & Record<string, any>> {
     // const model = new ChatOpenAI({ temperature: options.temperature as number });
     const model = new AzureOpenAI({});
-    const memory = new ConversationSummaryMemory({
-      memoryKey: 'chat_history',
-      llm: model,
-    });
+    // const memory = new ConversationSummaryMemory({
+    //   memoryKey: 'chat_history',
+    //   llm: model,
+    // });
     //an array to store a set of followup questions
     const followupQuestions: string[] = [];
 
@@ -161,13 +168,14 @@ export class BasicAgentChatModel implements IChatModel {
       responseFilter: 'Webpages',
       safeSearch: 'Strict',
     });
-    searchTool.name = 'search bing';
+    searchTool.name = 'bing';
     const calcTool = new Calculator();
-    calcTool.name = 'use calculator';
+    calcTool.name = 'calculator';
     const tools = [
       searchTool,
       calcTool,
       new UnitConvertorTool(),
+      new DallETool(process.env.AZ_DALLE_APIKEY),
       // new DynamicTool({
       //   name: 'ask maskedhumanname',
       //   description:
@@ -182,15 +190,19 @@ export class BasicAgentChatModel implements IChatModel {
     ];
 
     let lastIntermediateSet = '';
+    let intermediateSteps: AgentStep[] = [];
     const llmChain = new LLMChain({
       prompt: new CustomPromptTemplate({
         tools,
+        //inputVariables: ['input', 'agent_scratchpad'],
         inputVariables: ['input', 'chat_history', 'agent_scratchpad'],
-        setLastInput: msg => (lastIntermediateSet = msg),
+        setLastInput: (msg, isteps) => {
+          lastIntermediateSet = msg;
+          intermediateSteps = isteps;
+        },
         currentUser: options?.user,
       }),
       llm: model,
-      memory: memory,
       verbose: true,
     });
 
@@ -222,6 +234,7 @@ export class BasicAgentChatModel implements IChatModel {
         content: unmaskname(response.output),
         options: {
           intermediate_content: unmaskname(lastIntermediateSet),
+          intermediateSteps,
           followup_questions: followupQuestions.map(unmaskname),
         },
       };

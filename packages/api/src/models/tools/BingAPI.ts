@@ -2,9 +2,12 @@ import axios from 'axios';
 import { Tool } from 'langchain/tools';
 
 class BingAPI extends Tool {
-  name = 'bing-search';
+  name = 'bing';
 
-  description = 'a search engine. useful for when you need to answer questions about current events. input should be a search query.';
+  description =
+    `a search engine. useful for when you need to answer questions about current events.` +
+    `input should be a search query. When arriving at the final or likely answer, make sure to cite results using [[number](URL)] notation after the reference.` +
+    `If the provided search results refer to multiple subjects with the same name, write separate answers for each subject.`;
 
   key: string;
 
@@ -52,7 +55,10 @@ class BingAPI extends Tool {
     if (results.length === 0) {
       return 'No good results found.';
     }
-    const snippets = results.map((result: { snippet: string }) => result.snippet).join(' ');
+    //[{id, name, url, displayUrl, snippet, dateLastCrawled, language, isNavigational, isFamilyFriendly}]
+    const snippets = results
+      .map((result: { snippet: string; url: string; name: string }, idx: number) => `[${idx}]"${result.snippet}"\nURL: ${result.url}`)
+      .join('\n\n');
 
     return snippets;
   }

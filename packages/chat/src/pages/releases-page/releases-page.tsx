@@ -17,6 +17,10 @@ export function ReleasesPage(props: ReleasesPageProps) {
         {/* <ReleaseInfo date={'**Date**'} content={'**Description**'}/>
         <Divider/> */}
         <Box sx={{maxHeight:'450px'}} className='scrollbarv'>
+          <ReleaseInfo date={'2023-05-10'} content={
+            ` * Added copy to edit button, to edit prev messages and restart conversation. \n\n` +
+            `![edit btn image](/assets/releases/edit_btn.png)\n\n`
+          }/>
           <ReleaseInfo date={'2023-05-09'} content={
             ` * Added copy to clipboard button, for generated content \n\n` +
             `![Copy btn image](/assets/releases/copy_btn.jpg)\n\n` +

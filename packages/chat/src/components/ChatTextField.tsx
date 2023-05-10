@@ -6,7 +6,7 @@ import TelegramIcon from '@mui/icons-material/Telegram';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import IconButton from '@mui/material/IconButton';
 import DisplaySettingsIcon from '@mui/icons-material/DisplaySettings';
-import { IChatSession } from 'sharedtypes';
+import { IChatMessage, IChatSession } from 'sharedtypes';
 import {useChatModels, useChatSession } from '../api/chat';
 import MicIcon from '@mui/icons-material/Mic';
 import { Steps, Hints } from "intro.js-react";
@@ -16,9 +16,8 @@ import { IModelParameters, ModelParameters } from './ModelParameters';
 import React from 'react';
 import SyncIcon from '@mui/icons-material/Sync';
 interface ChatTextFieldProps {
-  sessionid?: string;
-  message?: string;
-  messageid?: string;
+  session?:IChatSession;
+  message?: IChatMessage;
   onSuccess?: (session: IChatSession) => void;
   showRegenerate?: boolean;
 }
@@ -41,8 +40,8 @@ export function ChatTextField(props: ChatTextFieldProps) {
       interimResults: true // Allows for displaying real-time speech results
     }
   });
-  const {sessionid} = props;
-  const {data:chatsession, error, mutation} = useChatSession(sessionid);
+  const {mutation, error} = useChatSession(props.session?.id);
+  const [chatsession, setChatSession] = useState<IChatSession>();
   const [newMessage, setNewMessage] = useState<string>('');
   const [isBusy, setIsBusy] = useState(false);
   const [showOptions, setShowOptions] = useState(true);
@@ -73,21 +72,25 @@ export function ChatTextField(props: ChatTextFieldProps) {
   });
 
   useEffect (()=>{
-    setNewMessage(props.message||'');
+    if (!props.message) {
+      setNewMessage('');
+      return;
+    }
+    setNewMessage(props.message.content);
   },[props.message]);
 
   useEffect(()=>{
-    if (chatsession) {
-      //setIntroState(prev=>({...prev, stepsEnabled: true}));
-      if (chatsession.options) {
+    if (props.session) {
+      setChatSession({...props.session});
+      if (props.session.options) {
         setOptions({
-          model: chatsession.options.model as string,
-          contexts: chatsession.options.contexts as string[],
-          assistant: chatsession.messages[0].content,
+          model: props.session.options.model as string,
+          contexts: props.session.options.contexts as string[],
+          assistant: props.session.messages[0].content,
         });
       }
     }
-  }, [chatsession])
+  },[props.session]);
 
   // useEffect(()=>{
   //   console.log('useEffect: '+__filename);
@@ -121,13 +124,14 @@ export function ChatTextField(props: ChatTextFieldProps) {
     setIsBusy(true);
     setErrorMessage(undefined);
     mutation.mutate({
-      id:sessionid,
+      id:chatsession?.id,
       model: options.model, assistant: options.assistant, contexts: options.contexts,
-      message: newMessage,
+      message: newMessage.trimEnd(),
       parameters,
     },{
       onSuccess: (newSession:IChatSession)=>{
         setNewMessage('');
+        setChatSession({...newSession});
         if (props.onSuccess) {
           props.onSuccess(newSession);
         }
@@ -148,7 +152,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
         setNewMessage(prev => prev + '\n');
       }
       else {
-        onSend();
+        props.message?handleRegenerate():onSend();
       }
     }
   };
@@ -163,12 +167,13 @@ export function ChatTextField(props: ChatTextFieldProps) {
 
   const handleRegenerate = async () => {
     if (!chatsession) return;
-    const lastUserMsg = chatsession.messages.slice(-2)[0];
+    const lastUserMsg = props.message ? {...props.message,content:newMessage} : chatsession.messages.slice(-2)[0];
+
     if (!lastUserMsg) return;
     setIsBusy(true);
     setErrorMessage(undefined);
     mutation.mutate({
-      id:sessionid,
+      id:chatsession?.id,
       model: options.model, assistant: options.assistant, contexts: options.contexts,
       messageid: lastUserMsg.id,
       message: lastUserMsg.content,
@@ -179,6 +184,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
         if (props.onSuccess) {
           props.onSuccess(updatedSession);
         }
+        setChatSession({...updatedSession});
         setIsBusy(false);
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -199,7 +205,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
       onExit={onExit}/>
     <Hints enabled={introState.hintsEnabled} hints={introState.hints} />
 
-    {props.showRegenerate && <Box sx={{display:'flex',p:1, flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
+    {(props.showRegenerate && !props.message) && <Box sx={{display:'flex',p:1, flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
       <Button variant='outlined' endIcon={<SyncIcon/>} onClick={handleRegenerate}>Regenerate</Button>
     </Box>}
     {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
@@ -238,7 +244,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
       </IconButton> : null} */}
       {isBusy?<CircularProgress/>:(
       <IconButton sx={{ p: '10px' }} color={newMessage !== '' ? 'primary' : 'inherit'} disabled={newMessage === ''}
-        aria-label="send message" onClick={onSend}>
+        aria-label="send message" onClick={props.message? handleRegenerate : onSend}>
         <TelegramIcon/>
       </IconButton>)}
       <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />

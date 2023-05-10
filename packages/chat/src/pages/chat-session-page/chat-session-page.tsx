@@ -31,6 +31,8 @@ import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { useQueryClient } from '@tanstack/react-query';
+import EditIcon from '@mui/icons-material/Edit';
+import { set } from 'date-fns';
 
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
@@ -90,7 +92,6 @@ export function InitialInstructionPopover(props:{message:IChatMessage}) {
 }
 
 export function ChatSessionPage(props: ChatSessionPageProps) {
-  const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
   const { auth } = useAuth();
   const { chatId } = useParams();
@@ -103,6 +104,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   const [isMouseOver, setIsMouseOver] = useState(false);
   const [session, setSession] = useState<IChatSession>();
   const {data:isFavourite, mutation:favMutation, invalidateCache: favInvalidateCache} = useChatSessionFavourite(session?.id);
+  const [editMessage, setEditMessage] = useState<IChatMessage>();
 
   useEffect(()=>{
     setSession(serverSession);
@@ -291,7 +293,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
                   />
                 </Grid> : <Grid item xs={12} sm={3} sx={{display:'flex', flexDirection:'row', flexWrap:'wrap', alignItems:'center'}}>
                   {sessionTags.map((tag,idx)=>(
-                    <Chip size='small' variant='outlined' label={tag} sx={{ml:1, mb:0.5}}/>
+                    <Chip key={tag} size='small' variant='outlined' label={tag} sx={{ml:1, mb:0.5}}/>
                   ))}
                 </Grid>}
               </Grid>
@@ -311,10 +313,24 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
           <Box sx={{flexGrow:1, pt:2}} className="scrollbarv" tabIndex={0}>
             {messages.map((m,idx)=>( idx===0?(
               <InitialInstructionPopover message={m}/>
-            ):<MessageItem key={m.id} message={m} />))}
+            ):<MessageItem key={m.id} message={m} onChange={(m)=>{
+                if (m) {
+                  const newSession = {...session};
+                  newSession.messages=[];
+                  for(let i = 0; i<session.messages.length; i++) {
+                    const em = session.messages[i];
+                    if (em.id===m.id) break;
+                    newSession.messages.push(em);
+                  };
+                  setSession(newSession);
+                } else {
+                  invalidateCache();
+                }
+                setEditMessage(m)
+              }} />))}
             <EndofChatMessagesBlock key={messages.slice(-1)[0]?.content.length+''+typeMode} complete={!typeMode}/>
           </Box>
-          {canEdit ? <ChatTextField sessionid={session?.id} onSuccess={handleSessionUpdate} showRegenerate={canEdit}/> : null}
+          {canEdit ? <ChatTextField session={session} message={editMessage} onSuccess={handleSessionUpdate} showRegenerate={canEdit}/> : null}
         </Box>
       ) : null}
     </Paper>
@@ -419,12 +435,18 @@ function MarkDown(props:any) {
   />
 }
 
-function MessageContent(props: { message: IChatMessage}) {
-  const {message:m} = props;
+interface MessageProps {
+  message: IChatMessage;
+  onChange?: (message?: IChatMessage)=>void;
+}
+
+function MessageContent(props: MessageProps) {
+  const {message:m, onChange=()=>{}} = props;
   const [openReasoning, setOpenReasoning] = useState(false);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleSnackbarClose = (event: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') {
@@ -461,8 +483,29 @@ function MessageContent(props: { message: IChatMessage}) {
           {followup_questions.map((q:string,i:number)=><li key={i}>{q}</li>)}
         </ul>
       </>: null}
+    {/* {isEditing?<Box>
+        <TextField fullWidth value={content} variant='standard' onChange={(e)=>{setContent(e.target.value)}}
+          onBlur={()=>{
+            setIsEditing(false);
+            onChange && onChange({...m, content})
+          }}
+        />
+      </Box> : <MarkDown children={m.content} partial={m.partial}/>} */}
     <MarkDown children={m.content} partial={m.partial}/>
-    {isUser?null:<IconButton size='small' sx={{position:'absolute', top:0, right:0}} onClick={()=>{
+    {isUser?<IconButton size='small' color={isEditing?'primary':'default'} sx={{position:'absolute', top:0, right:0}}
+      onClick={()=>{
+        setIsEditing(e=>{
+          if (e) {
+            onChange();
+            return false;
+          } else {
+            onChange(m)
+            return true;
+          }
+        });
+      }}>
+      <EditIcon/>
+    </IconButton>:<IconButton size='small' sx={{position:'absolute', top:0, right:0}} onClick={()=>{
       navigator.clipboard.writeText(m.content);
       showSnackbar('Copied to clipboard');
     }}>
@@ -498,7 +541,7 @@ function MessageContent(props: { message: IChatMessage}) {
 
 </Paper>
 }
-function MessageItem(props: { message:IChatMessage }) {
+function MessageItem(props: MessageProps) {
   const {message:m} = props;
   const ref = useRef<HTMLDivElement>(null);
   const isUser = m.role==='user';
@@ -513,7 +556,7 @@ function MessageItem(props: { message:IChatMessage }) {
           display:{xs:'none', sm:'block'}})}>
           <PsychologyAltIcon color='primary'/>
         </Avatar>
-        <MessageContent message={m}/>
+        <MessageContent message={m} onChange={props.onChange}/>
       </Box>:<Box key={m.id} sx={{display:'flex',pl:1, flexDirection:'column', alignItems:'flex-start',my:1}}>
         <Avatar alt='bot avatar' sx={theme=>({mt:1, ml:-1, mb:-1.5,
           width: 28, height: 28, zIndex:1,
