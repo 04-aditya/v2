@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Popover, Select, Snackbar, Stack, SxProps, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Popover, Select, Snackbar, Stack, SxProps, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
@@ -32,7 +32,9 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { useQueryClient } from '@tanstack/react-query';
 import EditIcon from '@mui/icons-material/Edit';
-import { set } from 'date-fns';
+import mermaid from 'mermaid';
+
+mermaid.initialize({});
 
 /* eslint-disable-next-line */
 export interface ChatSessionPageProps {}
@@ -84,7 +86,7 @@ export function InitialInstructionPopover(props:{message:IChatMessage}) {
       >
         <Alert severity='info' sx={{}}>
           <AlertTitle>Initial instruction</AlertTitle>
-          <p>{props.message.content}</p>
+          <p>{`${props.message.content}`}</p>
         </Alert>
       </Popover>
     </div>
@@ -100,7 +102,6 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
   const [typeMode, setTypeMode] = useState(false);
   const [sessionName, setSessionName] = useState('');
   const [sessionTags, setSessionTags] = useState<string[]>([]);
-  const [newTag, setNewtag] = useState('');
   const [isMouseOver, setIsMouseOver] = useState(false);
   const [session, setSession] = useState<IChatSession>();
   const {data:isFavourite, mutation:favMutation, invalidateCache: favInvalidateCache} = useChatSessionFavourite(session?.id);
@@ -199,11 +200,6 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
       });
     }
   };
-
-  const handleNewTagChange = useCallback((e: {target:{value:string}}) => {
-    const newTag = e.target.value.substring(0,32);
-    setNewtag(newTag);
-  },[setNewtag]);
 
   const toggleFavourite = useCallback((e: SyntheticEvent) => {
     e.stopPropagation();
@@ -312,7 +308,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
           </AppBar>
           <Box sx={{flexGrow:1, pt:2}} className="scrollbarv" tabIndex={0}>
             {messages.map((m,idx)=>( idx===0?(
-              <InitialInstructionPopover message={m}/>
+              <InitialInstructionPopover key={idx} message={m}/>
             ):<MessageItem key={m.id} message={m} onChange={(m)=>{
                 if (m) {
                   const newSession = {...session};
@@ -350,10 +346,10 @@ function EndofChatMessagesBlock(props:{complete: boolean}) {
   useEffect(()=>{
     if (props.complete) {
       setTimeout(()=>{
-        const mermaid: any = (global.window as any).mermaid;
-        mermaid.contentLoaded();
-        mermaid.run();
-      }, 500)
+        //const mermaid: any = (global.window as any).mermaid;
+        //mermaid.contentLoaded();
+        //mermaid.run();
+      }, 500);
     }
   },[props.complete]);
   return <div ref={ref} style={{minHeight:props.complete?16:48}}>
@@ -362,16 +358,26 @@ function EndofChatMessagesBlock(props:{complete: boolean}) {
 
 function CodeContent(args:any) {
   const {mode} = useThemeMode();
+  const [svg, setSvg] = useState<string>('');
   const {node, inline, className, children, partial, ...props} = args;
   const match = /language-(\w+)/.exec(className || '');
 
-  // useLayoutEffect(()=>{
-  //   if (className === 'language-mermaid' && !partial) {
-  //     const mermaid: any = (global.window as any).mermaid;
-  //     mermaid.contentLoaded();
-  //     mermaid.run();
-  //   }
-  // },[partial, className]);
+  useEffect(()=>{
+    if (className === 'language-mermaid' && !partial) {
+      const mcode = `%%{
+  init: {
+    'theme': ${mode === 'dark' ? 'dark' : 'default'}, 'htmlLabels': true
+  }
+}%%
+
+` + [...children].join('');
+      // console.log(mcode);
+      mermaid.render('mermaid-svg', mcode)
+        .then(res=>{
+          setSvg(res.svg);
+        })
+    }
+  },[partial, className, children, mode]);
 
   if (className === 'language-llm-observation') {
     return <Box sx={{p:1, backgroundColor:'#e8e8e8'}}>
@@ -381,17 +387,7 @@ function CodeContent(args:any) {
   if (className === 'language-mermaid' && !partial) {
     return <Grid container>
       <Grid item xs={12} sm={6}>
-        <pre className='mermaid'>
-        {`%%{
-  init: {
-    'theme': ${mode === 'dark' ? 'dark' : 'default'}, 'htmlLabels': true
-  }
-}%%
-
-`}
-
-        {children}
-      </pre>
+        <div dangerouslySetInnerHTML={{__html:svg}}/>
       </Grid>
       <Grid item xs={12} sm={6}>
         <pre>{children}</pre>
@@ -470,7 +466,7 @@ function MessageContent(props: MessageProps) {
   const isUser = m.role==='user';
   const followup_questions = m.options?.followup_questions as string[] || [];
   return <Paper sx={(theme)=>({
-      px:1,pt:isUser?0:2, border:'0px solid gray', overflow:'auto',
+      pl:1, pr:(isUser?3:1), pt:isUser?0:2, border:'0px solid gray', overflow:'auto',
       ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
       borderRadius: 1, width: '95%', position: 'relative',
       borderLeftWidth: isUser ? '0px' : '2px', borderRightWidth:isUser?'2px':'0px',
@@ -483,16 +479,8 @@ function MessageContent(props: MessageProps) {
           {followup_questions.map((q:string,i:number)=><li key={i}>{q}</li>)}
         </ul>
       </>: null}
-    {/* {isEditing?<Box>
-        <TextField fullWidth value={content} variant='standard' onChange={(e)=>{setContent(e.target.value)}}
-          onBlur={()=>{
-            setIsEditing(false);
-            onChange && onChange({...m, content})
-          }}
-        />
-      </Box> : <MarkDown children={m.content} partial={m.partial}/>} */}
     <MarkDown children={m.content} partial={m.partial}/>
-    {isUser?<IconButton size='small' color={isEditing?'primary':'default'} sx={{position:'absolute', top:0, right:0}}
+    {isUser?<IconButton size='small' color={isEditing?'primary':'default'} sx={{position:'absolute', top:'calc(50% - 16px)', right:0}}
       onClick={()=>{
         setIsEditing(e=>{
           if (e) {
@@ -533,9 +521,12 @@ function MessageContent(props: MessageProps) {
         <DialogTitle id="reasoning-dialog-title">
           {"Intermediate reasoning..."}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent className='scrollbarv'>
           <MarkDown children={m.options.intermediate_content}/>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Close</Button>
+        </DialogActions>
       </Dialog>
     </>: null}
 
