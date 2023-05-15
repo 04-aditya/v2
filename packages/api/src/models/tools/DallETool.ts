@@ -1,6 +1,8 @@
 import { logger } from '@/utils/logger';
+import { BlobServiceClient } from '@azure/storage-blob';
 import axios from 'axios';
 import { Tool } from 'langchain/tools';
+import crypto from 'crypto';
 
 class DallETool extends Tool {
   name = 'dalle';
@@ -68,6 +70,32 @@ class DallETool extends Tool {
       }
       const image_url = response.data.result.contentUrl;
       return `![](${image_url})`;
+
+      // const AZURE_STORAGE_CONNECTION_STRING = process.env.AZCONNSTR;
+
+      // if (!AZURE_STORAGE_CONNECTION_STRING) {
+      //   logger.error('Azure Storage Connection string not found');
+      // }
+
+      // // Create the BlobServiceClient object with connection string
+      // const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+      // const containerClient = blobServiceClient.getContainerClient(process.env.AZUPLOADCONTAINER);
+
+      // const iurl = new URL(image_url);
+      // const name = iurl.pathname.split('/').pop();
+      // // Create a unique name for the blob
+      // const blobName = `${this.params['userid']}/images/${crypto.randomBytes(10).toString('hex')}.${name}`;
+      // // Get a block blob client
+      // const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+      // // Display blob name and url
+      // logger.info(`\nUploading image to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`);
+
+      // // Upload data to the blob
+      // await blockBlobClient.syncUploadFromURL(image_url);
+      // logger.debug(`Blob was uploaded successfully.`);
+
+      // return `![](${blockBlobClient.url})`;
     } catch (ex) {
       console.error(ex);
       return "I don't know how to do that.";

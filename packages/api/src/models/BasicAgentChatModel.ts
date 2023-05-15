@@ -20,8 +20,8 @@ import { DallETool } from './tools/DallETool';
 const PREFIX = (date: Date, user?: UserEntity) =>
   `Answer the following questions as best you can. Your a AI assistant called PSChat that uses Large Language Models (LLM)` +
   ` You should know that current year is ${formatDate(date, 'yyyy')} ` +
-  `and today is ${formatDate(date, 'iiii')} ${formatDate(date, 'do')} of ${formatDate(date, 'MMMM')}. ` +
-  `Your are helping a Human named maskedhumanname, who is working at Publicis Sapient${user ? `, as ${user.business_title}` : ''}.\n\n` +
+  `and today is ${formatDate(date, 'iiii')} ${formatDate(date, 'do')} of ${formatDate(date, 'MMMM')}. \n\n` +
+  // `Your are helping a Human named maskedhumanname, who is working at Publicis Sapient${user ? `, as ${user.business_title}` : ''}.\n\n` +
   `Use previous conversation summary for additional context:` +
   `{chat_history}\n\n` +
   ` You have access to the following tools:`;
@@ -111,8 +111,9 @@ class CustomPromptTemplate extends BaseChatPromptTemplate {
 class CustomOutputParser extends AgentActionOutputParser {
   async parse(text: string): Promise<AgentAction | AgentFinish> {
     if (text.includes('Final Answer:')) {
-      const parts = text.split('Final Answer:');
-      const input = '🧠 ' + text.replace(/Final Answer:/g, '\n\n').trim();
+      //const parts = text.split('Final Answer:');
+      //const input = '🧠 ' + text.replace(/Final Answer:/g, '\n\n').trim();
+      const input = text.replace(/Final Answer:/g, '\n\n').trim();
       // const input = parts.slice(-1)[0].trim();
       const finalAnswers = { output: input };
       return { log: text, returnValues: finalAnswers };
@@ -175,7 +176,7 @@ export class BasicAgentChatModel implements IChatModel {
       searchTool,
       calcTool,
       new UnitConvertorTool(),
-      new DallETool(process.env.AZ_DALLE_APIKEY),
+      //new DallETool(process.env.AZ_DALLE_APIKEY, { userid: options?.user.id }),
       // new DynamicTool({
       //   name: 'ask maskedhumanname',
       //   description:
@@ -217,6 +218,13 @@ export class BasicAgentChatModel implements IChatModel {
       maxIterations: 20,
     });
 
+    const history = input
+      .slice(1, -1)
+      .map(i => i.role + ': ' + i.content)
+      .join('\n\n');
+    logger.debug(history);
+    const summary = await model._call(`summarize the following chat converstion between an user and ai assistant:\n\n${history}`);
+    logger.warn(summary);
     const inputMsg = input[input.length - 1].content;
     logger.debug(`Executing with input "${inputMsg}"...`);
 
@@ -225,7 +233,7 @@ export class BasicAgentChatModel implements IChatModel {
     }
 
     try {
-      const response = await executor.call({ input: inputMsg, chat_history: '' });
+      const response = await executor.call({ input: inputMsg, chat_history: summary });
 
       logger.debug(`Got response`);
 

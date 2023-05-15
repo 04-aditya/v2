@@ -458,13 +458,13 @@ export class ChatController {
     assistantMessage.content = response.content.replace(/maskedhumanname/g, `${currentUser.first_name || 'user'}`);
     assistantMessage.options = response.options || {};
     messages.push(assistantMessage);
+    const soptions: any = session.options;
     if (response.usage) {
-      const options: any = session.options;
-      options.usage.total_tokens += response.usage.total_tokens;
-      options.usage.prompt_tokens += response.usage.prompt_tokens;
-      options.usage.completion_tokens += response.usage.completion_tokens;
-      session.options = options;
+      soptions.usage.total_tokens += response.usage.total_tokens;
+      soptions.usage.prompt_tokens += response.usage.prompt_tokens;
+      soptions.usage.completion_tokens += response.usage.completion_tokens;
     }
+    session.options = soptions;
     await AppDataSource.getRepository(ChatMessageEntity).save(messages);
     session.messages = messages;
     await repo.save(session);

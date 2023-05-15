@@ -65,6 +65,7 @@ export class PSBodhiChatModel implements IChatModel {
     if (response.status === 200) {
       result = {
         content: response.data.choices[0].message.content,
+        options: response.data.choices[0].message.options || {},
         usage: response.data.usage,
       };
     }

@@ -465,6 +465,7 @@ function MessageContent(props: MessageProps) {
   };
   const isUser = m.role==='user';
   const followup_questions = m.options?.followup_questions as string[] || [];
+  const refs = m.options?.references||{};
   return <Paper sx={(theme)=>({
       pl:1, pr:(isUser?3:1), pt:isUser?0:2, border:'0px solid gray', overflow:'auto',
       ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
@@ -508,6 +509,9 @@ function MessageContent(props: MessageProps) {
         {snackbarMessage}
       </Alert>
     </Snackbar>
+    <Stack direction={'row'} spacing={1}>
+      {Object.keys(refs).map((r:any, i:number)=><a href={refs[r]}><Typography key={i} variant='caption'><strong>[{r}]</strong>&nbsp;{refs[r]}</Typography></a>)}
+    </Stack>
     {m.options?.intermediate_content ? <>
       <Button size='small' onClick={handleClickOpen}>
         show reasoning

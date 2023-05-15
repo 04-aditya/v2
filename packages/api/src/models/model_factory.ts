@@ -59,9 +59,9 @@ export default class ModelFactory {
     //   tools: [],
     // });
 
-    if (NODE_ENV !== 'production') {
-      models.push(new BasicAgentChatModel());
-    }
+    //if (NODE_ENV !== 'production') {
+    models.push(new BasicAgentChatModel());
+    //}
 
     models.forEach(m => ModelFactory._models.set(m.id, m));
 
