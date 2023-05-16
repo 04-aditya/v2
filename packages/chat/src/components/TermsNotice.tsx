@@ -9,7 +9,7 @@ Thanks for using PSChat! Our mission is to unleash your creativity and productiv
 Use of this PS Chat is governed by the following rules and guidelines:
 
 * Don't give any personal information (yours, clients’, or others) in your queries (i.e., prompts or other inputs) to PSChat.
-* <span style="color:#fe414d;">Currently, PSChat is authorized only for PS internal use. Please do not use it for any client or public-facing work and do not include any client information in your queries.</span>
+* <span style="color:#fe414d;">Only use the output in ways that are allowed by your client contract or for internal use.</span>
 * Don't use PSChat to do anything that could harm Publicis Groupe's reputation, or to make any harmful content (e.g., malware or spam).
 * Don't pretend or imply that any outputs from PSChat were made by a human. Include a disclosure where possible, indicating outputs are AI-generated.
 * Check the accuracy of the content that PSChat generates (text, software code, images, etc.), and don't use it if it's inaccurate or might infringe on others' rights.

@@ -22,8 +22,8 @@ const PREFIX = (date: Date, user?: UserEntity) =>
   ` You should know that current year is ${formatDate(date, 'yyyy')} ` +
   `and today is ${formatDate(date, 'iiii')} ${formatDate(date, 'do')} of ${formatDate(date, 'MMMM')}. \n\n` +
   // `Your are helping a Human named maskedhumanname, who is working at Publicis Sapient${user ? `, as ${user.business_title}` : ''}.\n\n` +
-  `Use previous conversation summary for additional context:` +
-  `{chat_history}\n\n` +
+  //`Use previous conversation summary for additional context:` +
+  //`{chat_history}\n\n` +
   ` You have access to the following tools:`;
 
 const formatInstructions = (
@@ -89,7 +89,7 @@ class CustomPromptTemplate extends BaseChatPromptTemplate {
           [
             action.log.split('Action:')[0],
             `\n🤔 I will use \`${action.tool}\` to process \n\`${action.toolInput}\`\n`,
-            '\n*Observation:* ' + observation + '\n',
+            '\n*Observation:* \n\n' + observation + '\n',
             i < intermediateSteps.length - 1 ? '💡 \n' : '',
           ].join('\n'),
         '',
@@ -119,9 +119,9 @@ class CustomOutputParser extends AgentActionOutputParser {
       return { log: text, returnValues: finalAnswers };
     }
 
-    const match = /Action: (.*)\nAction Input: (.*)/s.exec(text);
+    const match = /Action:(.*)\nAction Input:(.*)$/gms.exec(text);
     if (!match) {
-      // throw new Error(`Could not parse LLM output: ${text}`);
+      logger.debug(`Could not find Action tool in: ${text}`);
       return {
         log: text,
         returnValues: {
@@ -176,7 +176,7 @@ export class BasicAgentChatModel implements IChatModel {
       searchTool,
       calcTool,
       new UnitConvertorTool(),
-      //new DallETool(process.env.AZ_DALLE_APIKEY, { userid: options?.user.id }),
+      new DallETool(process.env.AZ_DALLE_APIKEY, { userid: options?.user.id }),
       // new DynamicTool({
       //   name: 'ask maskedhumanname',
       //   description:
@@ -222,9 +222,9 @@ export class BasicAgentChatModel implements IChatModel {
       .slice(1, -1)
       .map(i => i.role + ': ' + i.content)
       .join('\n\n');
-    logger.debug(history);
-    const summary = await model._call(`summarize the following chat converstion between an user and ai assistant:\n\n${history}`);
-    logger.warn(summary);
+    logger.debug('Using history:' + history);
+    const summary = '';//await model._call(`summarize the following chat converstion between an user and ai assistant:\n\n${history}`);
+    logger.debug('Summary: ' + summary);
     const inputMsg = input[input.length - 1].content;
     logger.debug(`Executing with input "${inputMsg}"...`);
 

@@ -509,7 +509,7 @@ function MessageContent(props: MessageProps) {
         {snackbarMessage}
       </Alert>
     </Snackbar>
-    <Stack direction={'row'} spacing={1}>
+    <Stack direction={'row'} flexWrap={'wrap'} spacing={2}>
       {Object.keys(refs).map((r:any, i:number)=><a href={refs[r]}><Typography key={i} variant='caption'><strong>[{r}]</strong>&nbsp;{refs[r]}</Typography></a>)}
     </Stack>
     {m.options?.intermediate_content ? <>

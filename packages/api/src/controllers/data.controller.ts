@@ -3,14 +3,9 @@ import { BlobServiceClient } from '@azure/storage-blob';
 import { Controller, Get, QueryParam, Res } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
 
-@Controller()
-export class IndexController {
-  @Get('/')
-  index() {
-    return 'OK';
-  }
-
-  @Get('/data')
+@Controller('/api/data')
+export class DataController {
+  @Get('/file')
   @OpenAPI({ summary: 'Return the generated files by name' })
   async getFile(@QueryParam('n') name: string, @Res() res) {
     const AZURE_STORAGE_CONNECTION_STRING = process.env.AZCONNSTR;
@@ -30,11 +25,20 @@ export class IndexController {
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
     // Display blob name and url
-    logger.info(`downloading to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`);
-    const buffer = await blockBlobClient.downloadToBuffer();
+    logger.debug(`downloading to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`);
+    // const buffer = await blockBlobClient.downloadToBuffer();
 
-    res.setHeader('Content-Type', 'image/png');
-    return res.send(buffer);
-    //res.sendFile(name, { root: './data' });
+    // const props = await blockBlobClient.getProperties();
+    // //console.log(props);
+    // res.setHeader('Content-Type', props.contentType);
+    // res.setHeader('etag', props.etag);
+    // res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    // return res.send(buffer);
+    const downloadResponse = await blockBlobClient.download();
+    res.setHeader('Content-Type', downloadResponse.contentType);
+    res.setHeader('etag', downloadResponse.etag);
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    downloadResponse.readableStreamBody.pipe(res);
+    return res;
   }
 }

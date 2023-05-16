@@ -10,11 +10,13 @@ import { PermissionsController } from '@controllers/permissions.controller';
 import { UserGroupController } from './controllers/usergroup.controller';
 import { StatsController } from './controllers/stats.controller';
 import { ChatController } from './controllers/chat.controller';
+import { DataController } from './controllers/data.controller';
 
 validateEnv();
 
 const app = new App([
   IndexController,
+  DataController,
   AuthController,
   UsersController,
   AdminController,

@@ -136,7 +136,7 @@ export class AzureOpenAI extends LLM implements AzureOpenAIInput {
     try {
       generations = JSON.parse(prompt);
     } catch (ex) {
-      logger.error(`prompt is not a JSON object`);
+      logger.debug(`prompt is not a JSON object, using prompt as a string.`);
     }
     const res = await this.client.call([{ content: generations[0].text, role: 'user' }], {
       stop,

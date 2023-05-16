@@ -149,7 +149,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const handleMessageKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       if (e.shiftKey || e.altKey) {
-        setNewMessage(prev => prev + '\n');
+        // setNewMessage(prev => prev + '\n');
       }
       else {
         props.message?handleRegenerate():onSend();
