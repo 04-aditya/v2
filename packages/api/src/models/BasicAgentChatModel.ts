@@ -171,12 +171,13 @@ export class BasicAgentChatModel implements IChatModel {
     });
     searchTool.name = 'bing';
     const calcTool = new Calculator();
+    const dalletool = new DallETool(process.env.AZ_DALLE_APIKEY, { userid: options?.user.id });
     calcTool.name = 'calculator';
     const tools = [
       searchTool,
       calcTool,
       new UnitConvertorTool(),
-      new DallETool(process.env.AZ_DALLE_APIKEY, { userid: options?.user.id }),
+      dalletool,
       // new DynamicTool({
       //   name: 'ask maskedhumanname',
       //   description:
@@ -239,7 +240,7 @@ export class BasicAgentChatModel implements IChatModel {
 
       logger.debug(JSON.stringify(response, null, 2));
       const result = {
-        content: unmaskname(response.output),
+        content: unmaskname(response.output) + '\n\n ### Generated Images \n\n' + dalletool.images.join('\n'),
         options: {
           intermediate_content: unmaskname(lastIntermediateSet),
           intermediateSteps,

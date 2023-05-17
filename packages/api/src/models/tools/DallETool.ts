@@ -14,6 +14,8 @@ class DallETool extends Tool {
 
   params: Record<string, string>;
 
+  images: string[] = [];
+
   constructor(
     apiKey: string | undefined = typeof process !== 'undefined'
       ? // eslint-disable-next-line no-process-env
@@ -111,7 +113,9 @@ class DallETool extends Tool {
         return "I don't know how to do that.";
       }
     }
-    return output.map((u, i) => `![${inputset[i]}](${u})`).join('\n');
+    const results = output.map((u, i) => `![${inputset[i]}](${u})`);
+    this.images.push(...results);
+    return results.join('\n');
   }
 }
 

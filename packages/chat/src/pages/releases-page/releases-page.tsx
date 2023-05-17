@@ -18,15 +18,19 @@ export function ReleasesPage(props: ReleasesPageProps) {
         {/* <ReleaseInfo date={'**Date**'} content={'**Description**'}/>
         <Divider/> */}
         <Box sx={theme=>({maxHeight:'600px', p:2})} className='scrollbarv'>
+          <ReleaseInfo date={'2023-05-17'} content={
+            ` * Added cability to generate images using DALLE as a tool. \n\n` +
+            `![add instruction btn image](/assets/releases/dalle.png)\n\n`
+          }/>
           <ReleaseInfo date={'2023-05-16'} content={
             ` * Added cability to add new system instructions. \n\n` +
-            `![add instruction btn image](/assets/releases/add_sysinst.png)\n\n` +
-            ` * Added display of intermediate reasoning steps. \n\n` +
-            `![intermediate reasoning image](/assets/releases/intermediate_reasoning.png)\n\n`
+            `![add instruction btn image](/assets/releases/add_sysinst.png)\n\n`
           }/>
           <ReleaseInfo date={'2023-05-15'} content={
             ` * Initial release of the Reasoning model with websearch tools. \n\n` +
-            `![websearch](/assets/releases/modelwithtools.png)\n\n`
+            `![websearch](/assets/releases/modelwithtools.png)\n\n` +
+            ` * Added display of intermediate reasoning steps. \n\n` +
+            `![intermediate reasoning image](/assets/releases/intermediate_reasoning.png)\n\n`
           }/>
           <ReleaseInfo date={'2023-05-10'} content={
             ` * Added copy to edit button, to edit prev messages and restart conversation. \n\n` +

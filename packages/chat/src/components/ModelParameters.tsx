@@ -14,7 +14,7 @@ export interface IModelParametersProps {
 }
 export function ModelParameters(props: IModelParametersProps) {
   const [temperature, setTemperature] = useState(0.1);
-  const [max_tokens, setMaxTokens] = useState(400);
+  const [max_tokens, setMaxTokens] = useState(1000);
   useEffect(() => {
     setTemperature(props.parameters.temperature);
     setMaxTokens(props.parameters.max_tokens);
@@ -35,16 +35,6 @@ export function ModelParameters(props: IModelParametersProps) {
   return <Grid container sx={{ mt: 0.5 }}>
     <Grid item xs={12} sm={6} sx={{ p: 0.5 }}>
       <Tooltip arrow title={`Controls randomness (0.0 to 2.0). Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both.`}>
-        {/* <TextField id="model-temperature" label="Temperature" size='small'
-          type='number' fullWidth
-          value={temperature}
-          inputProps={
-            {
-              inputMode:'numeric',
-              min: 0, max: 2, step: 0.1
-            }
-          }
-          onChange={handleTemperatureChange} /> */}
         <Typography variant='caption'>Temperature</Typography>
         </Tooltip>
         <Slider
