@@ -47,7 +47,9 @@ export function useChatSession(id?: string) {
   const keys = [CACHEKEY, id];
   const query = useQuery<IChatSession, AxiosError>(keys, async ()=>{
     const res = await axios.get(`${CHATAPI}/${id}`);
-    return res.data.data as IChatSession;
+    const session = res.data.data as IChatSession;
+    session.messages.sort();
+    return session;
   },{
     enabled: !!axios && id !== undefined,
     staleTime: 60 * 1000 // 1 minute
