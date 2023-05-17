@@ -24,6 +24,8 @@ const PREFIX = (date: Date, user?: UserEntity) =>
   // `Your are helping a Human named maskedhumanname, who is working at Publicis Sapient${user ? `, as ${user.business_title}` : ''}.\n\n` +
   //`Use previous conversation summary for additional context:` +
   //`{chat_history}\n\n` +
+  `Publicis Sapient (PS) Primary brand colors are #FE414D(radiant-red), #FFFFFF(white) and light-gray(#EEEEEE) and ` +
+  `Publicis Sapient (PS) secondary brand colors are  #079FFF(Blue), #FFE63B(yellow) and #00E6C3(green) . \n\n` +
   ` You have access to the following tools:`;
 
 const formatInstructions = (
