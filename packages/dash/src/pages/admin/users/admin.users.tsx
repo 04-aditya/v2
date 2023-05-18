@@ -11,7 +11,7 @@ import TableRenderers from 'react-pivottable/TableRenderers';
 import Plot from 'react-plotly.js';
 import createPlotlyRenderers from 'react-pivottable/PlotlyRenderers';
 import { ColDef, ColGroupDef, ColumnVisibleEvent, SelectionChangedEvent } from 'ag-grid-community';
-import { displayNotification } from '@/hooks/useNotificationState';
+import { displayNotification } from 'sharedui/hooks/useNotificationState';
 import { appstateDispatch } from 'sharedui/hooks/useAppState';
 import { useLocation, useNavigate } from 'react-router-dom';
 

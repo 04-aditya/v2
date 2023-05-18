@@ -26,7 +26,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { theme } from './theme';
-import {notificationDispatch, useNotificationStore} from '@/hooks/useNotificationState';
+import {notificationDispatch, useNotificationStore} from 'sharedui/hooks/useNotificationState';
 import {useAppStore} from 'sharedui/hooks/useAppState';
 import { CircularProgress, ListItem, ListItemAvatar, Menu, MenuItem, useTheme } from '@mui/material';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';

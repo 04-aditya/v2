@@ -33,7 +33,7 @@ import { LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
 import { groupBy } from '@/utils/util';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import { BlobServiceClient } from '@azure/storage-blob';
-import AsyncTask, { stringFn } from '@/utils/asyncTask';
+import AsyncTask, { updateFn } from '@/utils/asyncTask';
 import Excel from 'exceljs';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
 
@@ -285,7 +285,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
     return { qid: qt.id, message: 'created' };
   }
 
-  async processFileData(updater: stringFn, buffer: Buffer, permissions: string[], currentuser: UserEntity) {
+  async processFileData(updater: updateFn, buffer: Buffer, permissions: string[], currentuser: UserEntity) {
     try {
       // load from buffer
       const workbook: any = new Excel.Workbook();

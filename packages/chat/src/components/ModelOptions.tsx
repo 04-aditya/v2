@@ -1,10 +1,12 @@
 import { SelectChangeEvent, Grid, FormControl, InputLabel, Select, ListSubheader, MenuItem, Divider, OutlinedInput, Checkbox, ListItemText, IconButton, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button, Input, TextField, useTheme, useMediaQuery, Autocomplete, Box } from "@mui/material";
-import { useState, useEffect, Dispatch, SetStateAction, SyntheticEvent } from "react";
-import { useChatModels } from "../api/chat";
+import { useState, useEffect, Dispatch, SetStateAction, SyntheticEvent, useMemo } from "react";
+import { useChatContexts, useChatModels } from "../api/chat";
 import { MenuProps } from "./MenuProps";
 import Tooltip from '@mui/material/Tooltip';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import { flatGroup, group } from "d3";
+import { IChatModel } from "sharedtypes";
 const defaultprompt = (actas:string) => `You are a helpful AI assistant. If you do not know the answer to a question, respond by saying "I do not know the answer to your question.". ${actas}
 Respond in markdown format when possible.code parts should start with \`\`\`langauge and end with \`\`\` . if asked for uml generate mermaid code and start the mermaid code with \`\`\`mermaid .`;
 
@@ -27,29 +29,32 @@ const defaultSystemMessages: Array<ISystemMessage> = [
 export default function SelectSystemMessage(props:{
   id?: string,
   label?: string,
-  value?:ISystemMessage,
+  value?:string,
   options:ISystemMessage[],
   onChange:(value:ISystemMessage|null)=>void,
   onDelete:(value:ISystemMessage)=>void
 }) {
-  const [value, setValue] = useState<ISystemMessage | null>(props.value||props.options[0]);
+  const [value, setValue] = useState<ISystemMessage | null>(null);
   const [inputValue, setInputValue] = useState('');
 
+  useEffect(()=>{
+    if (props.value && props.options) {
+      const match = props.options.find(m=>m.message===props.value);
+      setValue(match||defaultSystemMessages[0]);
+    } else if (props.options.length>0) {
+      setValue(props.options[0]);
+    }
+  },[props.value, props.options])
   return (
     <Autocomplete fullWidth size='small'
       value={value}
-      onChange={(event, newValue) => {
-        const value = newValue || props.options[0];
-        setValue(value);
-        if (!newValue) setInputValue(value.name);
-        props.onChange(value);
-      }}
+      onChange={(event, newValue) => props.onChange(newValue)}
       inputValue={inputValue}
       onInputChange={(event, newInputValue) => {
         setInputValue(newInputValue);
       }}
       id={props.id||"systemmessages-select"}
-      options={props.options}
+      options={props.options||defaultSystemMessages}
       getOptionLabel={op=>op.name}
       groupBy={(option) => option.type}
       renderInput={(params) => <TextField {...params} label={props.label||"Act as"} />}
@@ -85,7 +90,8 @@ export function ModelOptions(props: IModelOptionsProps) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
   const chatModels = useChatModels();
-  const [model, setModel] = useState('gpt35turbo');
+  const [model, setModel] = useState('');
+  const {data: modelContexts} = useChatContexts(model);
   const [savedSysMsgs, setSavedSysMsgs] = useState<ISystemMessage[]>([]);
   const [assistant, setAssistant] = useState<string>(defaultSystemMessages[0].message);
   const [contexts, setContext] = useState<string[]>([]);
@@ -102,14 +108,11 @@ export function ModelOptions(props: IModelOptionsProps) {
   }, []);
 
   useEffect(()=>{
-    if (!chatModels) return;
     setModel(props.options.model);
-    const aidx = [...defaultSystemMessages,...savedSysMsgs].findIndex(m=>m.message===props.options.assistant);
-    if (aidx !== -1) {
-      setAssistant(props.options.assistant);
-    }
     setContext(props.options.contexts);
-  }, [chatModels, props.options, savedSysMsgs])
+    setAssistant(props.options.assistant);
+    setNewSystemMessage(props.options.assistant);
+  }, [props.options])
 
   const handleContextChange = (event: SelectChangeEvent<string[]>) => {
     const {
@@ -123,13 +126,19 @@ export function ModelOptions(props: IModelOptionsProps) {
     props.onChange({...props.options, contexts: newcontexts});
   }
   const handleModelChange = (e: SelectChangeEvent<string>) => {
-    setModel(e.target.value as string);
-    props.onChange({...props.options, model: e.target.value as string});
+    const selectedModel = e.target.value as string;
+    console.log(selectedModel);
+    setModel(selectedModel);
+    props.onChange({...props.options, model: selectedModel});
   }
-  // const handleAssistantChange = (e: SyntheticEvent) => {
-  //   setAssistant(e.target.value as string);
-  //   props.onChange({...props.options, assistant: e.target.value as string});
-  // }
+  const handleAssistantChange = (v:ISystemMessage|null) =>{
+    if (v) {
+      setAssistant(v.message);
+      setNewSystemMessage(v.message);
+      props.onChange({...props.options, assistant: v.message});
+    }
+  }
+
   const handleAddCustomPrompt = () => {
     setPromptDlg(true);
   }
@@ -153,8 +162,14 @@ export function ModelOptions(props: IModelOptionsProps) {
   }
 
 
+  const assistantOptions = useMemo(()=>{
+    return [...defaultSystemMessages, ...savedSysMsgs]
+  },[savedSysMsgs]);
+
   const availableModels = chatModels.data || [];
-  const availableContexts = availableModels.find(m=>m.id===model)?.contexts||[];
+  const modelGroups = group(availableModels, m=>m.group);
+  // console.log(flatGroup(availableModels, m=>m.group))
+  const availableContexts = modelContexts || [] // availableModels.find(m=>m.id===model)?.contexts||[];
   return <Grid container sx={{ml:-1, mt:0.5}}>
   <Grid item xs={12} sm={3} sx={{pr:1}}>
     <Tooltip arrow title='LLM model'>
@@ -164,12 +179,20 @@ export function ModelOptions(props: IModelOptionsProps) {
           value={model}
           onChange={handleModelChange}
         >
+          {/* {[...modelGroups].map(([group, models])=>(
+            <>
+              <ListSubheader key={group}>{group}</ListSubheader>
+              {models.map((m:IChatModel)=><Tooltip title={m.name}>
+                <MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>
+              </Tooltip>)}
+            </>)
+          )} */}
           <ListSubheader>Standard</ListSubheader>
-          {(chatModels?.data||[]).filter(m=>m.group==='Standard').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
+          {(availableModels||[]).filter(m=>m.group==='Standard').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
           <ListSubheader>Custom</ListSubheader>
-          {(chatModels?.data||[]).filter(m=>m.group==='Custom').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
+          {(availableModels||[]).filter(m=>m.group==='Custom').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
           <ListSubheader>Experimental</ListSubheader>
-          {(chatModels?.data||[]).filter(m=>m.group==='Experimental').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
+          {(availableModels||[]).filter(m=>m.group==='Experimental').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
           <ListSubheader>Open Source</ListSubheader>
           {(chatModels?.data||[]).filter(m=>m.group==='Open Source').map(m=><MenuItem key={m.id} value={m.id} disabled={!m.enabled}>{m.name}</MenuItem>)}
 
@@ -182,9 +205,9 @@ export function ModelOptions(props: IModelOptionsProps) {
       <Tooltip arrow title='Initial prompt'>
         <FormControl sx={{ m: 1}} fullWidth>
           <SelectSystemMessage id="assistant-select" label="Act as"
-            value={[...defaultSystemMessages, ...savedSysMsgs].find(m=>m.message===assistant)}
-            options={[...defaultSystemMessages, ...savedSysMsgs]}
-            onChange={v=>{if (v) { setAssistant(v.message); setNewSystemMessage(v.message); }}}
+            value={assistant}
+            options={assistantOptions}
+            onChange={handleAssistantChange}
             onDelete={deleteSystemMessage}
           />
         </FormControl>
@@ -232,14 +255,14 @@ export function ModelOptions(props: IModelOptionsProps) {
           <Select<string[]> id="contexts-select" labelId="contexts-select-label" label="Additional Contexts" size='small'
             multiple
             input={<OutlinedInput label="Tag" />}
-            value={contexts}
+            value={contexts||[]}
             renderValue={(selected) => selected.join(', ')}
             onChange={handleContextChange}
             MenuProps={MenuProps}
           >
             {
               availableContexts.map(c=> <MenuItem key={c.id} value={c.id} disabled={!c.enabled}>
-                <Checkbox checked={contexts.indexOf(c.id) > -1} />
+                <Checkbox checked={(contexts||[]).indexOf(c.id) > -1} />
                 <Tooltip title={c.description}>
                   <ListItemText primary={c.name} />
                 </Tooltip>

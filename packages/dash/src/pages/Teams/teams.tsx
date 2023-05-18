@@ -17,7 +17,7 @@ import { TabPanel, a11yProps } from '@/components/TabPanel';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import { GroupSelect } from '@/components/GroupSelect';
 import { UserGrid } from '@/components/UserGrid';
-import { displayNotification } from '@/hooks/useNotificationState';
+import { displayNotification } from 'sharedui/hooks/useNotificationState';
 
 /* eslint-disable-next-line */
 export interface TeamsProps {}

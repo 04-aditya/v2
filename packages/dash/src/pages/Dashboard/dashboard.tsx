@@ -20,7 +20,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { getUserName, IStatsData } from 'sharedtypes';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
-import { displayNotification } from '@/hooks/useNotificationState';
+import { displayNotification } from 'sharedui/hooks/useNotificationState';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import ButtonPopover from '@/components/ButtonPopover';
 import { PageContainer } from 'sharedui/components/PageContainer';

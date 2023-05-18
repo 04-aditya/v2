@@ -30,6 +30,19 @@ export interface IChatSession {
   //   stop?: string;
   // };
 };
+
+export interface IChatContext {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  metadata?: Record<string, any>;
+}
+
+export interface IChatModelCallParams {
+  input: {role:string, content: string}[],
+  options?: Record<string, any>;
+}
 export interface IChatModel {
   id: string;
   name: string;
@@ -40,11 +53,7 @@ export interface IChatModel {
     name: string;
     description: string;
   }[],
-  contexts: {
-    id: string;
-    name: string;
-    description: string;
-    enabled: boolean;
-  }[],
-  call?: (input: {role:string, content: string}[], options?: Record<string, unknown>) => Promise<{ content: string } & Record<string, any>>;
+  contexts: IChatContext[],
+  refresh?: () => Promise<void>;
+  call?: (data:IChatModelCallParams) => Promise<{ content: string } & Record<string, any>>;
 }

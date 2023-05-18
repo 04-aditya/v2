@@ -5,7 +5,7 @@ class BingAPI extends Tool {
   name = 'bing';
 
   description =
-    `a search engine. useful for when you need to answer questions about current events.` +
+    `a search engine. useful when you need to answer questions about current events and time related questions.` +
     `input should be a search query. When arriving at the final or likely answer, make sure to cite results using [[number](URL)] notation after the reference.` +
     `If the provided search results refer to multiple subjects with the same name, write separate answers for each subject.`;
 
@@ -16,7 +16,7 @@ class BingAPI extends Tool {
   constructor(
     apiKey: string | undefined = typeof process !== 'undefined'
       ? // eslint-disable-next-line no-process-env
-        process.env?.BingApiKey
+        process.env?.BINGSERPAPI_API_KEY
       : undefined,
     params: Record<string, string> = {},
   ) {

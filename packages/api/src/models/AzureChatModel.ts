@@ -1,8 +1,9 @@
 import { logger } from '@/utils/logger';
-import { IChatModel } from '@sharedtypes';
+import { IChatModel, IChatModelCallParams } from '@sharedtypes';
 import axios, { AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
-import { BaseLLM, BaseLLMParams, LLM } from 'langchain/llms/base';
+import { CallbackManagerForLLMRun } from 'langchain/dist/callbacks';
+import { BaseLLMParams, LLM } from 'langchain/llms/base';
 
 let currentAzAPIClientIndex = -1;
 const azAPIclients: AxiosInstance[] = [];
@@ -47,30 +48,66 @@ export class AzureChatModel implements IChatModel {
   readonly enabled = true;
   readonly contexts = [];
   readonly tools = [];
+  //readonly tiktoken = new Tiktoken());
 
-  async call(input: { role?: string; content: string }[], options?: Record<string, unknown>): Promise<{ content: string } & Record<string, any>> {
-    let result: { content: string } & Record<string, any>;
-    const client = getAzAPIClient();
-    const response = await client.post(`chat/completions?api-version=${api_versions[currentAzAPIClientIndex]}`, {
-      n: options.n,
-      stream: false,
-      temperature: options.temperature,
-      max_tokens: options.max_tokens,
-      top_p: options.top_p,
-      presence_penalty: options.presence_penalty,
-      frequency_penalty: options.frequency_penalty,
-      stop: options.stop,
-      messages: input.map(m => ({
-        role: m.role,
-        content: m.content,
-      })),
+  counttokens(messages: { role: string; content: string }[]) {
+    let count = 0;
+    messages.forEach(m => {
+      count += m.content.length / 4 + 4;
     });
-    if (response.status === 200) {
-      result = {
-        content: response.data.choices[0].message.content,
-        usage: response.data.usage,
-      };
-    }
+    return count;
+  }
+
+  async call(data: IChatModelCallParams): Promise<{ content: string } & Record<string, any>> {
+    const { input, options } = data;
+    const tinput = [...input];
+    const result: { content: string } & Record<string, any> = {
+      content: '',
+      usage: { completion_tokens: 0, prompt_tokens: 0, total_tokens: 0 },
+    };
+    do {
+      let conv_history_tokens = this.counttokens(tinput);
+      while (conv_history_tokens > 3500 && tinput.length > 3) {
+        logger.warn(`removing first message from input because it is too long (${conv_history_tokens} tokens)`);
+        tinput.splice(1, 1);
+        conv_history_tokens = this.counttokens(tinput);
+      }
+
+      const client = getAzAPIClient();
+      const response = await client.post(`chat/completions?api-version=${api_versions[currentAzAPIClientIndex]}`, {
+        n: options.n,
+        stream: false,
+        temperature: options.temperature,
+        max_tokens: options.max_tokens,
+        top_p: options.top_p,
+        presence_penalty: options.presence_penalty,
+        frequency_penalty: options.frequency_penalty,
+        stop: options.stop,
+        messages: tinput.map(m => ({
+          role: m.role,
+          content: m.content,
+        })),
+      });
+      if (response.status === 200) {
+        result.content += response.data.choices[0].message.content;
+        result.finish_reason = response.data.choices[0].finish_reason;
+        result.usage.completion_tokens += response.data.usage.completion_tokens;
+        result.usage.prompt_tokens += response.data.usage.prompt_tokens;
+        result.usage.total_tokens += response.data.usage.total_tokens;
+      }
+      if (result.finish_reason === 'length') {
+        logger.info(`continuing previous message...`);
+        logger.debug(result);
+        tinput.push({
+          role: 'assistant',
+          content: result.content,
+        });
+        tinput.push({
+          role: 'user',
+          content: 'continue',
+        });
+      }
+    } while (result.finish_reason === 'length');
     return result;
   }
 
@@ -131,20 +168,23 @@ export class AzureOpenAI extends LLM implements AzureOpenAIInput {
     return 'AzureOpenAI';
   }
 
-  async _call(prompt: string, stop?: string[]): Promise<string> {
+  async _call(prompt: string, options: this['ParsedCallOptions'], runManager?: CallbackManagerForLLMRun): Promise<string> {
     let generations: any = [{ text: prompt }];
     try {
       generations = JSON.parse(prompt);
     } catch (ex) {
       logger.debug(`prompt is not a JSON object, using prompt as a string.`);
     }
-    const res = await this.client.call([{ content: generations[0].text, role: 'user' }], {
-      stop,
-      temperature: this.temperature,
-      max_tokens: this.maxTokens,
-      frequencyPenalty: this.frequencyPenalty,
-      topP: this.topP,
-      topK: this.topK,
+    const res = await this.client.call({
+      input: [{ content: generations[0].text, role: 'user' }],
+      options: {
+        stop: options.stop,
+        temperature: this.temperature,
+        max_tokens: this.maxTokens,
+        frequencyPenalty: this.frequencyPenalty,
+        topP: this.topP,
+        topK: this.topK,
+      },
     });
     return res.content;
   }

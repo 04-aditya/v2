@@ -1,12 +1,9 @@
-import { logger } from '@/utils/logger';
-import { IChatModel, APIResponse } from '@sharedtypes';
-import axios, { AxiosInstance } from 'axios';
+import { IChatModel } from '@sharedtypes';
+import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import { AzureChatModel } from './AzureChatModel';
 import { PSBodhiChatModel } from './PSBodhiChatModel';
-import { AutoGPTChatModel } from './AutoGPTChatModel';
 import { BasicAgentChatModel } from './BasicAgentChatModel';
-import { NODE_ENV } from '@/config';
 
 const psbodhiclient = axios.create({
   baseURL: process.env['PSBODHI_URL'],

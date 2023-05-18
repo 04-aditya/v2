@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { APIResponse, IChatSession, IChatMessage, IChatModel } from '@sharedtypes';
+import { APIResponse, IChatSession, IChatMessage, IChatModel, IChatContext } from '@sharedtypes';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import { HttpException } from '@/exceptions/HttpException';
@@ -30,60 +30,8 @@ import { UserDataEntity } from '@/entities/userdata.entity';
 import ModelFactory from '@/models/model_factory';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { checkADTokens } from './auth.controller';
-
-// import { OpenAI } from 'langchain/llms';
-// const openai = new OpenAI();
-// openai.generate(['Tell me a joke.']).then(console.log).catch(console.error);
-
-// const azAPIclients: AxiosInstance[] = [];
-// let currentAzAPIClientIndex = 0;
-// function getAzAPIClient(): AxiosInstance {
-//   if (azAPIclients.length === 0) {
-//     const keys = process.env['AZ_OPENAI_KEY'].split(',');
-//     const baseURLs = process.env['AZ_OPENAI_URL'].split(',');
-//     const deployments = process.env['AZ_OPENAI_DEPLOYMENT'].split(',');
-//     for (let i = 0; i < keys.length; i++) {
-//       logger.info(`creating azure client ${i}...`);
-//       const client = axios.create({
-//         baseURL: `${baseURLs[i]}openai/deployments/${deployments[i]}/`,
-//         headers: {
-//           'api-key': keys[i],
-//         },
-//         timeout: 60000,
-//       });
-//       axiosRetry(client, {
-//         retries: 2,
-//         retryDelay: axiosRetry.exponentialDelay,
-//         retryCondition: error => {
-//           console.log(error);
-//           return true;
-//         },
-//       });
-//       azAPIclients.push(client);
-//     }
-//   }
-//   if (currentAzAPIClientIndex >= azAPIclients.length) currentAzAPIClientIndex = 0;
-//   logger.debug('Using AZ OpenAI API client', currentAzAPIClientIndex);
-//   const client = azAPIclients[currentAzAPIClientIndex];
-//   currentAzAPIClientIndex += 1; // round robin
-//   return client;
-// }
-
-// const psbodhiclient = axios.create({
-//   baseURL: process.env['PSBODHI_URL'],
-//   headers: {
-//     'access-token': process.env['PSBODHI_KEY'],
-//   },
-//   timeout: 60000,
-// });
-// axiosRetry(psbodhiclient, {
-//   retries: 2,
-//   retryDelay: axiosRetry.exponentialDelay,
-//   retryCondition: error => {
-//     console.log(error);
-//     return true;
-//   },
-// });
+import crypto from 'crypto';
+import AsyncTask, { updateFn } from '@/utils/asyncTask';
 
 @JsonController('/api/chat')
 @UseBefore(authMiddleware)
@@ -98,6 +46,60 @@ export class ChatController {
       result.data = [...(await ModelFactory.models()).values()];
     } catch (ex) {
       console.error(ex);
+      throw new HttpError(500);
+    }
+    return result;
+  }
+
+  @Get('/models/:modelid/contexts')
+  @OpenAPI({ summary: 'get chat contexts for the specified model' })
+  async getContext(@Param('modelid') modelId) {
+    const result = new APIResponse<IChatContext[]>();
+    try {
+      const model = (await ModelFactory.models()).get(modelId);
+      model.refresh && model.refresh();
+      result.data = model.contexts;
+    } catch (ex) {
+      console.log(ex);
+      logger.error(JSON.stringify(ex));
+      throw new HttpError(500);
+    }
+    return result;
+  }
+
+  @Post('/models/:modelid/contexts')
+  @OpenAPI({ summary: 'Create a new chat context for the specified model' })
+  async createContext(
+    @Param('modelid') modelid: string,
+    @CurrentUser() currentUser,
+    @BodyParam('name') name: string,
+    @BodyParam('description') description?: string,
+  ) {
+    const result = new APIResponse<IChatContext>();
+    if (modelid !== 'psbodhi') throw new HttpException(400, `Model ${modelid} not supported.`);
+    try {
+      const newcontext = {
+        id: `${modelid}-${name}-${crypto.randomBytes(6).toString('hex')}`,
+        name,
+        description,
+        enabled: true,
+        metadata: JSON.stringify({
+          userid: currentUser.id,
+        }),
+      };
+
+      const ar = await axios.post(`${process.env['PSBODHI_URL']}/contexts`, newcontext, {
+        headers: {
+          'access-token': process.env['PSBODHI_KEY'],
+          'Content-Type': 'application/json',
+        },
+        timeout: 60000,
+      });
+
+      result.data = ar.data;
+    } catch (ex) {
+      console.log(ex);
+      logger.error(JSON.stringify(ex));
       throw new HttpError(500);
     }
     return result;
@@ -349,7 +351,6 @@ export class ChatController {
   ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
-    const result = new APIResponse<IChatSession>();
     const repo = AppDataSource.getRepository(ChatSessionEntity);
 
     const message = message_param;
@@ -387,11 +388,12 @@ export class ChatController {
       }
     }
 
-    // if message and session id is specified updated the attributes and return
+    // if message is not present and session id is specified updated the attributes and return
     if (!message_param && sessionid_param) {
       await repo.save(session);
+      logger.debug(`updated chat session: ${session.id}}`);
+      const result = new APIResponse<IChatSession>();
       result.data = session.toJSON();
-      logger.debug(`updated session: ${session.id}}`);
       return result;
     }
 
@@ -407,7 +409,7 @@ export class ChatController {
     const contexts = contexts_param || (sessionid_param ? session.options.contexts : []);
     session.options = { ...session.options, model: modelid, contexts };
     session.options.usage = session.options.usage ?? { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 };
-
+    session.messages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
     const messages: ChatMessageEntity[] = [];
     for (let i = 0; i < session.messages.length; i++) {
       const m = session.messages[i];
@@ -432,10 +434,6 @@ export class ChatController {
     newMessage.options = { model: modelid, contexts };
     messages.push(newMessage);
 
-    const assistantMessage = new ChatMessageEntity();
-    assistantMessage.role = 'assistant';
-    assistantMessage.index = messages.length;
-
     const options: Record<string, any> = {
       n: 1,
       stream: false,
@@ -446,16 +444,31 @@ export class ChatController {
     };
 
     const inputMessages = messages.map(m => m.toJSON());
-    inputMessages[0].content +=
-      `\n Your name is PSChat a LLM powered chatbot developed by publicis sapient's engineers.` +
-      `The frontend was developed in React and the backend in NodeJS and Python.` +
-      `Your are helping a Human named maskedhumanname, who is working at Publicis as ${currentUser.business_title}.`;
+    inputMessages[0].content += `Context:\n` + `- username as maskedhumanname.` + `- today's date is ${new Date().toLocaleDateString()}.`;
+    // `\n\n You will state your name as PSChat, a LLM powered chatbot developed by publicis sapient's engineers. ` +
+    // `The frontend was developed in React and the backend API's using NodeJS and Python. ` +
+    // `\n\n Information about user:\nYour are helping a user named maskedhumanname, who is working at Publicis as "${currentUser.business_title}".`;
 
     logger.debug(inputMessages[0].content);
+    logger.debug(`Starting processing User data`);
+    const qt = new AsyncTask(updater => this.callModel(updater, model, messages, options, session), req.user.id);
+    return new APIResponse<IChatSession>(null, 'created', qt.id);
+  }
 
-    const response = await model.call(messages, options);
+  private async callModel(
+    updater: updateFn,
+    model: IChatModel,
+    messages: ChatMessageEntity[],
+    options: Record<string, any>,
+    session: ChatSessionEntity,
+  ) {
+    const response = await model.call({ input: messages, options });
     logger.debug(response);
-    assistantMessage.content = response.content.replace(/maskedhumanname/g, `${currentUser.first_name || 'user'}`);
+
+    const assistantMessage = new ChatMessageEntity();
+    assistantMessage.role = 'assistant';
+    assistantMessage.index = messages.length;
+    assistantMessage.content = response.content.replace(/maskedhumanname/g, `${options.user.first_name || 'user'}`);
     assistantMessage.options = response.options || {};
     messages.push(assistantMessage);
     const soptions: any = session.options;
@@ -464,11 +477,14 @@ export class ChatController {
       soptions.usage.prompt_tokens += response.usage.prompt_tokens;
       soptions.usage.completion_tokens += response.usage.completion_tokens;
     }
+    if (response.finish_reason) {
+      soptions.finish_reason = response.finish_reason;
+    }
     session.options = soptions;
     await AppDataSource.getRepository(ChatMessageEntity).save(messages);
     session.messages = messages;
-    await repo.save(session);
-    result.data = session.toJSON();
+    await AppDataSource.getRepository(ChatSessionEntity).save(session);
+    const result = new APIResponse<IChatSession>(session.toJSON(), 'done');
     return result;
   }
 

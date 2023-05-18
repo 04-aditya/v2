@@ -1,9 +1,9 @@
 import { logger } from '@/utils/logger';
-import { IChatModel } from '@sharedtypes';
+import { IChatModel, IChatModelCallParams } from '@sharedtypes';
 import { AgentActionOutputParser, AgentExecutor, LLMSingleActionAgent } from 'langchain/agents';
 import { LLMChain } from 'langchain/chains';
 import { ConversationSummaryMemory } from 'langchain/memory';
-import { ChatOpenAI, OpenAIInput } from 'langchain/chat_models/openai';
+import { ChatOpenAI } from 'langchain/chat_models/openai';
 import { BaseChatPromptTemplate, BasePromptTemplate, SerializedBasePromptTemplate, renderTemplate } from 'langchain/prompts';
 import { AgentAction, AgentFinish, AgentStep, BaseChatMessage, HumanChatMessage, InputValues, PartialValues } from 'langchain/schema';
 import { BingSerpAPI, DynamicTool, Tool } from 'langchain/tools';
@@ -18,12 +18,12 @@ import { BingAPI } from './tools/BingAPI';
 import { DallETool } from './tools/DallETool';
 
 const PREFIX = (date: Date, user?: UserEntity) =>
-  `Answer the following questions as best you can. Your a AI assistant called PSChat that uses Large Language Models (LLM)` +
-  ` You should know that current year is ${formatDate(date, 'yyyy')} ` +
+  `Answer the following questions as best you can. Your a AI assistant called PSChat that uses Large Language Models (LLM), ` +
+  `You should know that current year is ${formatDate(date, 'yyyy')} ` +
   `and today is ${formatDate(date, 'iiii')} ${formatDate(date, 'do')} of ${formatDate(date, 'MMMM')}. \n\n` +
   // `Your are helping a Human named maskedhumanname, who is working at Publicis Sapient${user ? `, as ${user.business_title}` : ''}.\n\n` +
-  //`Use previous conversation summary for additional context:` +
-  //`{chat_history}\n\n` +
+  // `Use previous conversation summary for additional context:` +
+  // `{chat_history}\n\n` +
   `Publicis Sapient (PS) Primary brand colors are #FE414D(radiant-red), #FFFFFF(white) and light-gray(#EEEEEE) and ` +
   `Publicis Sapient (PS) secondary brand colors are  #079FFF(Blue), #FFE63B(yellow) and #00E6C3(green) . \n\n` +
   ` You have access to the following tools:`;
@@ -153,7 +153,8 @@ export class BasicAgentChatModel implements IChatModel {
   readonly contexts = [];
   readonly tools = [];
 
-  async call(input: { role?: string; content: string }[], options?: Record<string, any>): Promise<{ content: string } & Record<string, any>> {
+  async call(data: IChatModelCallParams): Promise<{ content: string } & Record<string, any>> {
+    const { input, options } = data;
     // const model = new ChatOpenAI({ temperature: options.temperature as number });
     const model = new AzureOpenAI({});
     // const memory = new ConversationSummaryMemory({
@@ -226,7 +227,8 @@ export class BasicAgentChatModel implements IChatModel {
       .map(i => i.role + ': ' + i.content)
       .join('\n\n');
     logger.debug('Using history:' + history);
-    const summary = '';//await model._call(`summarize the following chat converstion between an user and ai assistant:\n\n${history}`);
+    const summary =
+      history.trim() === '' ? '' : await model._call(`summarize the following chat converstion between an user and ai assistant:\n\n${history}`,{});
     logger.debug('Summary: ' + summary);
     const inputMsg = input[input.length - 1].content;
     logger.debug(`Executing with input "${inputMsg}"...`);
@@ -242,7 +244,7 @@ export class BasicAgentChatModel implements IChatModel {
 
       logger.debug(JSON.stringify(response, null, 2));
       const result = {
-        content: unmaskname(response.output) + '\n\n ### Generated Images \n\n' + dalletool.images.join('\n'),
+        content: unmaskname(response.output) + (dalletool.images.length > 0 ? '\n\n ### Generated Images \n\n' + dalletool.images.join('\n') : ''),
         options: {
           intermediate_content: unmaskname(lastIntermediateSet),
           intermediateSteps,

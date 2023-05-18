@@ -4,7 +4,7 @@ import { AppDataSource } from '@/databases';
 import { IUser, APIResponse } from '@sharedtypes';
 import { UserEntity } from '@/entities/user.entity';
 import { OpenAPI } from 'routing-controllers-openapi';
-import AsyncTask, { stringFn } from '@/utils/asyncTask';
+import AsyncTask, { updateFn } from '@/utils/asyncTask';
 import { BlobServiceClient } from '@azure/storage-blob';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { HttpException } from '@/exceptions/HttpException';
@@ -252,7 +252,7 @@ export class AdminController {
     }
   }
 
-  async processFileData(updater: stringFn, buffer: Buffer, defaultsnapshot_date: Date) {
+  async processFileData(updater: updateFn, buffer: Buffer, defaultsnapshot_date: Date) {
     try {
       // load from buffer
       const workbook: any = new Excel.Workbook();

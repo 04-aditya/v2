@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger';
-import { IChatModel } from '@sharedtypes';
-import axios, { AxiosInstance } from 'axios';
+import { IChatModel, IChatModelCallParams } from '@sharedtypes';
+import axios from 'axios';
 import axiosRetry from 'axios-retry';
 
 const psbodhiclient = axios.create({
@@ -49,13 +49,14 @@ export class PSBodhiChatModel implements IChatModel {
     }
   }
 
-  async call(input: { role?: string; content: string }[], options?: Record<string, unknown>): Promise<{ content: string } & Record<string, any>> {
+  async call(data: IChatModelCallParams): Promise<{ content: string } & Record<string, any>> {
+    const { input, options } = data;
     let result: { content: string } & Record<string, any>;
     const response = await psbodhiclient.post(`/ask/`, {
       sessionid: options.sessionid,
       contexts: options.contexts,
       model: 'IGNORED',
-      max_tokens: options.max_tokens || 0,
+      max_tokens: options.max_tokens || 400,
       temperature: options.temperature || 0,
       messages: input.map(m => ({
         role: m.role,

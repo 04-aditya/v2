@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { parseISO } from "date-fns";
 import useAxiosPrivate from "psnapi/useAxiosPrivate";
-import {APIResponse, IChatModel, IChatSession} from "sharedtypes";
+import {APIResponse, IChatContext, IChatModel, IChatSession} from "sharedtypes";
 
 const CACHEKEY='chat';
 const CHATAPI = '/api/chat';
@@ -33,6 +34,23 @@ export function useChatModels() {
     return res.data.data as IChatModel[];
   },{
     enabled: !!axios,
+    staleTime:  15 * 60 * 1000 // 15 minute
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  }
+  return {...query, invalidateCache};
+}
+
+export function useChatContexts(modelid: string) {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, 'model', modelid, 'contexts'];
+  const query = useQuery<IChatContext[], AxiosError>(keys, async ()=>{
+    const res = await axios.get(`${CHATAPI}/models/${modelid}/contexts`);
+    return res.data.data as IChatContext[];
+  },{
+    enabled: !!axios && modelid!=='',
     staleTime:  5 * 60 * 1000 // 5 minute
   });
   const invalidateCache = ()=>{
@@ -44,11 +62,11 @@ export function useChatModels() {
 export function useChatSession(id?: string) {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
-  const keys = [CACHEKEY, id];
+  const keys = [CACHEKEY, 'session', id];
   const query = useQuery<IChatSession, AxiosError>(keys, async ()=>{
     const res = await axios.get(`${CHATAPI}/${id}`);
     const session = res.data.data as IChatSession;
-    session.messages.sort();
+    session.messages.forEach(m=>{parseISO(m.createdAt+'')});
     return session;
   },{
     enabled: !!axios && id !== undefined,
@@ -59,7 +77,7 @@ export function useChatSession(id?: string) {
   }
   const mutation = useMutation(async (data: unknown) => {
     const res = await axios.post(`${CHATAPI}/`, data);
-    return res.data.data as IChatSession;
+    return res.data as APIResponse<IChatSession>;
   });
   return {...query, mutation, invalidateCache};
 }
