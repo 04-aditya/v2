@@ -18,6 +18,11 @@ export function ReleasesPage(props: ReleasesPageProps) {
         {/* <ReleaseInfo date={'**Date**'} content={'**Description**'}/>
         <Divider/> */}
         <Box sx={theme=>({maxHeight:'600px', p:2})} className='scrollbarv'>
+          <ReleaseInfo date={'2023-05-18'} content={
+            ` * Added ability to auto continue and complete the response when it detects that it clipped the response. \n\n` +
+            ` * Made the chat rest call async, this will give PsChat the ability to interact with user for inputs. \n\n` +
+            `\n\n`
+          }/>
           <ReleaseInfo date={'2023-05-17'} content={
             ` * Added cability to generate images using DALLE as a tool. \n\n` +
             `![add instruction btn image](/assets/releases/dalle.png)\n\n`
