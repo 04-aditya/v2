@@ -1,22 +1,15 @@
 import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Popover, Select, Snackbar, Stack, SxProps, TextField, Toolbar, Tooltip, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown'
-import gfm from 'remark-gfm'
 import CodeBlock from "sharedui/components/CodeBlock";
 import { useChatSession, useChatSessionFavourite } from '../../api/chat';
 import { ChatTextField } from '../../components/ChatTextField';
-import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter'
-import {dark, coy, okaidia} from 'react-syntax-highlighter/dist/esm/styles/prism'
+import {dark} from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { IChatMessage, IChatSession } from 'sharedtypes';
 import { useEffect, useRef, useState, ChangeEvent, useCallback, useLayoutEffect, SyntheticEvent, useMemo } from 'react';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
-import { useTheme as useThemeMode } from 'sharedui/theme';
 import ContentEditable from "react-contenteditable";
-import rehypeRaw from "rehype-raw";
-import rehypeColorChips from 'rehype-color-chips';
-import rehypeExternalLinks from 'rehype-external-links';
 import useAuth from "psnapi/useAuth";
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { UserAvatar } from '../../components/UserAvatar';
@@ -33,6 +26,7 @@ import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { useQueryClient } from '@tanstack/react-query';
 import EditIcon from '@mui/icons-material/Edit';
 import mermaid from 'mermaid';
+import { MarkDown } from '../../components/MarkDown';
 
 mermaid.initialize({});
 
@@ -120,8 +114,18 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
         const msgs = session.messages.slice(0,-1);
         const lastmsg = session.messages[session.messages.length-1];
         lastmsg.partial = true;
-        // console.log(lastmsg.content);
-        const words = lastmsg.content.split(' ');
+        const words: string[] = [];
+        let i=0;
+        while(i<lastmsg.content.length) {
+          if (i<lastmsg.content.length-4) {
+            const wl = 2+Math.round(Math.random()*4);
+            words.push(lastmsg.content.substring(i,i+wl));
+            i+=wl;
+          } else {
+            words.push(lastmsg.content.substring(i))
+            i=lastmsg.content.length;
+          }
+        };
         //merge consecutive spaces into one word
         for (let i=0; i<words.length-1; i++) {
           if (words[i].trim()==='' && words[i+1].trim()==='') {
@@ -136,7 +140,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
         const intervalHandle = setInterval(()=>{
           if (words.length>0) {
             const word=words.shift();
-            lastmsg.content += word + ' ';
+            lastmsg.content += word ;//+ ' ';
             setMessages([...msgs,lastmsg]);
             return;
           }
@@ -163,11 +167,6 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
       setMessages([]);
     }
   }, [session, typeMode]);
-
-  // useLayoutEffect(()=>{
-  //   console.log('useLayoutEffect ' + __filename);
-  //   mermaid.contentLoaded();
-  // },[]);
 
   const handleSessionUpdate = (updatedSession: IChatSession) => {
     setTypeMode(true);
@@ -339,7 +338,7 @@ function EndofChatMessagesBlock(props:{complete: boolean}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      ref.current.scrollIntoView({ behavior: "auto", block: "end" });
     }
   }, []);
 
@@ -354,81 +353,6 @@ function EndofChatMessagesBlock(props:{complete: boolean}) {
   },[props.complete]);
   return <div ref={ref} style={{minHeight:props.complete?16:48}}>
   </div>
-}
-
-function CodeContent(args:any) {
-  const {mode} = useThemeMode();
-  const [svg, setSvg] = useState<string>('');
-  const {node, inline, className, children, partial, ...props} = args;
-  const match = /language-(\w+)/.exec(className || '');
-
-  useEffect(()=>{
-    if (className === 'language-mermaid' && !partial) {
-      const mcode = `%%{
-  init: {
-    'theme': ${mode === 'dark' ? 'dark' : 'default'}, 'htmlLabels': true
-  }
-}%%
-
-` + [...children].join('');
-      // console.log(mcode);
-      mermaid.render('mermaid-svg', mcode)
-        .then(res=>{
-          setSvg(res.svg);
-        })
-    }
-  },[partial, className, children, mode]);
-
-  if (className === 'language-llm-observation') {
-    return <Box sx={{p:1, backgroundColor:'#e8e8e8'}}>
-      <Typography variant='body2'>{children}</Typography>
-    </Box>
-  }
-  if (className === 'language-mermaid' && !partial) {
-    return <Grid container>
-      <Grid item xs={12} sm={6}>
-        <div dangerouslySetInnerHTML={{__html:svg}}/>
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        <pre>{children}</pre>
-      </Grid>
-    </Grid>
-  }
-
-  return !inline && match ? (
-    <SyntaxHighlighter
-      {...props}
-      children={String(children).replace(/\n$/, '')}
-      style={mode==='dark'?okaidia:coy}
-      language={match[1]}
-      PreTag="div"
-    />
-  ) : (<>
-    {className}
-    <code {...props} className={className}>
-      {children}
-    </code>
-    </>
-  )
-}
-
-const csscolor = new RegExp(/[#]([a-fA-F\d]{6}|[a-fA-F\d]{3})/gi);
-function MarkDown(props:any) {
-  const partial = props.partial;
-  let text = props.children as string;
-  text = text.replace(csscolor, '`#$1`');
-  return <ReactMarkdown children={text} className='message-content'
-    skipHtml={false}
-    remarkPlugins={[gfm]}
-    components={{
-      code: (props)=><CodeContent {...props} partial={partial}/>,
-    }}
-    rehypePlugins={[
-      rehypeRaw,
-      [rehypeExternalLinks, {rel: ['nofollow']}],
-      [rehypeColorChips, { customClassName: 'color-chip' }]
-    ]}
-  />
 }
 
 interface MessageProps {

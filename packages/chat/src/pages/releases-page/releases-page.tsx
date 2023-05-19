@@ -1,8 +1,7 @@
 import { Box, Card, CardContent, CardHeader, Divider, Grid, Paper, Skeleton } from '@mui/material';
 import styles from './releases-page.module.css';
-import { ReactMarkdown } from 'react-markdown/lib/react-markdown';
-import gfm from 'remark-gfm';
 import { format, formatDistanceToNow, parse } from 'date-fns';
+import { MarkDown } from '../../components/MarkDown';
 
 /* eslint-disable-next-line */
 export interface ReleasesPageProps {}
@@ -20,7 +19,7 @@ export function ReleasesPage(props: ReleasesPageProps) {
         <Box sx={theme=>({maxHeight:'600px', p:3})} className='scrollbarv'>
           <ReleaseInfo date={'2023-05-19'} content={
             ` * Added session now removes ignores oldest messages so that the token limit is not exhausted, the messages that are not not used are marked in the UI. \n\n` +
-            `![skipped count image](/assets/releases/skippedcount.png)\n\n` +
+            `\t![skipped count image](/assets/releases/skippedcount.png)\n\n` +
             `\n\n`
           }/>
           <ReleaseInfo date={'2023-05-18'} content={
@@ -30,27 +29,27 @@ export function ReleasesPage(props: ReleasesPageProps) {
           }/>
           <ReleaseInfo date={'2023-05-17'} content={
             ` * Added cability to generate images using DALLE as a tool. \n\n` +
-            `![add instruction btn image](/assets/releases/dalle.png)\n\n`
+            `\t![add instruction btn image](/assets/releases/dalle.png)\n\n`
           }/>
           <ReleaseInfo date={'2023-05-16'} content={
             ` * Added cability to add new system instructions. \n\n` +
-            `![add instruction btn image](/assets/releases/add_sysinst.png)\n\n`
+            `\t![add instruction btn image](/assets/releases/add_sysinst.png)\n\n`
           }/>
           <ReleaseInfo date={'2023-05-15'} content={
             ` * Initial release of the Reasoning model with websearch tools. \n\n` +
-            `![websearch](/assets/releases/modelwithtools.png)\n\n` +
+            `\t![websearch](/assets/releases/modelwithtools.png)\n\n` +
             ` * Added display of intermediate reasoning steps. \n\n` +
-            `![intermediate reasoning image](/assets/releases/intermediate_reasoning.png)\n\n`
+            `\t![intermediate reasoning image](/assets/releases/intermediate_reasoning.png)\n\n`
           }/>
           <ReleaseInfo date={'2023-05-10'} content={
             ` * Added copy to edit button, to edit prev messages and restart conversation. \n\n` +
-            `![edit btn image](/assets/releases/edit_btn.png)\n\n`
+            `\t![edit btn image](/assets/releases/edit_btn.png)\n\n`
           }/>
           <ReleaseInfo date={'2023-05-09'} content={
             ` * Added copy to clipboard button, for generated content \n\n` +
-            `![Copy btn image](/assets/releases/copy_btn.jpg)\n\n` +
+            `\t![Copy btn image](/assets/releases/copy_btn.jpg)\n\n` +
             ` * Fixed the Share button, and the favourite button \n\n` +
-            `![Share and Favourite btn image](/assets/releases/fav-share_btn.jpg)`
+            `\t![Share and Favourite btn image](/assets/releases/fav-share_btn.jpg)`
           }/>
           <ReleaseInfo date={'2023-05-08'} content={
             ` * Releases Pages link in About Dialog \n`+
@@ -72,13 +71,7 @@ function ReleaseInfo(props:{date:string, content: string}) {
   return <Card sx={{mb:3}} elevation={4}>
     <CardHeader title={format(date,'do MMM yyyy')} subheader={formatDistanceToNow(date,{addSuffix: true})}/>
     <CardContent>
-      <ReactMarkdown
-        components={{
-          'img': ({node, ...props})=> <img style={{width:'40%'}} {...props} />,
-        }}
-        skipHtml={false}
-        remarkPlugins={[gfm]}
-        children={props.content}/>
+      <MarkDown>{props.content}</MarkDown>
     </CardContent>
   </Card>
 }

@@ -11,7 +11,8 @@
     "src/components/AboutDialog.tsx",
     "src/components/TermsNotice.tsx",
     "src/components/ModelParameters.tsx",
-    "src/components/UserAvatar.tsx"
+    "src/components/UserAvatar.tsx",
+    "src/components/MarkDown.tsx"
   ],
   "exclude": [
     "jest.config.ts",
