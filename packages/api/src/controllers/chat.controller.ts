@@ -477,9 +477,6 @@ export class ChatController {
       soptions.usage.prompt_tokens += response.usage.prompt_tokens;
       soptions.usage.completion_tokens += response.usage.completion_tokens;
     }
-    if (response.finish_reason) {
-      soptions.finish_reason = response.finish_reason;
-    }
     session.options = soptions;
     await AppDataSource.getRepository(ChatMessageEntity).save(messages);
     session.messages = messages;

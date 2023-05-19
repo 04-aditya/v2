@@ -64,12 +64,15 @@ export class AzureChatModel implements IChatModel {
     const result: { content: string } & Record<string, any> = {
       content: '',
       usage: { completion_tokens: 0, prompt_tokens: 0, total_tokens: 0 },
+      options: {},
     };
+    let skippedcount = 0;
     do {
       let conv_history_tokens = this.counttokens(tinput);
       while (conv_history_tokens > 3500 && tinput.length > 3) {
         logger.warn(`removing first message from input because it is too long (${conv_history_tokens} tokens)`);
         tinput.splice(1, 1);
+        skippedcount += 1;
         conv_history_tokens = this.counttokens(tinput);
       }
 
@@ -89,13 +92,13 @@ export class AzureChatModel implements IChatModel {
         })),
       });
       if (response.status === 200) {
+        result.options = { skippedcount, finish_reason: response.data.choices[0].finish_reason };
         result.content += response.data.choices[0].message.content;
-        result.finish_reason = response.data.choices[0].finish_reason;
         result.usage.completion_tokens += response.data.usage.completion_tokens;
         result.usage.prompt_tokens += response.data.usage.prompt_tokens;
         result.usage.total_tokens += response.data.usage.total_tokens;
       }
-      if (result.finish_reason === 'length') {
+      if (result.options.finish_reason === 'length') {
         logger.info(`continuing previous message...`);
         logger.debug(result);
         tinput.push({
@@ -107,7 +110,7 @@ export class AzureChatModel implements IChatModel {
           content: 'continue',
         });
       }
-    } while (result.finish_reason === 'length');
+    } while (result.options.finish_reason === 'length');
     return result;
   }
 

@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Popover, Select, Snackbar, Stack, SxProps, TextField, Toolbar, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, AlertTitle, AppBar, Autocomplete, Avatar, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, IconButton, InputBase, InputLabel, LinearProgress, ListSubheader, MenuItem, Paper, Popover, Select, Snackbar, Stack, SxProps, TextField, Toolbar, Tooltip, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import styles from './chat-session-page.module.css';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'
@@ -494,12 +494,17 @@ function MessageContent(props: MessageProps) {
         });
       }}>
       <EditIcon/>
-    </IconButton>:<IconButton size='small' sx={{position:'absolute', top:0, right:0}} onClick={()=>{
-      navigator.clipboard.writeText(m.content);
-      showSnackbar('Copied to clipboard');
-    }}>
-      <ContentCopyIcon/>
-    </IconButton>}
+    </IconButton>:<>
+      <IconButton size='small' sx={{position:'absolute', top:0, right:0}} onClick={()=>{
+        navigator.clipboard.writeText(m.content);
+        showSnackbar('Copied to clipboard');
+      }}>
+        <ContentCopyIcon/>
+      </IconButton>
+      {m.options?.skippedcount>0 ? <Tooltip arrow title={`Skipped ${m.options?.skippedcount} messages as token limit was exceeded`}>
+        <Chip size='small' sx={{position:'absolute', bottom:0, right:0, m:0.5}} label={<Typography variant='caption'><em>skipped:</em>&nbsp;{m.options?.skippedcount}</Typography>} variant='outlined'/>
+      </Tooltip>:null}
+    </>}
     <Snackbar
       anchorOrigin={{ vertical:'top', horizontal:'center' }}
       open={snackbarMessage !== ''}

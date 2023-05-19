@@ -14,12 +14,17 @@ export function ReleasesPage(props: ReleasesPageProps) {
       <h3>Release History for PS Chat application</h3>
       <Divider/>
       <br/>
-      <Box sx={theme=>({maxWidth:{xs:'100%', sm:'600'}, height:'100hv', background: theme.palette.background.default})}>
+      <Box sx={theme=>({maxWidth:{xs:'100%', sm:'600'}, overflowY:'scroll', height:'100hv', background: theme.palette.background.default})}>
         {/* <ReleaseInfo date={'**Date**'} content={'**Description**'}/>
         <Divider/> */}
-        <Box sx={theme=>({maxHeight:'600px', p:2})} className='scrollbarv'>
+        <Box sx={theme=>({maxHeight:'600px', p:3})} className='scrollbarv'>
+          <ReleaseInfo date={'2023-05-19'} content={
+            ` * Added session now removes ignores oldest messages so that the token limit is not exhausted, the messages that are not not used are marked in the UI. \n\n` +
+            `![skipped count image](/assets/releases/skippedcount.png)\n\n` +
+            `\n\n`
+          }/>
           <ReleaseInfo date={'2023-05-18'} content={
-            ` * Added ability to auto continue and complete the response when it detects that it clipped the response. \n\n` +
+            ` * Added ability to auto continue and complete the response when it detects that it clipped the response for \`GPT3.5 Turbo\` model. \n\n` +
             ` * Made the chat rest call async, this will give PsChat the ability to interact with user for inputs. \n\n` +
             `\n\n`
           }/>
@@ -68,6 +73,9 @@ function ReleaseInfo(props:{date:string, content: string}) {
     <CardHeader title={format(date,'do MMM yyyy')} subheader={formatDistanceToNow(date,{addSuffix: true})}/>
     <CardContent>
       <ReactMarkdown
+        components={{
+          'img': ({node, ...props})=> <img style={{width:'40%'}} {...props} />,
+        }}
         skipHtml={false}
         remarkPlugins={[gfm]}
         children={props.content}/>
