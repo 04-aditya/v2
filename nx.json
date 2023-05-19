@@ -33,7 +33,7 @@
   },
   "defaultProject": "api",
   "generators": {
-    "@nrwl/react": {
+    "@nx/react": {
       "application": {
         "style": "css",
         "linter": "eslint",

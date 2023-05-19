@@ -1,11 +1,14 @@
 {
   "presets": [
     [
-      "@nrwl/react/babel",
+      "@nx/react/babel",
       {
         "runtime": "automatic"
       }
     ]
   ],
-  "plugins": ["@babel/plugin-transform-runtime", "@babel/plugin-transform-regenerator"]
+  "plugins": [
+    "@babel/plugin-transform-runtime",
+    "@babel/plugin-transform-regenerator"
+  ]
 }

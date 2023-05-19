@@ -7,15 +7,13 @@
     "updateversion": {
       "executor": "nx:run-commands",
       "options": {
-        "commands": [
-          "echo Updating version for PSNextAPI..."
-        ],
+        "commands": ["echo Updating version for PSNextAPI..."],
         "parallel": false,
         "forwardAllArgs": false
       }
     },
     "build": {
-      "executor": "@nrwl/webpack:webpack",
+      "executor": "@nx/webpack:webpack",
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/packages/api",
@@ -40,7 +38,7 @@
       }
     },
     "serve": {
-      "executor": "@nrwl/node:node",
+      "executor": "@nx/node:node",
       "options": {
         "buildTarget": "api:build"
       },
@@ -89,14 +87,14 @@
       }
     },
     "lint": {
-      "executor": "@nrwl/linter:eslint",
+      "executor": "@nx/linter:eslint",
       "outputs": ["{options.outputFile}"],
       "options": {
         "lintFilePatterns": ["packages/api/**/*.ts"]
       }
     },
     "test": {
-      "executor": "@nrwl/jest:jest",
+      "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/packages/api"],
       "options": {
         "jestConfig": "packages/api/jest.config.ts",
