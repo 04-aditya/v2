@@ -24,10 +24,10 @@ function getAzAPIClient() {
         timeout: 60000,
       });
       axiosRetry(client, {
-        retries: 2,
+        retries: 1,
         retryDelay: axiosRetry.exponentialDelay,
         retryCondition: error => {
-          console.log(error);
+          //console.log(error);
           return true;
         },
       });
@@ -52,9 +52,14 @@ export class AzureChatModel implements IChatModel {
 
   counttokens(messages: { role: string; content: string }[]) {
     let count = 0;
-    messages.forEach(m => {
-      count += m.content.length / 4 + 4;
-    });
+    console.log(messages);
+    try {
+      messages.forEach(m => {
+        count += m.content.length / 4 + 4;
+      });
+    } catch (ex) {
+      logger.error(ex);
+    }
     return count;
   }
 
@@ -172,14 +177,16 @@ export class AzureOpenAI extends LLM implements AzureOpenAIInput {
   }
 
   async _call(prompt: string, options: this['ParsedCallOptions'], runManager?: CallbackManagerForLLMRun): Promise<string> {
-    let generations: any = [{ text: prompt }];
+    let generations: any = [{ data: { content: prompt }, type: 'human' }];
     try {
       generations = JSON.parse(prompt);
+      logger.debug(generations);
     } catch (ex) {
       logger.debug(`prompt is not a JSON object, using prompt as a string.`);
+      logger.warn(generations);
     }
     const res = await this.client.call({
-      input: [{ content: generations[0].text, role: 'user' }],
+      input: generations.map(g => ({ content: g.data.content, role: g.type === 'human' ? 'user' : g.type })),
       options: {
         stop: options.stop,
         temperature: this.temperature,

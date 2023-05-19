@@ -228,7 +228,7 @@ export class BasicAgentChatModel implements IChatModel {
       .join('\n\n');
     logger.debug('Using history:' + history);
     const summary =
-      history.trim() === '' ? '' : await model._call(`summarize the following chat converstion between an user and ai assistant:\n\n${history}`,{});
+      history.trim() === '' ? '' : await model._call(`summarize the following chat converstion between an user and ai assistant:\n\n${history}`, {});
     logger.debug('Summary: ' + summary);
     const inputMsg = input[input.length - 1].content;
     logger.debug(`Executing with input "${inputMsg}"...`);
@@ -254,6 +254,7 @@ export class BasicAgentChatModel implements IChatModel {
 
       return result;
     } catch (ex) {
+      console.log(ex);
       const result = {
         content: '**Error:**\n' + ex.message,
         options: {
