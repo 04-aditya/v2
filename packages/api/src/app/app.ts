@@ -17,6 +17,7 @@ import { UserEntity } from '@/entities/user.entity';
 import { bootstrapDB } from '../databases/bootstrapdb';
 import { HttpErrorHandler } from '@/utils/HttpErrorHandler';
 import promClient from 'prom-client';
+import path from 'path';
 class App {
   public app: express.Application;
   public env: string;
@@ -154,6 +155,7 @@ class App {
       res.setHeader('Content-Type', this.register.contentType);
       res.send(await this.register.metrics());
     });
+    this.app.use('/public', express.static(path.join(__dirname, 'assets')));
   }
 
   private initializeErrorHandling() {

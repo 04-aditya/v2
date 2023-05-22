@@ -45,7 +45,6 @@ export default function ChatStatsList(props: ChatStatsListProps) {
     <List
       sx={{
         width: '100%',
-        maxWidth: 360,
         bgcolor: 'background.paper',
         position: 'relative',
         overflowX: 'hidden',

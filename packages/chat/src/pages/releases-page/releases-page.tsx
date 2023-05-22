@@ -17,6 +17,14 @@ export function ReleasesPage(props: ReleasesPageProps) {
         {/* <ReleaseInfo date={'**Date**'} content={'**Description**'}/>
         <Divider/> */}
         <Box sx={theme=>({maxHeight:'600px', p:3})} className='scrollbarv'>
+        <ReleaseInfo date={'2023-05-20'} content={
+            ` * Added copy to clipboard button to the generated code sections. \n\n` +
+            `\t![copy code button](/assets/releases/code_copy.png)\n\n` +
+            ` * Added option to switch between diagram and code the generated \`mermaid\` code sections. \n` +
+            ` the copy button copies \`mermaid\` code or the svg diagram code based on what is visible. \n\n` +
+          `\t![copy code button](/assets/releases/code_image_switch.png)\n\n` +
+            `\n\n`
+          }/>
           <ReleaseInfo date={'2023-05-19'} content={
             ` * Added session now removes ignores oldest messages so that the token limit is not exhausted, the messages that are not not used are marked in the UI. \n\n` +
             `\t![skipped count image](/assets/releases/skippedcount.png)\n\n` +

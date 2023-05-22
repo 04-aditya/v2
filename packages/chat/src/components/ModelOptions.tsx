@@ -105,6 +105,18 @@ export function ModelOptions(props: IModelOptionsProps) {
       const msgs=JSON.parse(storedValue) as ISystemMessage[]
       setSavedSysMsgs(msgs.map(m=>({...m, type:'Custom'})));
     }
+    // fetch(`${process.env.NX_API_URL}/public/prompts.json`)
+    //   .then(res=>{
+    //     if (res.ok) {
+    //       return res.json();
+    //     } else {
+    //       return [];
+    //     }
+    //   })
+    //   .then(prompts=>{
+    //     console.log(prompts[0])
+    //   })
+    //   .catch(ex=>console.error)
   }, []);
 
   useEffect(()=>{

@@ -98,7 +98,7 @@ export function ChatSessions(props: ChatSessionListProps) {
 
 export function SessionSummary(props: {show?: string, sessionid?: string, session?:IChatSession, onDelete?: ()=>void}) {
   const axios = useAxiosPrivate();
-  const {data: session, mutation, error, isLoading, invalidateCache} = useChatSession(props.sessionid);
+  const {data: session, mutation, error, isLoading, invalidateCache} = useChatSession(props.sessionid || props.session?.id);
   const [isDeleted, setIsDeleted] = useState(false);
   const {data:isFavourite, mutation:favMutation, invalidateCache: favInvalidateCache} = useChatSessionFavourite(session?.id);
   const navigate = useNavigate();

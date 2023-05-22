@@ -27,6 +27,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import EditIcon from '@mui/icons-material/Edit';
 import mermaid from 'mermaid';
 import { MarkDown } from '../../components/MarkDown';
+import ThumbUpOffAltIcon from '@mui/icons-material/ThumbUpOffAlt';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ThumbDownOffAltIcon from '@mui/icons-material/ThumbDownOffAlt';
+import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 
 mermaid.initialize({});
 
@@ -365,8 +369,8 @@ function MessageContent(props: MessageProps) {
   const [openReasoning, setOpenReasoning] = useState(false);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
-  const [snackbarMessage, setSnackbarMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const handleSnackbarClose = (event: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') {
@@ -391,7 +395,7 @@ function MessageContent(props: MessageProps) {
   const followup_questions = m.options?.followup_questions as string[] || [];
   const refs = m.options?.references||{};
   return <Paper sx={(theme)=>({
-      pl:1, pr:(isUser?3:1), pt:isUser?0:2, border:'0px solid gray', overflow:'auto',
+      pl:{xs:0.5, sm:1}, pr:{xs:0, sm:(isUser?3:1)}, pt:{xs:0, sm:isUser?0:2}, pb:(isUser?0:2), border:'0px solid gray', overflow:'auto',
       ml: {xs:0, sm:isUser?8:0}, mr: {xs:0, sm:isUser?0:8},
       borderRadius: 1, width: '95%', position: 'relative',
       borderLeftWidth: isUser ? '0px' : '2px', borderRightWidth:isUser?'2px':'0px',
@@ -425,9 +429,17 @@ function MessageContent(props: MessageProps) {
       }}>
         <ContentCopyIcon/>
       </IconButton>
-      {m.options?.skippedcount>0 ? <Tooltip arrow title={`Skipped ${m.options?.skippedcount} messages as token limit was exceeded`}>
-        <Chip size='small' sx={{position:'absolute', bottom:0, right:0, m:0.5}} label={<Typography variant='caption'><em>skipped:</em>&nbsp;{m.options?.skippedcount}</Typography>} variant='outlined'/>
-      </Tooltip>:null}
+      <Stack direction={'row'} spacing={1} alignItems={'center'} sx={{position:'absolute', bottom:0, right:0, m:0.5}}>
+        {/* <IconButton size='small'>
+          <ThumbUpOffAltIcon/>
+        </IconButton>
+        <IconButton size='small'>
+          <ThumbDownOffAltIcon/>
+        </IconButton> */}
+        {m.options?.skippedcount>0 ? <Tooltip arrow title={`Skipped ${m.options?.skippedcount} messages as token limit was exceeded`}>
+          <Chip size='small' label={<Typography variant='caption'><em>skipped:</em>&nbsp;{m.options?.skippedcount}</Typography>} variant='outlined'/>
+        </Tooltip>:null}
+      </Stack>
     </>}
     <Snackbar
       anchorOrigin={{ vertical:'top', horizontal:'center' }}
@@ -472,7 +484,7 @@ function MessageItem(props: MessageProps) {
 
   return (
     <div ref={ref}>
-      {isUser?<Box key={m.id} sx={{display:'flex', pr:1, flexGrow:1, flexDirection:'column', alignItems:'flex-end',}}>
+      {isUser?<Box key={m.id} sx={{display:'flex', pr:{xs:0, sm:1}, flexGrow:1, flexDirection:'column', alignItems:'flex-end',}}>
         <Avatar alt='user avatar' sx={theme=>({mt:1, mr:-1, mb:-1.5,
           width: 24, height: 24, zIndex:1,
           background: theme.palette.background.default,
@@ -481,7 +493,7 @@ function MessageItem(props: MessageProps) {
           <PsychologyAltIcon color='primary'/>
         </Avatar>
         <MessageContent message={m} onChange={props.onChange}/>
-      </Box>:<Box key={m.id} sx={{display:'flex',pl:1, flexDirection:'column', alignItems:'flex-start',my:1}}>
+      </Box>:<Box key={m.id} sx={{display:'flex',pl:{xs:0, sm:1}, flexDirection:'column', alignItems:'flex-start',my:1}}>
         <Avatar alt='bot avatar' sx={theme=>({mt:1, ml:-1, mb:-1.5,
           width: 28, height: 28, zIndex:1,
           background: theme.palette.background.paper,

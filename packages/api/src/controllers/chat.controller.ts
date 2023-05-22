@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { APIResponse, IChatSession, IChatMessage, IChatModel, IChatContext } from '@sharedtypes';
+import { APIResponse, IChatSession, IChatMessage, IChatModel, IChatContext, IChatCommand } from '@sharedtypes';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
 import { HttpException } from '@/exceptions/HttpException';
@@ -100,6 +100,58 @@ export class ChatController {
     } catch (ex) {
       console.log(ex);
       logger.error(JSON.stringify(ex));
+      throw new HttpError(500);
+    }
+    return result;
+  }
+
+  @Get('/commands')
+  @OpenAPI({ summary: 'Return the chat commands for the current user' })
+  async getCommands(@CurrentUser() currentUser: UserEntity) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+    const result = new APIResponse<IChatCommand[]>();
+    try {
+      result.data = [
+        {
+          name: 'actas',
+          description: 'Select a system message for the query',
+          options: {
+            example: '/actas:gpt35turbo',
+            choices: [],
+          },
+        },
+        {
+          name: 'model',
+          description: 'Select a model to use for the query',
+          options: {
+            example: '/model:gpt35turbo',
+            choices: [...(await ModelFactory.models()).values()].filter(m => m.enabled).map(m => ({ id: m.id, name: m.name })),
+          },
+        },
+        {
+          name: 'site',
+          description: 'Search the site and use it as context to the query',
+          options: {
+            example: '/site:publicissapient.com',
+          },
+        },
+        {
+          name: 'web',
+          description: 'Search the web and use top N results as context to the query',
+          options: {
+            example: '/web:5',
+          },
+        },
+        {
+          name: 'temperature',
+          description: 'set the temparature for this query. between 0-2.',
+          options: {
+            example: '/temperature:0.5',
+          },
+        },
+      ];
+    } catch (ex) {
+      console.error(ex);
       throw new HttpError(500);
     }
     return result;
@@ -343,11 +395,11 @@ export class ChatController {
     @BodyParam('tags') tags_param?: string[],
     @BodyParam('type') type_param?: string,
     @BodyParam('messageid') messageid_param?: number,
-    @BodyParam('model') model_param?: string,
-    @BodyParam('assistant') assistant_param?: string,
-    @BodyParam('contexts') contexts_param?: string[],
-    @BodyParam('parameters') parameters?: Record<string, any>,
-    @BodyParam('tooloptions') tooloptions?: Record<string, any>,
+    // @BodyParam('model') model_param?: string,
+    // @BodyParam('assistant') assistant_param?: string,
+    // @BodyParam('contexts') contexts_param?: string[],
+    // @BodyParam('parameters') parameters?: Record<string, any>,
+    @BodyParam('options') options?: Record<string, any>,
   ) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
 
@@ -404,9 +456,9 @@ export class ChatController {
       session.messages = [];
     }
 
-    const modelid = (model_param || (sessionid_param ? session.options.model : 'gpt35turbo')) as string;
+    const modelid = (options.model || (sessionid_param ? session.options.model : 'gpt35turbo')) as string;
     const model = (await ModelFactory.models()).get(modelid);
-    const contexts = contexts_param || (sessionid_param ? session.options.contexts : []);
+    const contexts = options.contexts || (sessionid_param ? session.options.contexts : []);
     session.options = { ...session.options, model: modelid, contexts };
     session.options.usage = session.options.usage ?? { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 };
     session.messages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
@@ -422,7 +474,7 @@ export class ChatController {
     const systemMessage = sessionid_param ? null : new ChatMessageEntity();
     if (systemMessage) {
       systemMessage.role = 'system';
-      systemMessage.content = assistant_param || 'You are a helpful assistant.';
+      systemMessage.content = options.assistant || 'You are a helpful assistant.';
       systemMessage.index = 0;
       messages.push(systemMessage);
     }
@@ -434,24 +486,25 @@ export class ChatController {
     newMessage.options = { model: modelid, contexts };
     messages.push(newMessage);
 
-    const options: Record<string, any> = {
+    const calloptions: Record<string, any> = {
       n: 1,
       stream: false,
       sessionid: session.id,
       contexts,
-      ...(parameters || {}),
+      ...(options.parameters || {}),
       user: currentUser,
     };
 
     const inputMessages = messages.map(m => m.toJSON());
-    inputMessages[0].content += `Context:\n` + `- username as maskedhumanname.` + `- today's date is ${new Date().toLocaleDateString()}.`;
+    inputMessages[0].content +=
+      `\n\nContext:\n` + `- when responsing to the user use the name maskedhumanname.` + `- today's date is ${new Date().toLocaleDateString()}.`;
     // `\n\n You will state your name as PSChat, a LLM powered chatbot developed by publicis sapient's engineers. ` +
     // `The frontend was developed in React and the backend API's using NodeJS and Python. ` +
     // `\n\n Information about user:\nYour are helping a user named maskedhumanname, who is working at Publicis as "${currentUser.business_title}".`;
 
     logger.debug(inputMessages[0].content);
     logger.debug(`Starting processing User data`);
-    const qt = new AsyncTask(updater => this.callModel(updater, model, messages, options, session), req.user.id);
+    const qt = new AsyncTask(updater => this.callModel(updater, model, messages, calloptions, session), req.user.id);
     return new APIResponse<IChatSession>(null, 'created', qt.id);
   }
 
@@ -546,36 +599,36 @@ export class ChatController {
       type: newtype,
       updatedAt: () => '"updatedAt"',
     });
-    // if (newtype === 'public') {
-    //   try {
-    //     const hasTokens = await checkADTokens(currentUser);
-    //     const adtokens = JSON.parse(currentUser.adtokens);
-    //     console.log(adtokens);
-    //     if (hasTokens) {
-    //       axios
-    //         .post(
-    //           `https://graph.microsoft.com/v1.0/teams/${process.env.TEAMID}/channels/${process.env.TEAMCHANNEL}/messages`,
-    //           {
-    //             body: {
-    //               content: 'share test',
-    //             },
-    //           },
-    //           {
-    //             headers: {
-    //               Authorization: `Bearer ${adtokens.access_token}`,
-    //             },
-    //           },
-    //         )
-    //         .then(ar => {
-    //           console.log(ar.status);
-    //           console.log(ar.data);
-    //         })
-    //         .catch(ex => console.error(ex));
-    //     }
-    //   } catch (ex) {
-    //     logger.error(JSON.stringify(ex));
-    //   }
-    // }
+    if (newtype === 'public') {
+      try {
+        const hasTokens = await checkADTokens(currentUser);
+        const adtokens = JSON.parse(currentUser.adtokens);
+        console.log(adtokens);
+        if (hasTokens) {
+          axios
+            .post(
+              `https://graph.microsoft.com/v1.0/teams/${process.env.TEAMID}/channels/${process.env.TEAMCHANNEL}/messages`,
+              {
+                body: {
+                  content: 'share test',
+                },
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${adtokens.access_token}`,
+                },
+              },
+            )
+            .then(ar => {
+              console.log(ar.status);
+              console.log(ar.data);
+            })
+            .catch(ex => console.error(ex));
+        }
+      } catch (ex) {
+        logger.error(JSON.stringify(ex));
+      }
+    }
     const result = new APIResponse<IChatSession>();
     result.data = { ...session.toJSON(), type: newtype };
     return result;

@@ -39,6 +39,12 @@ export interface IChatContext {
   metadata?: Record<string, any>;
 }
 
+export interface IChatCommand {
+  name: string;
+  description: string;
+  options?: Record<string, any>;
+}
+
 export interface IChatModelCallParams {
   input: {role:string, content: string}[],
   options?: Record<string, any>;
