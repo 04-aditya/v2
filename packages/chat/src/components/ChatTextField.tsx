@@ -403,7 +403,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
         </IconButton> : null} */}
         {isBusy?<CircularProgress/>:(
         <IconButton sx={{ p: '10px' }} color={newMessage !== '' ? 'primary' : 'inherit'} disabled={newMessage === ''}
-          aria-label="send message" onClick={props.message? handleRegenerate : onSend}>
+          aria-label="send message" onClick={()=>{props.message? handleRegenerate() : onSend()}}>
           <TelegramIcon/>
         </IconButton>)}
         <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
