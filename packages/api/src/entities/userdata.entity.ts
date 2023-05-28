@@ -1,7 +1,7 @@
 import { AppDataSource } from '@/databases';
 import { logger } from '@/utils/logger';
 import { IUserData } from '@sharedtypes';
-import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan, Any, Between } from 'typeorm';
+import { BaseEntity, Entity, PrimaryColumn, Column, Index, In, LessThan, Any, Between, LessThanOrEqual } from 'typeorm';
 import { UserEntity } from './user.entity';
 
 @Entity({ name: 'psuserdata' })
@@ -33,7 +33,7 @@ export class UserDataEntity extends BaseEntity implements IUserData {
     let data: UserDataEntity;
     try {
       data = await repo.findOne({
-        where: { userid, key, timestamp: LessThan(timestamp) },
+        where: { userid, key, timestamp: LessThanOrEqual(timestamp) },
         order: {
           timestamp: 'DESC',
         },

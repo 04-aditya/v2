@@ -17,20 +17,24 @@ import { Divider } from '@mui/material';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 
-const DataPanel = (props: IToolPanelParams<IUser>) => {
-  const {api, columnApi, } = props;
+const DataPanel = (props: {usergroups?:string[]} & IToolPanelParams<IUser>) => {
+  const {api, columnApi,usergroups=[] } = props;
   const axios = useAxiosPrivate();
-  const [dataStore, setDataStore] = useState<Map<string, Map<string, IUserData[]>>>(new Map<string, Map<string, IUserData[]>>());
+  const [dataStore, setDataStore] = useState<Record<string, Record<string, IUserData[]>>>({});
+  const [ranges, setRanges] = useState<Record<string,string>>({});
+  const [aggTypes, setAggTypes] = useState<Record<string,string>>({});
 
   const onLoadData = (datakey: string) => {
     return async ()=>{
       try {
-        const res = await axios.get(`/api/users/me/data?datakeys=${datakey}&minDate=2023-01-01`);
+        console.log(props);
+        const res = await axios.get(`/api/users/me/data?datakeys=${datakey}&minDate=2023-01-01&usergroups=${usergroups.join(',')}`);
         setDataStore(d => {
           const mappedData = res.data.data;
           console.log(res.data);
           const data = mappedData[datakey];
           console.log(data);
+          if (!data) return d;
           api.forEachNode((node) => {
             const user = node.data;
             if (user?.data) {
@@ -55,6 +59,15 @@ const DataPanel = (props: IToolPanelParams<IUser>) => {
       }
     }
   }
+
+  const onChangeDataRange = (key:string, range:string)=>{
+    setRanges(ranges=>({...ranges, [key]:range}));
+  }
+
+  const onChangeAggType = (key:string, aggType:string)=>{
+    setAggTypes(aggTypes=>({...aggTypes, [key]:aggType}));
+  }
+
   return (
     <Box sx={{p:1}}>
       <Typography variant="h6">Data Panel</Typography>
@@ -69,29 +82,42 @@ const DataPanel = (props: IToolPanelParams<IUser>) => {
         const children = (colDef as ColGroupDef).children||[];
         return <Box key={colId}>
           <Row>
-              <IconButton sx={{color:'inherit'}} aria-label="load data" size='small' onClick={onLoadData(colId.substring(5))}>
+              <IconButton sx={{color: dataStore[colId.substring(5)] ?'primary':'inherit'}} aria-label="load data" size='small' onClick={onLoadData(colId.substring(5))}>
                 <CloudDownloadIcon fontSize='small'/>
               </IconButton>
               <span className='ag-column-select-column-label'>{fparts[1]}</span>
               <Avatar alt="dataclass" sx={{width: 16, height: 16 , fontSize:12}}>{uparts[0][0]}</Avatar>
           </Row>
-          <Row><Select size='small' value='last' variant='standard'>
-                  <MenuItem value="last">Last</MenuItem>
-                  <MenuItem value="current_month">Current Month</MenuItem>
-                  <MenuItem value="current_quarter">Current Quarter</MenuItem>
-                  <MenuItem value="current_halfyear">Current Half Year</MenuItem>
-                  <MenuItem value="current_year">Current Year</MenuItem>
-                </Select></Row>
+          <Row spacing={1}>
+            <Select label='Range' variant='outlined' size='small'
+              value={ranges[colId.substring(5)]||'last'}
+              onChange={(e)=>onChangeDataRange(colId.substring(5), e.target.value)}>
+              <MenuItem value="last">Last</MenuItem>
+              <MenuItem value="current_month">Current Month</MenuItem>
+              <MenuItem value="current_quarter">Current Quarter</MenuItem>
+              <MenuItem value="current_halfyear">Current Half Year</MenuItem>
+              <MenuItem value="current_year">Current Year</MenuItem>
+            </Select>
+            <Select label='aggregation' variant='outlined' size='small'
+              value={aggTypes[colId.substring(5)]||'none'}
+              onChange={(e)=>onChangeAggType(colId.substring(5), e.target.value)}>
+              <MenuItem value="none">Last Value</MenuItem>
+              <MenuItem value="count">Count</MenuItem>
+              <MenuItem value="sum">Sum</MenuItem>
+              <MenuItem value="min">Min</MenuItem>
+              <MenuItem value="max">Max</MenuItem>
+            </Select>
+          </Row>
           {children?<Stack spacing={1} sx={{ml:2}}>
             {children.map((child:ColDef) => {
               return <>
                 <Row key={child.colId}><span className='ag-column-select-column-label'>{child.headerName}</span></Row>
-                <Select>
-                  <MenuItem value="last">Last</MenuItem>
-                  <MenuItem value="current_month">Current Month</MenuItem>
-                  <MenuItem value="current_quarter">Current Quarter</MenuItem>
-                  <MenuItem value="current_halfyear">Current Half Year</MenuItem>
-                  <MenuItem value="current_year">Current Year</MenuItem>
+                <Select label='aggregation' size='small' value={aggTypes[colId.substring(5)+child.colId]||'none'} onChange={(e)=>onChangeAggType(colId.substring(5), e.target.value)} variant='standard'>
+                  <MenuItem value="none">Last Value</MenuItem>
+                  <MenuItem value="count">Count</MenuItem>
+                  <MenuItem value="sum">Sum</MenuItem>
+                  <MenuItem value="min">Min</MenuItem>
+                  <MenuItem value="max">Max</MenuItem>
                 </Select>
               </>
             })}
@@ -121,7 +147,9 @@ export interface UserGridProps {
   users: IUser[];
   onColumnVisible?: (event: ColumnVisibleEvent<IUser>) => void;
   datakeys?: string[];
+  usergroups?: string[];
 }
+
 export function UserGrid(props: UserGridProps) {
   const navigate = useNavigate();
   const gridStyle = useMemo(() => ({height: '75vh', width: '100%'}), []);
@@ -227,6 +255,7 @@ export function UserGrid(props: UserGridProps) {
             labelKey: 'aggregation',
             iconKey: 'menuValue',
             toolPanel: DataPanel,
+            toolPanelParams: {usergroups: props.usergroups},
             minWidth: 180,
             maxWidth: 400,
             width: 250,
@@ -349,7 +378,7 @@ export function UserGrid(props: UserGridProps) {
         });
         Object.keys(sample.data[key].details).forEach(k => {
           // const val:any = sample.custom_details?sample.custom_details[key].details[k]:undefined;
-          const isdate = k.toLowerCase().indexOf('date')!==-1;
+          const isdatetype = false; // k.toLowerCase().indexOf('date')!==-1;
           children.push({
             field: k,
             valueGetter: ({data:user}) => {
@@ -357,9 +386,9 @@ export function UserGrid(props: UserGridProps) {
               if (!user.data) return null;
               const kpi = user.data[key];
               if (!kpi || !kpi.details[k]) return '';
-              return isdate? parseISO(kpi.details[k]) : kpi.details[k];
+              return isdatetype? parseISO(kpi.details[k]) : kpi.details[k];
             },
-            type: isdate ? ['dateColumn', 'nonEditableColumn'] : ['nonEditableColumn'],
+            type: isdatetype ? ['dateColumn', 'nonEditableColumn'] : ['nonEditableColumn'],
             enableRowGroup: true, colId: `subdata-${key}-${k}`
           });
         });

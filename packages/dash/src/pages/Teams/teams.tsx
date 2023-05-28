@@ -128,7 +128,7 @@ export function Teams(_props: TeamsProps) {
           <FileUploadButton buttonContent={'Upload Data'} title='Upload Additional Data from excel' onUpload={onUserDataUpload} variant='outlined' />
         </Row>
         <Row spacing={1}>
-          <UserGrid users={teamMembers} datakeys={datakeys} onColumnVisible={onColumnVisible}/>
+          <UserGrid users={teamMembers} datakeys={datakeys} onColumnVisible={onColumnVisible} usergroups={selectedUserGroups.map(g=>g.type+':'+g.name)}/>
         </Row>
       </TabPanel>
   </PageContainer>);

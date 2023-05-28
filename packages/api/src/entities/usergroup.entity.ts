@@ -72,7 +72,7 @@ export class UserGroupEntity extends BaseEntity implements IUserGroup {
     } catch (ex) {
       if (ex.code === '23505') {
         // if duplicate
-        logger.warn(`duplicate usergroup for ${name} & ${type}.`, ex);
+        logger.warn(`duplicate usergroup for ${name} for type ${type}.`, ex);
         return await UserGroupEntity.GetByNameAndType(name, type);
       } else {
         logger.error(ex);

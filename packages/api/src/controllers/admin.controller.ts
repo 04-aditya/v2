@@ -59,8 +59,26 @@ export class AdminController {
   @OpenAPI({ summary: 'Get all allowed keys for user data' })
   @Authorized(['user.write.all.all'])
   async updateDataKeys(@Param('key') key: string, @BodyParam('newkey') value: string) {
+    //backup old data
+    let res = await AppDataSource.query(`UPDATE psuserdata SET key = $1 WHERE key = $2`, [value + ':old', value]);
+    logger.debug(`backedup ${res} records with key ${value}`);
     //update key
-    await AppDataSource.query(`UPDATE psuserdata SET key = $1 WHERE key = $2`, [value, key]);
+    res = await AppDataSource.query(
+      `INSERT INTO psuserdata (userid, key, timestamp, value) SELECT userid, $1 as key, timestamp, value FROM psuserdata where key=$2`,
+      [value, key],
+    );
+    logger.debug(`Copied ${res} new records with from ${key} ${value}`);
+    res = await AppDataSource.query(
+      `UPDATE psuserdata SET key = $2 WHERE key = $1 and timestamp NOT IN (SELECT timestamp from psuserdata where key=$1)`,
+      [value + ':old', value],
+    );
+    logger.debug(`Added ${res} new records with key ${value}`);
+    res = await AppDataSource.query(`SELECT count(*) from psuserdata where key=$1`, [value + ':old']);
+    logger.debug(`Replaced ${res} records with key ${value}`);
+    logger.debug(res);
+    res = await AppDataSource.query(`DELETE FROM psuserdata where key=$1`, [value + ':old']);
+    logger.debug(`Deleted ${res} old records with key ${value}`);
+    logger.debug(res);
     return { message: 'ok' };
   }
 

@@ -56,15 +56,15 @@ export function AdminUsers() {
     setUploadDateValue(newValue);
   };
 
-  // const refreshSelectedUsers = ()=>{
-  //   axios.post(`${ADMINAPI}/refreshuser/pda`,{
-  //       email: selectedUsers[0].email,
-  //     })
-  //     .then (ar:any => displayNotification('User Refresh',`Refreshing PDA data for user ${selectedUsers[0].email}.`,'pending', {axios, ar}))
-  //     .catch (ex:any => {
-  //       console.error(ex);
-  //     })
-  // };
+  const refreshSelectedUsers = ()=>{
+    axios.post(`${ADMINAPI}/refreshuser/pda`,{
+        email: selectedUsers[0].email,
+      })
+      .then ((ar:AxiosResponse) => displayNotification('User Refresh',`Refreshing PDA data for user ${selectedUsers[0].email}.`,'pending', {axios, ar}))
+      .catch (ex => {
+        console.error(ex);
+      })
+  };
 
   const onPDAUpload = async (files:File[], otherFields:{date:Date})=>{
     const formData = new FormData();
@@ -103,7 +103,7 @@ export function AdminUsers() {
     <PageContainer isBusy={isLoading}>
       <PageHeader title='Users' />
       <Row>
-        {/* <Button variant='outlined' disabled={selectedUsers.length===0} onClick={refreshSelectedUsers}>Refresh Data</Button> */}
+        <Button variant='outlined' disabled={selectedUsers.length===0} onClick={refreshSelectedUsers}>Refresh Data</Button>
         <FileUploadButton title='Upload PDA excel' onUpload={onPDAUpload} variant='outlined'>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <DatePicker

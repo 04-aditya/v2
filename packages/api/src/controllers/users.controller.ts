@@ -147,17 +147,23 @@ export class UsersController {
     const matchedUser = await this.getUser(userId, currentUser);
     if (!UserEntity.canRead(currentUser, matchedUser, req.permissions)) throw new HttpError(403, 'Insufficient permissions.');
 
+    const { reqdate } = await this.getRequestedDate('last');
+
+    //lis of all teh users for which the data will be fetched for
+    let userList = [matchedUser.id];
+    if (usergroups) {
+      const groups = usergroups.split(',').map(g => g.trim());
+      const org = await matchedUser.loadOrg(maxDate || reqdate, groups);
+      //console.log(org);
+      userList = org.users.map(u => u.id);
+    }
+
     const keys = (data_keys || '')
       .split(',')
       .map(k => k.trim())
       .filter(k => k !== '');
-    let userList = [matchedUser.id];
-    if (usergroups) {
-      const groups = usergroups.split(',').map(g => g.trim());
-      const { users } = await matchedUser.loadOrg(maxDate || new Date(), groups);
-      userList = users.map(u => u.id);
-    }
-    console.log(data_keys, userList, minDate, maxDate);
+
+    logger.debug({ keys, userList, minDate, maxDate });
     const dataList = await UserDataEntity.GetSeries(userList, keys, minDate, maxDate);
     const dataMap = groupBy(
       dataList.map(d => d.toJSON()),
@@ -330,7 +336,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
             continue;
           }
           const data = await UserDataEntity.Add(user.id, `u-${currentuser.id}:` + values.key, values.value, values.timestamp);
-          if (updatedCount === 1) {
+          if (updatedCount % 100) {
             logger.debug(JSON.stringify(data.toJSON()));
           }
         } catch (ex) {
@@ -380,7 +386,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
         details.value = value;
         yield details;
       } else {
-        logger.debug(`Row ${i} has empty email`);
+        logger.warn(`Row ${i} has empty email ${JSON.stringify(row)}`);
       }
       i++;
     }
