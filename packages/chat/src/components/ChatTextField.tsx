@@ -1,5 +1,5 @@
 import React, { useState, ChangeEvent, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Alert, Box, Button, CircularProgress, Divider, Fade, InputBase, ListItemButton, ListItemText, MenuItem, Paper, Popover, Snackbar, Stack, Tooltip, Typography } from '@mui/material';
+import { Alert, Avatar, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Fade, InputBase, ListItem, ListItemButton, ListItemText, MenuItem, Paper, Popover, Snackbar, Stack, Tooltip, Typography } from '@mui/material';
 import TelegramIcon from '@mui/icons-material/Telegram';
 // import PsychologyAltIcon from '@mui/icons-material/PsychologyAlt';
 // import SettingsIcon from '@mui/icons-material/Settings';
@@ -17,9 +17,11 @@ import SyncIcon from '@mui/icons-material/Sync';
 import {notificationDispatch, useNotificationStore} from 'sharedui/hooks/useNotificationState';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import ChatCmdList from './CmdList';
-import { captureRejectionSymbol } from 'events';
-import { fi, tr } from 'date-fns/locale';
-
+import { useDropzone } from 'react-dropzone';
+import DescriptionIcon from '@mui/icons-material/Description';
+import FolderIcon from '@mui/icons-material/Folder';
+import TPopover from 'sharedui/components/TPopover';
+import { fi } from 'date-fns/locale';
 interface ChatTextFieldProps {
   session?:IChatSession;
   message?: IChatMessage;
@@ -59,9 +61,40 @@ export function ChatTextField(props: ChatTextFieldProps) {
   const [showParameters, setShowParameters] = useState(false);
   const [parameters, setParameters] = useState<IModelParameters>({temperature:0, max_tokens: 1000});
   const [errorMessage, setErrorMessage] = useState<string>();
-  const [enableCmdPnl, setEnableCmdPnl] = useState(true);
   const [msgTokens, setMsgTokens] = useState(0);const [snackbarMessage, setSnackbarMessage] = useState('');
   const iref = useRef<HTMLInputElement>();
+  const [files, setFiles] = useState<Record<string,any>>({});
+  const [processingInput, setProcessingInput] = useState(false);
+
+  const onDrop = useCallback((acceptedFiles:Array<any>) => {
+    acceptedFiles.map((file:any, index:number) => {
+      console.log(file);
+      setFiles(files=>({...files, [file.name]: {file, status: 'initial', progress: 0}}));
+      showSnackbar(`adding file ${file.name} to the chat...`);
+      // const reader = new FileReader();
+      // reader.onload = function (e) {
+      //   console.log(e);
+      // }
+      // reader.readAsBinaryString(file);
+      // showSnackbar(`reading file ${file.name}`);
+    });
+  },[]);
+  const {
+    getRootProps,
+    getInputProps,
+    acceptedFiles,
+    open,
+    isDragActive,
+    isDragAccept,
+    isFocused,
+    isDragReject,
+  } = useDropzone({
+    //accept: '*/*',
+    onDrop,
+    // Disable click and keydown behavior
+    noClick: true,
+    noKeyboard: true,
+  });
 
   const handleSnackbarClose = (event: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') {
@@ -129,7 +162,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
 
   const handleNewMessageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const msg = (e.target.value as string).trimStart();
-    if (msg.startsWith('//') && msg[msg.length-1]===' ') {
+    if (msg.startsWith('/') && msg[msg.length-1]===' ') {
       const word = msg.split(' ');
       const parts = word[0].split(':');
       switch(parts[0]) {
@@ -161,6 +194,26 @@ export function ChatTextField(props: ChatTextFieldProps) {
           e.preventDefault();
           return;
         }
+        case '/web': {
+          const params = parts[1].split(',')
+          let count:number = parseFloat(params[0]);
+          let site:string|undefined = params[1];
+          if (isNaN(count)) {
+            site=params[0];
+            count=5;
+          }
+          if ((count<0 || count>10)) {
+            setErrorMessage('Invalid count value. Please enter a number between 0 and 10.');
+            break;
+          }
+          setOptions({...options, ...{ web: { count, site } }});
+          setNewMessage('');
+          setErrorMessage(undefined);
+          showSnackbar(`set web count to ${count}`);
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
       }
       return setNewMessage(msg);
     }
@@ -180,60 +233,109 @@ export function ChatTextField(props: ChatTextFieldProps) {
 
   const handleParametersChange = (params: IModelParameters)=>setParameters(params);
 
+  const processInput = useCallback(async ()=>{
+    console.log('started input processing');
+    const fileToUpload=Object.keys(files);
+    if (fileToUpload.length) {
+      setProcessingInput(true);
+      for (const fname of fileToUpload) {
+        const file = files[fname];
+        console.log(file.file);
+        if (file.status==='initial') {
+          setFiles(files=>({...files, [fname]: {file: file.file, status: 'processing'}}));
+          const formData = new FormData();
+          formData.append("file", file.file);
+          const ar = axios.post(`/api/chat/upload`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+          // const reader = new FileReader();
+          // reader.onload = function (e) {
+          //   console.log(e);
+          //   const formData = new FormData();
+          //   formData.append("file", e.target?.result as unknown as Blob);
+          //   axios.post(`/api/chat/upload`, formData, {
+          //     headers: {
+          //       'Content-Type': 'multipart/form-data'
+          //     }
+          //   }).then(ar=>{
+          //     setFiles(files=>({...files, [fname]: {file:file, status: 'done'}}));
+          //   }).catch(console.error)
+          // }
+          // reader.readAsArrayBuffer(file.file);
+        }
+      }
+      //throw new Error('Files not yet supported. Comming soon')
+    }
+  },[axios, files]);
+
+
+
   const onSend = async (data?: any) => {
     setIsBusy(true);
     setErrorMessage(undefined);
-    mutation.mutate(data || {
-      id:chatsession?.id,
-      options: {
-        model: options.model,
-        assistant: options.assistant,
-        contexts: options.contexts,
-        parameters,
-      },
-      message: newMessage.trimEnd(),
-    },{
-      onSuccess: (response: APIResponse<IChatSession>)=>{
-        if (!response.qid) {
-          setErrorMessage('Unable to send message. Please try again!');
-          setIsBusy(false);
-          return;
-        }
 
-        const poller = setInterval(()=>{
-          axios.get(`/api/q/${response.qid}`)
-            .then(res=>{
-              const qresponse = res.data;
-              if (qresponse.status==='done') {
-                const updatedSession = qresponse.results.data;
-                if (updatedSession) {
-                  setNewMessage('');
-                  setChatSession({...updatedSession});
-                  if (props.onSuccess) {
-                    props.onSuccess(updatedSession);
-                  }
-                  setIsBusy(false);
-                }
-                clearInterval(poller);
-              }
-              else {
-                console.log('polling...'+response.qid);
-              }
-            })
-            .catch(ex=>{
-              setErrorMessage('Unable to get the updates to the message. Please try again!');
+    processInput()
+      .then (()=>{
+        mutation.mutate(data || {
+          id:chatsession?.id,
+          options: {
+            model: options.model,
+            web: options.web,
+            assistant: options.assistant,
+            contexts: options.contexts,
+            parameters,
+          },
+          message: newMessage.trimEnd(),
+        },{
+          onSuccess: (response: APIResponse<IChatSession>)=>{
+            if (!response.qid) {
+              setErrorMessage('Unable to send message. Please try again!');
               setIsBusy(false);
-              clearInterval(poller);
-            })
-        },1000);
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onError: (err: any)=>{
-        const res = err.response?.data?.message;
-        setErrorMessage(res || 'Unable to send message. Please try again!');
+              return;
+            }
+
+            const poller = setInterval(()=>{
+              axios.get(`/api/q/${response.qid}`)
+                .then(res=>{
+                  const qresponse = res.data;
+                  if (qresponse.status==='done') {
+                    const updatedSession = qresponse.results.data;
+                    if (updatedSession) {
+                      setNewMessage('');
+                      setChatSession({...updatedSession});
+                      if (props.onSuccess) {
+                        props.onSuccess(updatedSession);
+                      }
+                      setIsBusy(false);
+                    }
+                    clearInterval(poller);
+                  }
+                  else {
+                    console.log('polling...'+response.qid);
+                  }
+                })
+                .catch(ex=>{
+                  setErrorMessage('Unable to get the updates to the message. Please try again!');
+                  setIsBusy(false);
+                  clearInterval(poller);
+                })
+            },1000);
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onError: (err: any)=>{
+            const res = err.response?.data?.message;
+            setErrorMessage(res || 'Unable to send message. Please try again!');
+            setIsBusy(false);
+          }
+        });
+      })
+      .catch(err=>{
+        console.error(err);
+        setErrorMessage('Unable to process inputs for the message. Please try again!');
         setIsBusy(false);
-      }
-    });
+      });
   };
 
   const handleCmdPanelClose = ()=> setOpenCmdPanel(false);
@@ -242,11 +344,10 @@ export function ChatTextField(props: ChatTextFieldProps) {
     let filteredCmds: IChatCommand[] = [];
     let matchedCmd: IChatCommand|undefined;
     let filteredCmdOptions: Array<any> =[];
-    if (newMessage.startsWith('//')) {
+    if (newMessage.startsWith('/')) {
       const words=newMessage.substring(1).split(' ');
       if (words.length < 2) {
         const parts = words[0].split(':');
-        console.log(parts[0]);
         filteredCmds = (commands||[]).filter(c=>c.name.startsWith(parts[0]));
         if (filteredCmds.length===1) {
           matchedCmd=filteredCmds[0];
@@ -303,6 +404,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
       id:chatsession?.id,
       options: {
         model: options.model,
+        web: options.web,
         assistant: options.assistant,
         contexts: options.contexts,
         parameters,
@@ -314,6 +416,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
 
   const handleFocus = (e: any) => { }
 
+  const cancelProcessing = ()=>{}
   const rowCount = newMessage.split('').filter(c => c === '\n').length + 1;
   return (<Box className='chat-message-container'>
     <Snackbar
@@ -335,16 +438,26 @@ export function ChatTextField(props: ChatTextFieldProps) {
     {(props.showRegenerate && !props.message) && <Box sx={{display:'flex',p:1, flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
       <Button variant='outlined' endIcon={<SyncIcon/>} onClick={handleRegenerate}>Regenerate</Button>
     </Box>}
+
     {error ? <Alert severity="error">{error.response?.data as string}</Alert> : null}
     {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
+
     <div id="finalMessage" aria-live="polite" role="status" className="sr-only" aria-hidden="false"></div>
+
     <Paper className='chat-message-field'
-      component="div"
-      sx={theme=>({ p: '2px 4px', width: '100%', backgroundColor: theme.palette.background.default, position:'relative' })}
+      component="div" {...getRootProps()}
+      sx={theme=>({ p: '2px 4px', width: '100%', backgroundColor: theme.palette.background.default, position:'relative',
+      border:`2px solid ${isDragActive? theme.palette.primary.light : theme.palette.background.default}`})}
     >
-      {(cmdoptions.filteredCmds.length>0 && cmdoptions.filteredCmdOptions.length===0) ? <Paper sx={{position:'absolute', bottom:52, left:{xs:12, sm:(44+newMessage.length*12)}, minWidth: '300px', Height:'200px'}}>
+      <input style={{position:'absolute', top:0, left:0, bottom:0, right:0,}}
+        {...getInputProps()}
+      />
+      {(cmdoptions.filteredCmds.length>0 && cmdoptions.filteredCmdOptions.length===0) ? <Paper elevation={6}
+        sx={{position:'absolute', left:{xs:12, sm:(44+newMessage.length*12)},zIndex:100,
+          minWidth: '300px', minHeight:'200px',...(chatsession?{bottom:52}:{top:52}),}}>
         <Typography sx={{ p: 2 }}>Commands</Typography>
         <Divider/>
+        <div className='scrollbarv' style={{maxHeight:250}}>
         {cmdoptions.filteredCmds.map((c,i)=>{
           const parts=c.options?.example.split(':');
           return <ListItemButton key={c.name} onClick={(e)=>{setNewMessage(`/${c.name}:`);iref.current?.focus();}} >
@@ -353,6 +466,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
               secondary={c.description} />
           </ListItemButton>
         })}
+        </div>
       </Paper> : null}
       {cmdoptions.filteredCmdOptions.length>0 ? <Paper sx={{position:'absolute', bottom:48,
         left:{xs:12, sm:(44+newMessage.length*12)},
@@ -368,8 +482,27 @@ export function ChatTextField(props: ChatTextFieldProps) {
         })}
       </Paper> : null}
       <Stack direction={'row'} spacing={0.5} alignItems={'center'}>
+        {Object.keys(files).length>0 ? <Box>
+
+          <TPopover element={(onClick, did) => <Chip aria-describedby={did} onClick={onClick}
+            avatar={<Avatar><FolderIcon sx={{fontSize:'16px'}}/></Avatar>} sx={{ml:1,}}
+            label={`${Object.keys(files).length} file${Object.keys(files).length>1?'s':''}`}
+            variant="outlined" size='small'/>}
+            PaperProps={{
+              sx: {minWidth:'200px', minHeight:'250px',p:2}
+            }}
+          >
+            <Typography>Files that will be uploaded</Typography>
+            <Divider/>
+            {Object.keys(files).map(fname =><ListItem key={fname}>
+                <ListItemText primary={fname} secondary={`${files[fname].path} bytes`} />
+              </ListItem>)}
+          </TPopover>
+        </Box>:null}
         {showOptions?null:<Typography variant='caption'><em>model:</em></Typography>}
         {showOptions?null:<Typography variant='caption' color={'primary'}><strong>{options.model}</strong>&nbsp;</Typography>}
+        {showOptions?null:options.web && <Typography variant='caption'><em>useWeb:</em></Typography>}
+        {showOptions?null:options.web && <Typography variant='caption' color={'primary'}><strong>{options.web.count}</strong>&nbsp;</Typography>}
         {/* <ChatCmdList commands={[
           {label:'model', name:options.model, icon:<PsychologyIcon fontSize='small' color={showOptions?'secondary':'inherit'} sx={{transform:'scale(-1,1)'}}/>}
           ]}
@@ -423,6 +556,15 @@ export function ChatTextField(props: ChatTextFieldProps) {
     </Paper>
     {showOptions && <ModelOptions options={options} onChange={handleOptionsChange}/>}
     {showParameters && <ModelParameters parameters={parameters} onChange={handleParametersChange}/>}
+    <Dialog open={processingInput}>
+      <DialogTitle>Preparing Input...</DialogTitle>
+      <DialogContent>
+
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={cancelProcessing}>Cancel</Button>
+      </DialogActions>
+    </Dialog>
   </Box>
   );
 }

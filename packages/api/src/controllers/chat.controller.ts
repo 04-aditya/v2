@@ -21,6 +21,8 @@ import {
   Param,
   QueryParam,
   Req,
+  UploadedFile,
+  ForbiddenError,
 } from 'routing-controllers';
 import { Not, MoreThan, Equal, And } from 'typeorm';
 import { OpenAPI } from 'routing-controllers-openapi';
@@ -32,6 +34,8 @@ import { RequestWithUser } from '@/interfaces/auth.interface';
 import { checkADTokens } from './auth.controller';
 import crypto from 'crypto';
 import AsyncTask, { updateFn } from '@/utils/asyncTask';
+import { BlobServiceClient } from '@azure/storage-blob';
+import { BingAPI } from '@/models/tools/BingAPI';
 
 @JsonController('/api/chat')
 @UseBefore(authMiddleware)
@@ -112,14 +116,14 @@ export class ChatController {
     const result = new APIResponse<IChatCommand[]>();
     try {
       result.data = [
-        {
-          name: 'actas',
-          description: 'Select a system message for the query',
-          options: {
-            example: '/actas:gpt35turbo',
-            choices: [],
-          },
-        },
+        // {
+        //   name: 'actas',
+        //   description: 'Select a system message for the query',
+        //   options: {
+        //     example: '/actas:gpt35turbo',
+        //     choices: [],
+        //   },
+        // },
         {
           name: 'model',
           description: 'Select a model to use for the query',
@@ -128,18 +132,18 @@ export class ChatController {
             choices: [...(await ModelFactory.models()).values()].filter(m => m.enabled).map(m => ({ id: m.id, name: m.name })),
           },
         },
-        {
-          name: 'site',
-          description: 'Search the site and use it as context to the query',
-          options: {
-            example: '/site:publicissapient.com',
-          },
-        },
+        // {
+        //   name: 'site',
+        //   description: 'Search the site and use it as context to the query',
+        //   options: {
+        //     example: '/site:publicissapient.com',
+        //   },
+        // },
         {
           name: 'web',
-          description: 'Search the web and use top N results as context to the query',
+          description: 'Search the web/site, use top N results as context to the query',
           options: {
-            example: '/web:5',
+            example: '/web:5,publicissapient.com',
           },
         },
         {
@@ -483,7 +487,7 @@ export class ChatController {
     newMessage.content = message;
     newMessage.role = 'user';
     newMessage.index = messages.length;
-    newMessage.options = { model: modelid, contexts };
+    newMessage.options = { model: modelid, contexts, web: options.web };
     messages.push(newMessage);
 
     const calloptions: Record<string, any> = {
@@ -493,15 +497,11 @@ export class ChatController {
       contexts,
       ...(options.parameters || {}),
       user: currentUser,
+      web: options.web,
     };
 
     const inputMessages = messages.map(m => m.toJSON());
-    inputMessages[0].content +=
-      `\n\nContext:\n` + `- when responsing to the user use the name maskedhumanname.` + `- today's date is ${new Date().toLocaleDateString()}.`;
-    // `\n\n You will state your name as PSChat, a LLM powered chatbot developed by publicis sapient's engineers. ` +
-    // `The frontend was developed in React and the backend API's using NodeJS and Python. ` +
-    // `\n\n Information about user:\nYour are helping a user named maskedhumanname, who is working at Publicis as "${currentUser.business_title}".`;
-
+    inputMessages[0].content += `\n\nCurrent date: ${new Date().toLocaleDateString()}.\n`;
     logger.debug(inputMessages[0].content);
     logger.debug(`Starting processing User data`);
     const qt = new AsyncTask(updater => this.callModel(updater, model, messages, calloptions, session), req.user.id);
@@ -515,7 +515,37 @@ export class ChatController {
     options: Record<string, any>,
     session: ChatSessionEntity,
   ) {
-    const response = await model.call({ input: messages, options });
+    const modelInput = {
+      input: messages.map(m => ({ role: m.role, content: m.content })),
+      options,
+    };
+    const userQuery = modelInput.input[modelInput.input.length - 1].content;
+    let intermediate_content: string | undefined;
+    if (options.web) {
+      const bing = new BingAPI(process.env.BINGSERPAPI_API_KEY, {
+        answerCount: '3', //webpages, images, videos, and relatedSearches
+        count: options.web.count || 5, //
+        promote: 'Webpages',
+        responseFilter: 'Webpages',
+        safeSearch: 'Strict',
+      });
+      let newMessageContent = 'Web search results:\n\n';
+      let q = options.web.query || userQuery;
+      if (options.web.site) {
+        q += ` site:${options.web.site}`;
+      }
+      const searchResults = await bing.call(q);
+      newMessageContent += searchResults;
+
+      intermediate_content = newMessageContent + '\n\n';
+      newMessageContent +=
+        `\n\nInstructions: Using the provided web search results, write a comprehensive reply to the given query. Make sure to cite results using [[number](URL)] notation after the reference. If the provided search results refer to multiple subjects with the same name, write separate answers for each subject.` +
+        `\n\nQuery: ` +
+        userQuery;
+      modelInput.input[modelInput.input.length - 1].content = newMessageContent;
+      console.log(modelInput);
+    }
+    const response = await model.call(modelInput);
     logger.debug(response);
 
     const assistantMessage = new ChatMessageEntity();
@@ -523,6 +553,9 @@ export class ChatController {
     assistantMessage.index = messages.length;
     assistantMessage.content = response.content.replace(/maskedhumanname/g, `${options.user.first_name || 'user'}`);
     assistantMessage.options = response.options || {};
+    assistantMessage.options.intermediate_content = assistantMessage.options.intermediate_content
+      ? assistantMessage.options.intermediate_content + '\n\n' + intermediate_content || ''
+      : intermediate_content;
     messages.push(assistantMessage);
     const soptions: any = session.options;
     if (response.usage) {
@@ -536,6 +569,46 @@ export class ChatController {
     await AppDataSource.getRepository(ChatSessionEntity).save(session);
     const result = new APIResponse<IChatSession>(session.toJSON(), 'done');
     return result;
+  }
+
+  @Post('/upload')
+  @OpenAPI({
+    summary: 'Upload  file that can used as context in chats.',
+  })
+  async uploadFile(@UploadedFile('file') file: any, @Req() req: RequestWithUser) {
+    const writePermissions = req.permissions.filter(p => p.startsWith('user.write.group.custom'));
+    if (writePermissions.length === 0) throw new ForbiddenError('Insufficient permissions.');
+
+    const AZURE_STORAGE_CONNECTION_STRING = process.env.AZCONNSTR;
+
+    if (!AZURE_STORAGE_CONNECTION_STRING) {
+      logger.error('Azure Storage Connection string not found');
+    }
+
+    // Create the BlobServiceClient object with connection string
+    const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+    const containerClient = blobServiceClient.getContainerClient(process.env.AZUPLOADCONTAINER);
+
+    // Create a unique name for the blob
+    const blobName = `${req.user.id}/file/${file.originalname || file.name}`;
+
+    // Get a block blob client
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+    // Display blob name and url
+    logger.info(`\nUploading Chat file to Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`);
+
+    const rwurl = blockBlobClient.url.toLowerCase().replace(process.env.AZUPLOADHOST, `${process.env.APIROOT}/api/data/file?n=`);
+    // Upload data to the blob
+    const uploadBlobResponse = await blockBlobClient.uploadData(file.buffer);
+    logger.debug(`Starting processing chat file: ${rwurl}`);
+    const qt = new AsyncTask(updater => this.processFileData(updater, file.buffer, rwurl, req.user), req.user.id);
+    return { qid: qt.id, message: 'created', fileurl: rwurl };
+  }
+
+  private async processFileData(updater: updateFn, buffer: Buffer, filePath: string, currentuser: UserEntity) {
+    logger.debug(`finished processing chat file: ${filePath}`);
+    return new APIResponse<string>(filePath, 'done');
   }
 
   @Delete('/:id')

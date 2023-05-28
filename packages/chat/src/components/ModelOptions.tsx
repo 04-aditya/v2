@@ -73,7 +73,7 @@ export default function SelectSystemMessage(props:{
     />
   );
 }
-export interface IModelOptions {
+export type IModelOptions = Record<string, any> & {
   model:string,
   assistant: string,
   contexts: string[],

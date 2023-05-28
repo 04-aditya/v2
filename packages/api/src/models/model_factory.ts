@@ -32,15 +32,8 @@ export default class ModelFactory {
     ModelFactory._models = new Map<string, IChatModel>();
     const models: IChatModel[] = [];
 
-    models.push(new AzureChatModel());
-    models.push({
-      id: 'gpt4-test',
-      name: 'GPT 4 (preview)',
-      group: 'Standard',
-      enabled: false,
-      contexts: [],
-      tools: [],
-    });
+    models.push(new AzureChatModel('gpt35turbo', 'GPT 3.5 Turbo', 'Standard', 4097));
+    models.push(new AzureChatModel('gpt4', 'GPT 4', 'Standard', 8000));
 
     const psmodel = new PSBodhiChatModel();
     await psmodel.refresh();

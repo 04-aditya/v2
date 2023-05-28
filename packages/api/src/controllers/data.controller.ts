@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger';
 import { BlobServiceClient } from '@azure/storage-blob';
-import { Controller, Get, QueryParam, Res } from 'routing-controllers';
+import { Authorized, Controller, Get, QueryParam, Res } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
 
 @Controller('/api/data')

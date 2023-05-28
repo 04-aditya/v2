@@ -2,20 +2,21 @@ import { logger } from '@/utils/logger';
 import { IChatModel, IChatModelCallParams } from '@sharedtypes';
 import axios, { AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
+import { fi } from 'date-fns/locale';
 import { CallbackManagerForLLMRun } from 'langchain/dist/callbacks';
 import { BaseLLMParams, LLM } from 'langchain/llms/base';
 
-let currentAzAPIClientIndex = -1;
-const azAPIclients: AxiosInstance[] = [];
-const api_versions: string[] = (process.env['AZ_OPENAI_VERSION'] || '').split(',');
+const currentAzAPIClientIndex: Record<string, number> = {};
+const azAPIclients: Record<string, AxiosInstance[]> = {};
 
-function getAzAPIClient() {
-  if (azAPIclients.length === 0) {
-    const keys = process.env['AZ_OPENAI_KEY'].split(',');
-    const baseURLs = process.env['AZ_OPENAI_URL'].split(',');
-    const deployments = process.env['AZ_OPENAI_DEPLOYMENT'].split(',');
+function getAzAPIClient(id: string) {
+  if (azAPIclients[id] === undefined || azAPIclients[id].length === 0) {
+    const keys = process.env[`AZ_${id}_KEY`].split(',');
+    const baseURLs = process.env[`AZ_${id}_URL`].split(',');
+    const deployments = process.env[`AZ_${id}_DEPLOYMENT`].split(',');
+    azAPIclients[id] = [];
     for (let i = 0; i < keys.length; i++) {
-      logger.info(`creating azure client ${i}...`);
+      logger.info(`creating azure ${id} client ${i}...`);
       const client = axios.create({
         baseURL: `${baseURLs[i]}openai/deployments/${deployments[i]}/`,
         headers: {
@@ -31,28 +32,38 @@ function getAzAPIClient() {
           return true;
         },
       });
-      azAPIclients.push(client);
+      azAPIclients[id].push(client);
     }
   }
-  currentAzAPIClientIndex += 1; // round robin
-  if (currentAzAPIClientIndex >= azAPIclients.length) currentAzAPIClientIndex = 0;
-  logger.debug('Using AZ OpenAI API client', currentAzAPIClientIndex);
-  const client = azAPIclients[currentAzAPIClientIndex];
+  if (currentAzAPIClientIndex[id] === undefined) currentAzAPIClientIndex[id] = -1;
+  currentAzAPIClientIndex[id] += 1; // round robin
+  if (currentAzAPIClientIndex[id] >= azAPIclients[id].length) currentAzAPIClientIndex[id] = 0;
+  logger.debug(`Using AZ ${id} API client`, currentAzAPIClientIndex[id]);
+  const client = azAPIclients[id][currentAzAPIClientIndex[id]];
   return client;
 }
 
 export class AzureChatModel implements IChatModel {
-  readonly id = 'gpt35turbo';
-  readonly name = 'GPT 3.5 Turbo';
-  readonly group = 'Standard';
+  readonly id: string = 'gpt35turbo';
+  readonly name: string = 'GPT 3.5 Turbo';
+  readonly group: string = 'Standard';
   readonly enabled = true;
   readonly contexts = [];
   readonly tools = [];
+  readonly api_versions: string[] = (process.env['AZ_gpt35turbo_VERSION'] || '').split(',');
+  readonly tokencontextlength: number = 4000;
   //readonly tiktoken = new Tiktoken());
+  constructor(id: string, name: string, group: string, tokencontextlength: number) {
+    this.id = id;
+    this.name = name;
+    this.group = group;
+    this.api_versions = (process.env[`AZ_${id}_VERSION`] || '').split(',');
+    this.tokencontextlength = tokencontextlength;
+  }
 
   counttokens(messages: { role: string; content: string }[]) {
     let count = 0;
-    console.log(messages);
+    // console.log(messages);
     try {
       messages.forEach(m => {
         count += m.content.length / 4 + 4;
@@ -74,15 +85,15 @@ export class AzureChatModel implements IChatModel {
     let skippedcount = 0;
     do {
       let conv_history_tokens = this.counttokens(tinput);
-      while (conv_history_tokens > 3500 && tinput.length > 3) {
+      while (conv_history_tokens > this.tokencontextlength - 500 && tinput.length > 3) {
         logger.warn(`removing first message from input because it is too long (${conv_history_tokens} tokens)`);
         tinput.splice(1, 1);
         skippedcount += 1;
         conv_history_tokens = this.counttokens(tinput);
       }
 
-      const client = getAzAPIClient();
-      const response = await client.post(`chat/completions?api-version=${api_versions[currentAzAPIClientIndex]}`, {
+      const client = getAzAPIClient(this.id);
+      const response = await client.post(`chat/completions?api-version=${this.api_versions[currentAzAPIClientIndex[this.id]]}`, {
         n: options.n,
         stream: false,
         temperature: options.temperature,
@@ -148,10 +159,12 @@ export interface AzureOpenAIInput {
 
   /** Penalizes repeated tokens according to frequency */
   frequencyPenalty?: number;
+
+  modelid?: string;
 }
 
 export class AzureOpenAI extends LLM implements AzureOpenAIInput {
-  client = new AzureChatModel();
+  client: AzureChatModel;
   temperature: number | undefined = undefined;
 
   maxTokens: number | undefined = undefined;
@@ -164,6 +177,8 @@ export class AzureOpenAI extends LLM implements AzureOpenAIInput {
 
   constructor(fields?: Partial<AzureOpenAIInput> & BaseLLMParams) {
     super(fields ?? {});
+
+    this.client = fields?.modelid ? new AzureChatModel(fields.modelid, '', '', 4000) : new AzureChatModel('gpt35turbo', 'GPT3.5', 'Standard', 4000);
 
     this.temperature = fields?.temperature ?? this.temperature;
     this.maxTokens = fields?.maxTokens ?? this.maxTokens;

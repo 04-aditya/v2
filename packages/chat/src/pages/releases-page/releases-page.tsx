@@ -17,6 +17,15 @@ export function ReleasesPage(props: ReleasesPageProps) {
         {/* <ReleaseInfo date={'**Date**'} content={'**Description**'}/>
         <Divider/> */}
         <Box sx={theme=>({maxHeight:'600px', p:3})} className='scrollbarv'>
+        <ReleaseInfo date={'2023-05-28'} content={
+            ` * Added GPT4 model option. \n\n` +
+            `\t![gpt4 model option](/assets/releases/gpt4.png)\n\n` +
+            ` * Added comand palatte on press on '/' as the first character in the message box. \n\n` +
+          `\t![command palette](/assets/releases/cmdpalette.png)\n\n` +
+          ` * Added /web command , to ask PSChat to use web search results as context. \n\n` +
+        `\t![/web command](/assets/releases/cmd_web.png)\n\n\t![web reasoning](/assets/releases/cmd_web_reason.png)\n\n` +
+            `\n\n`
+          }/>
         <ReleaseInfo date={'2023-05-20'} content={
             ` * Added copy to clipboard button to the generated code sections. \n\n` +
             `\t![copy code button](/assets/releases/code_copy.png)\n\n` +

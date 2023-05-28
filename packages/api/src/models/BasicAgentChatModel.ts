@@ -16,32 +16,45 @@ import { format as formatDate } from 'date-fns';
 import { UserEntity } from '@/entities/user.entity';
 import { BingAPI } from './tools/BingAPI';
 import { DallETool } from './tools/DallETool';
+import { RequestsGetTool, RequestsPostTool, AIPluginTool } from 'langchain/tools';
+import { WebBrowser } from 'langchain/tools/webbrowser';
+import { AzFileStore, AzReadFileTool, AzWriteFileTool } from './tools/AzFileTool';
+import { BaseLLM, LLM } from 'langchain/llms/base';
 
 const PREFIX = (date: Date, user?: UserEntity) =>
-  `Answer the following questions as best you can. Your a AI assistant called PSChat that uses Large Language Models (LLM), ` +
-  `You should know that current year is ${formatDate(date, 'yyyy')} ` +
-  `and today is ${formatDate(date, 'iiii')} ${formatDate(date, 'do')} of ${formatDate(date, 'MMMM')}. \n\n` +
+  `Assistant is a large language model trained by OpenAI named PSChat.
+
+  Assistant is designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, Assistant is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
+
+  Assistant is constantly learning and improving, and its capabilities are constantly evolving. It is able to process and understand large amounts of text, and can use this knowledge to provide accurate and informative responses to a wide range of questions. Additionally, Assistant is able to generate its own text based on the input it receives, allowing it to engage in discussions and provide explanations and descriptions on a wide range of topics.
+
+  Overall, Assistant is a powerful system that can help with a wide range of tasks and provide valuable insights and information on a wide range of topics. Whether you need help with a specific question or just want to have a conversation about a particular topic, Assistant is here to assist.\n` +
+  `You should also know that current year is ${formatDate(date, 'yyyy')} ` +
+  `and today is ${formatDate(date, 'iiii')} ${formatDate(date, 'do')} of ${formatDate(date, 'MMMM')}. \n` +
   // `Your are helping a Human named maskedhumanname, who is working at Publicis Sapient${user ? `, as ${user.business_title}` : ''}.\n\n` +
   // `Use previous conversation summary for additional context:` +
   // `{chat_history}\n\n` +
   `Publicis Sapient (PS) Primary brand colors are #FE414D(radiant-red), #FFFFFF(white) and light-gray(#EEEEEE) and ` +
   `Publicis Sapient (PS) secondary brand colors are  #079FFF(Blue), #FFE63B(yellow) and #00E6C3(green) . \n\n` +
-  ` You have access to the following tools:`;
+  `TOOLS
+  ------
+  Assistant can ask the user to use tools to look up information that may be helpful in answering the users original question. The tools the human can use are:\n`;
 
-const formatInstructions = (
-  toolNames: string,
-) => `First try to provide a initial answer, if unable to provide a answer, Try to arrive at the Final Answer by using the following format:
+const formatInstructions = (toolNames: string) => `The summary of the previous conversation:
+{chat_history}
+
+ALWAYS use the following format:
 
 Question: the input question you must answer
-Thought: you should always think about what to do
+Thought: you should always think about what to do in terms of Action/Action Input/Observation in the following format.
 Action: the action to take, should be one of [${toolNames}]
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat 0 or N times)
-Thought: I now know the final answer or I will stop here with most likely answer
+Thought: I now know the final answer or I will stop here with most likely answer.
 Final Answer: the final answer or most likely answer to the original input question`;
 
-const SUFFIX = `Begin!
+const SUFFIX = `Begin! Reminder to ALWAYS use the above format, and to use tools if appropriate.!
 
 Question: {input}
 Thought: {agent_scratchpad}`;
@@ -121,7 +134,7 @@ class CustomOutputParser extends AgentActionOutputParser {
       return { log: text, returnValues: finalAnswers };
     }
 
-    const match = /Action:(.*)\nAction Input:(.*)$/gms.exec(text);
+    const match = /Action(?:.*):(.*)Action Input(?:.*):(.*)/gms.exec(text);
     if (!match) {
       logger.debug(`Could not find Action tool in: ${text}`);
       return {
@@ -176,11 +189,17 @@ export class BasicAgentChatModel implements IChatModel {
     const calcTool = new Calculator();
     const dalletool = new DallETool(process.env.AZ_DALLE_APIKEY, { userid: options?.user.id });
     calcTool.name = 'calculator';
+    const filestore = new AzFileStore(`${options?.user.id}/store/${options?.sessionid}}`);
     const tools = [
       searchTool,
       calcTool,
       new UnitConvertorTool(),
       dalletool,
+      //new WebBrowser({model: model as LLM}),
+      new RequestsGetTool(),
+      new RequestsPostTool(),
+      // new AzReadFileTool({ store: filestore }),
+      // new AzWriteFileTool({ store: filestore }),
       // new DynamicTool({
       //   name: 'ask maskedhumanname',
       //   description:
@@ -224,7 +243,7 @@ export class BasicAgentChatModel implements IChatModel {
 
     const history = input
       .slice(1, -1)
-      .map(i => i.role + ': ' + i.content)
+      .map(i => i.role + ': ' + i.content) //system, human, ai, generic
       .join('\n\n');
     logger.debug('Using history:' + history);
     const summary =
