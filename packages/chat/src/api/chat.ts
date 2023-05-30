@@ -136,3 +136,21 @@ export function useChatStats(type='user', offset=0, limit=10) {
   };
   return {...query, invalidateCache};
 }
+
+export function useChatFiles(type='file', offset=0, limit=10) {
+  const queryClient = useQueryClient();
+  const axios = useAxiosPrivate();
+  const keys = [CACHEKEY, 'files', type, offset, limit];
+  const query = useQuery<Array<{ name: string; url: string; timestamp: Date; metadata: Record<string, any> }> | undefined, AxiosError>(keys, async ()=>{
+    const res = await axios.get(`${CHATAPI}/files?type=${type}&offset=${offset}&limit=${limit}`);
+    const result = res.data as APIResponse<Array<{ name: string; url: string; timestamp: Date; metadata: Record<string, any> }>>;
+    return result.data;
+  },{
+    enabled: !!axios,
+    staleTime:  5 * 60 * 1000, // 5 min
+  });
+  const invalidateCache = ()=>{
+    queryClient.invalidateQueries(keys);
+  };
+  return {...query, invalidateCache};
+}

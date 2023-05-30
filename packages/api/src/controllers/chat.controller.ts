@@ -326,6 +326,54 @@ export class ChatController {
     }
   }
 
+  @Get('/files')
+  @OpenAPI({ summary: 'Get the files generated or uploaded by the user in the chat' })
+  @Authorized(['chat.read'])
+  async getChatFiles(
+    @QueryParam('type') fileType: 'images' | 'file',
+    @CurrentUser() currentUser: UserEntity,
+    @QueryParam('offset') offset = 0,
+    @QueryParam('limit') limit = 10,
+  ) {
+    if (!currentUser) throw new HttpException(403, 'Unauthorized');
+    const AZURE_STORAGE_CONNECTION_STRING = process.env.AZCONNSTR;
+
+    if (!AZURE_STORAGE_CONNECTION_STRING) {
+      logger.error('Azure Storage Connection string not found');
+    }
+
+    // Create the BlobServiceClient object with connection string
+    const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+    const containerClient = blobServiceClient.getContainerClient(process.env.AZUPLOADCONTAINER);
+
+    const result = new APIResponse<Array<{ name: string; url: string; timestamp: Date; metadata: Record<string, any> }>>([]);
+    // for await (const response of containerClient.listBlobsFlat().byPage({ maxPageSize: 20 })) {
+    //   for (const blob of response.segment.blobItems) {
+    // List the blob(s) in the container.
+    for await (const blob of containerClient.listBlobsFlat({ prefix: `${currentUser.id}/${fileType}` })) {
+      // Get Blob Client from name, to get the URL
+      const tempBlockBlobClient = containerClient.getBlockBlobClient(blob.name);
+
+      // Display blob name and URL
+      logger.debug(`\n\tname: ${blob.name}\n\tURL: ${tempBlockBlobClient.url}\n`);
+      const props = await tempBlockBlobClient.getProperties();
+      // logger.debug(props);
+      const name = decodeURI(tempBlockBlobClient.url.toLowerCase().replace(process.env.AZUPLOADHOST + `${currentUser.id}/${fileType}/`, ''));
+      const url = tempBlockBlobClient.url.toLowerCase().replace(process.env.AZUPLOADHOST, `${process.env.APIROOT}/api/data/file?n=`);
+      result.data.push({
+        name,
+        url,
+        timestamp: props.lastModified,
+        metadata: {
+          createdOn: props.createdOn,
+          expiresOn: props.expiresOn,
+          ...props.metadata,
+        },
+      });
+    }
+    return result;
+  }
+
   @Get('/:id')
   @OpenAPI({ summary: 'Return the chat session identified by the id' })
   @Authorized(['chat.read'])

@@ -45,7 +45,7 @@ class DallETool extends Tool {
       .split('\n')
       .map(t => t.trim())
       .filter(t => t !== '');
-    logger.warn(inputset);
+    // logger.warn(inputset);
 
     const output: string[] = [];
     for await (const input of inputset) {
@@ -54,7 +54,7 @@ class DallETool extends Tool {
         resolution: '256x256',
       };
       const apiUrl = new URL(process.env.AZ_DALLE_URL);
-      logger.debug('calling ' + apiUrl.href);
+      //logger.debug('calling ' + apiUrl.href);
       try {
         let response = await axios({
           url: apiUrl.href,
@@ -64,12 +64,12 @@ class DallETool extends Tool {
         });
 
         if (response.status >= 400) {
-          console.log(response);
+          logger.warn(response);
           return "I don't know how to do that.";
         }
 
         let status = '';
-        console.log(response.headers);
+        //console.log(response.headers);
         const operation_location = response.headers['operation-location'];
         const retry_after = response.headers['retry-after'];
         while (status !== 'Succeeded') {
@@ -107,6 +107,10 @@ class DallETool extends Tool {
         logger.debug(`Blob was uploaded successfully.`);
 
         const rwurl = blockBlobClient.url.toLowerCase().replace(process.env.AZUPLOADHOST, `${process.env.APIROOT}/api/data/file?n=`);
+        blockBlobClient.setMetadata({
+          prompt: input,
+          sessionid: this.params.sessionid,
+        });
         output.push(rwurl);
       } catch (ex) {
         console.error(ex);

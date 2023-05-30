@@ -6,10 +6,9 @@ import { ConversationSummaryMemory } from 'langchain/memory';
 import { ChatOpenAI } from 'langchain/chat_models/openai';
 import { BaseChatPromptTemplate, BasePromptTemplate, SerializedBasePromptTemplate, renderTemplate } from 'langchain/prompts';
 import { AgentAction, AgentFinish, AgentStep, BaseChatMessage, HumanChatMessage, InputValues, PartialValues } from 'langchain/schema';
-import { BingSerpAPI, DynamicTool, Tool } from 'langchain/tools';
+import { BingSerpAPI, ChainTool, DynamicTool, Tool } from 'langchain/tools';
 import { Calculator } from 'langchain/tools/calculator';
 import { initializeAgentExecutorWithOptions } from 'langchain/agents';
-import { BaseLanguageModelParams } from 'langchain/dist/base_language';
 import { UnitConvertorTool } from './tools/unitconvertor';
 import { AzureOpenAI } from './AzureChatModel';
 import { format as formatDate } from 'date-fns';
@@ -187,7 +186,7 @@ export class BasicAgentChatModel implements IChatModel {
     });
     searchTool.name = 'bing';
     const calcTool = new Calculator();
-    const dalletool = new DallETool(process.env.AZ_DALLE_APIKEY, { userid: options?.user.id });
+    const dalletool = new DallETool(process.env.AZ_DALLE_APIKEY, { userid: options?.user.id, sessionid: options?.sessionid });
     calcTool.name = 'calculator';
     const filestore = new AzFileStore(`${options?.user.id}/store/${options?.sessionid}}`);
     const tools = [

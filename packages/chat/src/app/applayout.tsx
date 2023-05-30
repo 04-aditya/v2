@@ -27,6 +27,7 @@ import ForumIcon from '@mui/icons-material/Forum';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import InfoIcon from '@mui/icons-material/Info';
 import HistoryIcon from '@mui/icons-material/History';
+import FolderIcon from '@mui/icons-material/Folder';
 import {formatDistanceToNow, parseJSON} from 'date-fns';
 import useAuth from "psnapi/useAuth";
 import ChatSessionList, { ChatSessions } from "../components/ChatSessionList";
@@ -89,6 +90,14 @@ const DrawerContent = (dprops: any)=>{
           </Paper>
         </Collapse>
         <Divider/>
+        <ListItem disablePadding>
+          <ListItemButton onClick={()=>navigate('/files')}>
+            <ListItemIcon>
+              <FolderIcon/>
+            </ListItemIcon>
+            <ListItemText primary={'Files'} />
+          </ListItemButton>
+        </ListItem>
         <ListItem disablePadding>
           <ListItemButton onClick={dprops.colorMode.toggleColorMode}>
             <ListItemIcon>
