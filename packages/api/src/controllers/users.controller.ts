@@ -110,8 +110,10 @@ export class UsersController {
       const readPerms = req.permissions.filter(p => p.startsWith('user.read'));
       const canRead = await currentUser.canRead(matchedUser, readPerms);
       if (canRead === false) {
-        logger.warn(`user ${currentUser.email} does not have permission to read user ${matchedUser.email}}`);
-        throw new HttpError(403);
+        result.data = matchedUser.toJSON('basic');
+        return result;
+        // logger.warn(`user ${currentUser.email} does not have permission to read user ${matchedUser.email}}`);
+        // throw new HttpError(403);
       }
     }
     result.data = matchedUser.toJSON();
