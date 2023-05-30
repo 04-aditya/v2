@@ -82,51 +82,57 @@ export class AzureChatModel implements IChatModel {
       usage: { completion_tokens: 0, prompt_tokens: 0, total_tokens: 0 },
       options: {},
     };
-    let skippedcount = 0;
-    do {
-      let conv_history_tokens = this.counttokens(tinput);
-      while (conv_history_tokens > this.tokencontextlength - 500 && tinput.length > 3) {
-        logger.warn(`removing first message from input because it is too long (${conv_history_tokens} tokens)`);
-        tinput.splice(1, 1);
-        skippedcount += 1;
-        conv_history_tokens = this.counttokens(tinput);
-      }
+    try {
+      let skippedcount = 0;
+      do {
+        let conv_history_tokens = this.counttokens(tinput);
+        while (conv_history_tokens > this.tokencontextlength - 500 && tinput.length > 3) {
+          logger.warn(`removing first message from input because it is too long (${conv_history_tokens} tokens)`);
+          tinput.splice(1, 1);
+          skippedcount += 1;
+          conv_history_tokens = this.counttokens(tinput);
+        }
 
-      const client = getAzAPIClient(this.id);
-      const response = await client.post(`chat/completions?api-version=${this.api_versions[currentAzAPIClientIndex[this.id]]}`, {
-        n: options.n,
-        stream: false,
-        temperature: options.temperature,
-        max_tokens: options.max_tokens,
-        top_p: options.top_p,
-        presence_penalty: options.presence_penalty,
-        frequency_penalty: options.frequency_penalty,
-        stop: options.stop,
-        messages: tinput.map(m => ({
-          role: m.role,
-          content: m.content,
-        })),
-      });
-      if (response.status === 200) {
-        result.options = { skippedcount, finish_reason: response.data.choices[0].finish_reason };
-        result.content += response.data.choices[0].message.content;
-        result.usage.completion_tokens += response.data.usage.completion_tokens;
-        result.usage.prompt_tokens += response.data.usage.prompt_tokens;
-        result.usage.total_tokens += response.data.usage.total_tokens;
-      }
-      if (result.options.finish_reason === 'length') {
-        logger.info(`continuing previous message...`);
-        logger.debug(result);
-        tinput.push({
-          role: 'assistant',
-          content: result.content,
+        const client = getAzAPIClient(this.id);
+        const response = await client.post(`chat/completions?api-version=${this.api_versions[currentAzAPIClientIndex[this.id]]}`, {
+          n: options.n,
+          stream: false,
+          temperature: options.temperature,
+          max_tokens: options.max_tokens,
+          top_p: options.top_p,
+          presence_penalty: options.presence_penalty,
+          frequency_penalty: options.frequency_penalty,
+          stop: options.stop,
+          messages: tinput.map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
         });
-        tinput.push({
-          role: 'user',
-          content: 'continue',
-        });
-      }
-    } while (result.options.finish_reason === 'length');
+        if (response.status === 200) {
+          result.options = { skippedcount, finish_reason: response.data.choices[0].finish_reason };
+          result.content += response.data.choices[0].message.content;
+          result.usage.completion_tokens += response.data.usage.completion_tokens;
+          result.usage.prompt_tokens += response.data.usage.prompt_tokens;
+          result.usage.total_tokens += response.data.usage.total_tokens;
+        }
+        if (result.options.finish_reason === 'length') {
+          logger.info(`continuing previous message...`);
+          logger.debug(result);
+          tinput.push({
+            role: 'assistant',
+            content: result.content,
+          });
+          tinput.push({
+            role: 'user',
+            content: 'continue',
+          });
+        }
+      } while (result.options.finish_reason === 'length');
+    } catch (ex) {
+      console.log(ex);
+      logger.error(ex);
+      result.content = 'Unable to call the LLM model. please try again.';
+    }
     return result;
   }
 
