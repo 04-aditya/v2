@@ -358,8 +358,8 @@ export class ChatController {
       logger.debug(`\n\tname: ${blob.name}\n\tURL: ${tempBlockBlobClient.url}\n`);
       const props = await tempBlockBlobClient.getProperties();
       // logger.debug(props);
-      const name = decodeURI(tempBlockBlobClient.url.toLowerCase().replace(process.env.AZUPLOADHOST + `${currentUser.id}/${fileType}/`, ''));
-      const url = tempBlockBlobClient.url.toLowerCase().replace(process.env.AZUPLOADHOST, `${process.env.APIROOT}/api/data/file?n=`);
+      const name = decodeURI(tempBlockBlobClient.url.replace(process.env.AZUPLOADHOST + `${currentUser.id}/${fileType}/`, ''));
+      const url = tempBlockBlobClient.url.replace(process.env.AZUPLOADHOST, `${process.env.APIROOT}/api/data/file?n=`);
       result.data.push({
         name,
         url,

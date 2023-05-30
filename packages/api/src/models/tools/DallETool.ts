@@ -106,7 +106,7 @@ class DallETool extends Tool {
         await blockBlobClient.syncUploadFromURL(image_url);
         logger.debug(`Blob was uploaded successfully.`);
 
-        const rwurl = blockBlobClient.url.toLowerCase().replace(process.env.AZUPLOADHOST, `${process.env.APIROOT}/api/data/file?n=`);
+        const rwurl = blockBlobClient.url.replace(process.env.AZUPLOADHOST, `${process.env.APIROOT}/api/data/file?n=`);
         blockBlobClient.setMetadata({
           prompt: input,
           sessionid: this.params.sessionid,

@@ -1,13 +1,13 @@
-import React from 'react';
-import { Box, Card, CardActions, CardContent, CardHeader, CardMedia, Divider, Grid, LinearProgress, Paper, Skeleton, Typography } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Button, Card, CardActions, CardContent, CardHeader, CardMedia, Divider, Grid, LinearProgress, Paper, Skeleton, Stack, Typography } from '@mui/material';
 import styles from './files-page.module.css';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import DriveFolderUploadIcon from '@mui/icons-material/DriveFolderUpload';
 import PermMediaIcon from '@mui/icons-material/PermMedia';
 import { useChatFiles } from '../../api/chat';
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { format, parseISO, set } from 'date-fns';
+import { DataGrid, GridColDef, GridRenderCellParams, GridRowSelectionModel, GridCallbackDetails} from '@mui/x-data-grid';
+import { format, parseISO, } from 'date-fns';
 import ImageList from '@mui/material/ImageList';
 import ImageListItem from '@mui/material/ImageListItem';
 import ImageListItemBar from '@mui/material/ImageListItemBar';
@@ -53,13 +53,37 @@ const columns: GridColDef[] = [
     renderCell:(params:GridRenderCellParams<Date>)=><a href={params.value}>{params.value}</a> },
 ]
 function ChatFileList() {
+  const axios = useAxiosPrivate();
   const [paginationModel, setPaginationModel] = React.useState({
     pageSize: 25,
     page: 0,
   });
-  const {data: files} = useChatFiles('file',paginationModel.pageSize*paginationModel.page, paginationModel.pageSize);
+  const {data: files, invalidateCache} = useChatFiles('file',paginationModel.pageSize*paginationModel.page, paginationModel.pageSize);
+  const [selectedFiles, setSelectedFiles] = useState<Array<any>>([]);
+  useEffect(()=> setSelectedFiles([]), [files])
+  const onRowSelectionModelChange = (rowSelectionModel: GridRowSelectionModel, details: GridCallbackDetails) => {
+    if (!files) return;
+    setSelectedFiles([...rowSelectionModel].map(i=>files[i as number]))
+  }
 
-  return <Box>
+  const onDelete = async ()=>{
+    for await (const file of selectedFiles) {
+      try {
+        console.log('Deleting: ' + file.url);
+        const ar = await axios.delete(file.url);
+      } catch (ex) {
+        console.log('Error deleting: ' + file.url);
+        console.log(ex);
+      }
+    }
+    invalidateCache();
+  }
+
+  return <Box sx={{width:'100%', minHeight:100}}>
+    <Stack direction="row" spacing={1}>
+      <Button onClick={onDelete} disabled={selectedFiles.length===0}>Delete</Button>
+    </Stack>
+    <Divider/>
     {files?<div style={{ height: '100%', width: '100%' }}>
       <DataGrid
         rows={files.map((f,i)=>({...f, id: i}))}
@@ -72,10 +96,13 @@ function ChatFileList() {
         paginationModel={paginationModel}
         onPaginationModelChange={setPaginationModel}
         checkboxSelection
+        disableRowSelectionOnClick
+        onRowSelectionModelChange={onRowSelectionModelChange}
       />
     </div>:<LinearProgress/>}
   </Box>;
 }
+
 function ChatImagesList() {
   const axios = useAxiosPrivate();
   const navigate = useNavigate();
@@ -88,8 +115,8 @@ function ChatImagesList() {
       setDeletedFiles([...deletedFiles, url]);
     }
   }
-  return <Box sx={{display:'flex', flexWrap:'wrap', flexDirection:'row'}}>
-    {isLoading?<LinearProgress/>:null}
+  return <Box sx={{display:'flex', flexWrap:'wrap', flexDirection:'row', width:'100%'}}>
+    {isLoading?<LinearProgress sx={{width:'100%'}}/>:null}
     {files?.map((item) =>deletedFiles.indexOf(item.url)===-1?<Card key={item.url} sx={{ maxWidth: 345, m:1 }} elevation={4}
       onClick={()=>(item.metadata.sessionid?navigate(`/chat/${item.metadata.sessionid}`):null)}>
       <CardMedia

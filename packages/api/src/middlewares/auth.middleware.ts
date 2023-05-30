@@ -11,9 +11,15 @@ import { UserPATEntity } from '@/entities/userpat.entity';
 import { Like } from 'typeorm';
 
 const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFunction) => {
+  const result: any = await validateAuth(req);
+  if (result[0] === 200) return next();
+  return res.status(result[0]).send(result[1]);
+};
+
+export const validateAuth = async (req: RequestWithUser) => {
   try {
     const Authorization = req.cookies['Authorization'] || (req.header('Authorization') ? req.header('Authorization').split('Bearer ')[1] : null);
-    if (!Authorization) return res.status(403).send('Authentication token missing');
+    if (!Authorization) return [403, 'Authentication token missing'];
 
     const secretKey: string = ACCESS_TOKEN_SECRET;
     const verificationResponse = (await verify(Authorization, secretKey)) as DataStoredInToken;
@@ -36,7 +42,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
           milliseconds: 30 * 60 * 1000, // 30 minutes
         },
       });
-      if (userPAT.user.id !== userId) return res.status(401).send('Invalid token');
+      if (userPAT.user.id !== userId) return [401, 'Invalid token'];
       matchedUser = userPAT.user;
       userPAT.lastUsedAt = new Date();
       userPAT.save();
@@ -56,7 +62,7 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
         },
       });
 
-      if (!matchedUser) return res.status(401).send('Invalid token');
+      if (!matchedUser) return [401, 'Invalid token'];
       req.accessToken = Authorization;
     }
 
@@ -69,13 +75,13 @@ const authMiddleware = async (req: RequestWithUser, res: Response, next: NextFun
 
     // req.permissions.forEach(p => console.log(p));
 
-    next();
+    return [200, ''];
   } catch (error) {
     if (isInstance(error, TokenExpiredError)) {
-      return res.status(412).send('Token Expired');
+      return [412, 'Token Expired'];
     }
     logger.error(JSON.stringify(error));
-    return res.status(401).send('Invalid token');
+    return [401, 'Invalid token'];
   }
 };
 

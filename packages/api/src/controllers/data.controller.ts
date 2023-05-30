@@ -1,10 +1,11 @@
 import { UserEntity } from '@/entities/user.entity';
-import authMiddleware from '@/middlewares/auth.middleware';
+import { RequestWithUser } from '@/interfaces/auth.interface';
+import authMiddleware, { validateAuth } from '@/middlewares/auth.middleware';
 import { logger } from '@/utils/logger';
 import { BlobServiceClient } from '@azure/storage-blob';
-import { Authorized, Controller, CurrentUser, Delete, Get, HttpError, QueryParam, Res, UseBefore } from 'routing-controllers';
+import { Response } from 'express';
+import { Authorized, Controller, CurrentUser, Delete, Get, HttpError, QueryParam, Req, Res, UseBefore } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
-import { Http } from 'winston/lib/winston/transports';
 
 @Controller('/api/data')
 export class DataController {
@@ -47,31 +48,38 @@ export class DataController {
 
   @Delete('/file')
   @OpenAPI({ summary: 'Delete a file by name' })
-  @UseBefore(authMiddleware)
-  async deleteFile(@QueryParam('n') name: string, @CurrentUser() user: UserEntity) {
+  async deleteFile(@QueryParam('n') name: string, @Req() req: RequestWithUser) {
+    const vres: any = await validateAuth(req);
+    if (vres[0] !== 200) throw new HttpError(vres[0], vres[1]);
+
+    if (name.startsWith(`${req.user.id}/`) === false) {
+      throw new HttpError(403);
+    }
+
     const AZURE_STORAGE_CONNECTION_STRING = process.env.AZCONNSTR;
 
     if (!AZURE_STORAGE_CONNECTION_STRING) {
       logger.error('Azure Storage Connection string not found');
     }
+    try {
+      // Create the BlobServiceClient object with connection string
+      const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+      const containerClient = blobServiceClient.getContainerClient(process.env.AZUPLOADCONTAINER);
+      // Create a unique name for the blob
+      const blobName = `${name}`;
 
-    // Create the BlobServiceClient object with connection string
-    const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
-    const containerClient = blobServiceClient.getContainerClient(process.env.AZUPLOADCONTAINER);
+      // Get a block blob client
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    if (name.startsWith(`${user.id}/`) === false) {
-      throw new HttpError(403, 'Unauthorized');
+      // Display blob name and url
+      logger.debug(`Deleting file from Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`);
+
+      await blockBlobClient.delete();
+      return 'ok';
+    } catch (ex) {
+      console.log(ex);
+      logger.error(ex);
+      throw new HttpError(500, 'Internal Server Error');
     }
-    // Create a unique name for the blob
-    const blobName = `${name}`;
-
-    // Get a block blob client
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-
-    // Display blob name and url
-    logger.debug(`Deleting file from Azure storage as blob\n\tname: ${blobName}:\n\tURL: ${blockBlobClient.url}`);
-
-    blockBlobClient.delete();
-    return 'ok';
   }
 }
