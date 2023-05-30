@@ -122,7 +122,7 @@ export function ChatSessionPage(props: ChatSessionPageProps) {
         let i=0;
         while(i<lastmsg.content.length) {
           if (i<lastmsg.content.length-4) {
-            const wl = 2+Math.round(Math.random()*4);
+            const wl = 4+Math.round(Math.random()*8);
             words.push(lastmsg.content.substring(i,i+wl));
             i+=wl;
           } else {
