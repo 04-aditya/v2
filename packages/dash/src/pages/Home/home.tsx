@@ -27,7 +27,7 @@ export function Home(props: HomeProps) {
         </Row>
         <Row justifyContent={'center'}>
           <Typography variant="h4" gutterBottom component="div">
-            PS Next (Our data driven future...)
+            PS Next (Our data driven futur...)
           </Typography>
         </Row>
         {/* <Typography variant="h1" component="div" gutterBottom>
