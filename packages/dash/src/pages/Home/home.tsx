@@ -30,7 +30,7 @@ export function Home(props: HomeProps) {
         </Row>
         <Row justifyContent={'center'}>
           <Typography variant="h4" gutterBottom component="div">
-            PS Next (Our data driven fute...)
+            PS Next (Our data driven future...)
           </Typography>
         </Row>
         <AddWidget
