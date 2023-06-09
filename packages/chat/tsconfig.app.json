@@ -12,7 +12,9 @@
     "src/components/TermsNotice.tsx",
     "src/components/ModelParameters.tsx",
     "src/components/UserAvatar.tsx",
-    "src/components/MarkDown.tsx"
+    "src/components/MarkDown.tsx",
+    "src/components/ChatImagesList.tsx",
+    "./src/pages/files-page/ChatFileList.tsx"
   ],
   "exclude": [
     "jest.config.ts",
