@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 RUN apk add dumb-init
 USER node
 COPY --chown=node:node dist/packages/api /usr/psnextv2/api
