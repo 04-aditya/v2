@@ -6,23 +6,26 @@ import styles from './home.module.scss';
 import { useEffect } from 'react';
 import { useUser } from 'psnapi/users';
 import { Row } from '@/components/RowColumn';
+import useAuth from '@/../../shared/psnapi/src/useAuth';
+import { AddWidget } from '@ps-next/ps-next-widgets';
 
 /* eslint-disable-next-line */
 export interface HomeProps {}
 
 export function Home(props: HomeProps) {
-  const {data:user} = useUser()
+  const auth = useAuth();
+  const { data: user } = useUser();
   useEffect(() => {
-    appstateDispatch({type:'title', data:'Home - PSNext'});
+    appstateDispatch({ type: 'title', data: 'Home - PSNext' });
   }, []);
 
   return (
     <div className={styles['container']}>
-      <Outlet/>
+      <Outlet />
       <Container>
         <Row justifyContent={'center'}>
           <Typography variant="h1" component="div" gutterBottom>
-              Welcome
+            Welcome
           </Typography>
         </Row>
         <Row justifyContent={'center'}>
@@ -30,6 +33,16 @@ export function Home(props: HomeProps) {
             PS Next (Our data driven future...)
           </Typography>
         </Row>
+        <AddWidget
+          apiKey={auth.auth.accessToken ? auth.auth.accessToken : ''}
+          apiurl="http://localhost:3000"
+          filters={{
+            maxDate: new Date().toISOString(),
+            minDate: '2000-12-31T05:30:00.000Z',
+            usergroups: 'org:Team',
+          }}
+          id="AW1"
+        />
         {/* <Typography variant="h1" component="div" gutterBottom>
           h1. Heading
         </Typography>
