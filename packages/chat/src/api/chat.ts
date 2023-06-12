@@ -65,7 +65,8 @@ export function useChatContexts(modelid: string) {
   const keys = [CACHEKEY, 'model', modelid, 'contexts'];
   const query = useQuery<IChatContext[], AxiosError>(keys, async ()=>{
     const res = await axios.get(`${CHATAPI}/models/${modelid}/contexts`);
-    return res.data.data as IChatContext[];
+    const ctxs = res.data.data as IChatContext[];
+    return ctxs.sort((a,b)=>a.name.localeCompare(b.name)).sort((a,b)=>a.enabled===b.enabled?0:a.enabled?-1:1);
   },{
     enabled: !!axios && modelid!=='',
     staleTime:  5 * 60 * 1000 // 5 minute
