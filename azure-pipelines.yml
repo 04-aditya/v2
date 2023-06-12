@@ -50,6 +50,8 @@ stages:
       inputs:
         versionSpec: '18.x'
     - script: |
+        npm config set @ps-next:registry https://pscode.lioncloud.net/api/v4/projects/24769/packages/npm/
+        npm config set -- '//pscode.lioncloud.net/api/v4/projects/24769/packages/npm/:_authToken' "$(PSNEXTREGISTRYTOKEN)"
         npm i -g nx
         npm i --legacy-peer-deps
       displayName: 'Install modules'
