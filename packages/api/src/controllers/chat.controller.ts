@@ -36,6 +36,7 @@ import crypto from 'crypto';
 import AsyncTask, { updateFn } from '@/utils/asyncTask';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { BingAPI } from '@/models/tools/BingAPI';
+import { SlidingCounter } from '@/utils/redisInstance';
 
 @JsonController('/api/chat')
 @UseBefore(authMiddleware)
@@ -501,6 +502,16 @@ export class ChatController {
       return result;
     }
 
+    const modelid = (options.model || (sessionid_param ? session.options.model : 'gpt35turbo')) as string;
+
+    const slkey = `${currentUser.id}.${modelid}.count`;
+    await SlidingCounter.increment(slkey, 3600);
+    const slcount = await SlidingCounter.count(slkey);
+
+    if (slcount > 25) {
+      throw new HttpError(429, 'Too many requests. Limit 25 per hour.');
+    }
+
     //if session is is not specified create a new session
     if (!sessionid_param) {
       session.name = name_param || message.substring(0, 45);
@@ -508,7 +519,6 @@ export class ChatController {
       session.messages = [];
     }
 
-    const modelid = (options.model || (sessionid_param ? session.options.model : 'gpt35turbo')) as string;
     const model = (await ModelFactory.models()).get(modelid);
     const contexts = options.contexts || (sessionid_param ? session.options.contexts : []);
     session.options = { ...session.options, model: modelid, contexts };
