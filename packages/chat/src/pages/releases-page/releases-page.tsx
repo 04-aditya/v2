@@ -23,6 +23,11 @@ export function ReleasesPage(props: ReleasesPageProps) {
             `\t![PAT tab](/assets/releases/pat.png)\n\n` +
             `\n\n`
           }/>
+        <ReleaseInfo date={'2023-06-10'} content={
+            ` * Enabled File &amp; Image managements. \n\n` +
+            `\t![images](/assets/releases/file_images.png)\n\n` +
+            `\n\n`
+          }/>
         <ReleaseInfo date={'2023-05-28'} content={
             ` * Added GPT4 model option. \n\n` +
             `\t![gpt4 model option](/assets/releases/gpt4.png)\n\n` +

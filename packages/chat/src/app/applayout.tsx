@@ -163,8 +163,6 @@ export default function AppLayout(props: Props) {
       onClose={handleMenuClose}
     >
       <MenuItem ><LogoutButton onClick={handleMenuClose}>Logout</LogoutButton></MenuItem>
-      <Divider/>
-      <MenuItem >API Access</MenuItem>
     </Menu>
   );
 
