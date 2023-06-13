@@ -288,6 +288,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
             parameters,
           },
           message: newMessage.trimEnd(),
+          async: true,
         },{
           onSuccess: (response: APIResponse<IChatSession>)=>{
             if (!response.qid) {

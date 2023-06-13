@@ -35,6 +35,7 @@ import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import LogoutButton from "sharedui/components/LogoutButton";
 import { AboutDialog } from "../components/AboutDialog";
 import { UserAvatar } from "../components/UserAvatar";
+import DeveloperModeIcon from '@mui/icons-material/DeveloperMode';
 
 const drawerWidth = 280;
 
@@ -99,6 +100,14 @@ const DrawerContent = (dprops: any)=>{
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
+          <ListItemButton onClick={()=>navigate('/devsettings')}>
+            <ListItemIcon>
+              <DeveloperModeIcon/>
+            </ListItemIcon>
+            <ListItemText primary={'Developer'} />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
           <ListItemButton onClick={dprops.colorMode.toggleColorMode}>
             <ListItemIcon>
               {dprops.mode==='dark'?<LightModeIcon/>:<DarkModeIcon/>}
@@ -154,6 +163,8 @@ export default function AppLayout(props: Props) {
       onClose={handleMenuClose}
     >
       <MenuItem ><LogoutButton onClick={handleMenuClose}>Logout</LogoutButton></MenuItem>
+      <Divider/>
+      <MenuItem >API Access</MenuItem>
     </Menu>
   );
 

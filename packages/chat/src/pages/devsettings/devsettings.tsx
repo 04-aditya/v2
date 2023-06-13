@@ -11,17 +11,16 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { Checkbox, FormControlLabel, FormLabel, Grid, List, ListItem, ListItemButton, ListItemIcon, ListItemText, MenuItem, Paper, Stack, Switch, TextField } from '@mui/material';
-import { appstateDispatch } from 'sharedui/hooks/useAppState';
 import { IPermission, IUserPAT } from 'sharedtypes';
 import { useUserPATs, useUserPermissions } from 'psnapi/users';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { formatDistanceToNow, parseJSON } from 'date-fns';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import { ClipCopyButton } from '@/components/ClipCopyButton';
+import { ClipCopyButton } from 'sharedui/components/ClipCopyButton';
 import GppMaybeIcon from '@mui/icons-material/GppMaybe';
 import { Row } from 'sharedui/components/RowColumn';
-import { addDays } from 'date-fns';
 import { TabPanel, a11yProps } from 'sharedui/components/TabPanel';
+import { MarkDown } from '../../components/MarkDown';
 
 
 type PATFormSchema = {
@@ -32,9 +31,14 @@ type PATFormSchema = {
 
 function GeneratePAT({onSuccess}:{onSuccess:(pat:IUserPAT)=>void}) {
   const axios = useAxiosPrivate();
-  const {data: permissions} = useUserPermissions();
+  const {data: allpermissions} = useUserPermissions();
   const [open, setOpen] = React.useState(false);
   const [selectedPerms, setSelectedPerms] = React.useState<IPermission[]>([]);
+
+  const permissions = useMemo(()=>{
+    if (!allpermissions) return [];
+    return allpermissions.filter(p => p.name.startsWith('chat'));
+  }, [allpermissions]);
 
   const { control, handleSubmit, formState } = useForm<PATFormSchema>({
     defaultValues:{
@@ -173,14 +177,23 @@ function GeneratePAT({onSuccess}:{onSuccess:(pat:IUserPAT)=>void}) {
 /* eslint-disable-next-line */
 export interface DevSettingsProps {}
 
-export function DevSettings(props: DevSettingsProps) {
+export default function DevSettings(props: DevSettingsProps) {
   const axios = useAxiosPrivate();
   const [tabValue, setTabValue] = React.useState(0);
-  const {data, invalidateCache} = useUserPATs();
+  const {data:allPATS, invalidateCache} = useUserPATs();
   const [newPATs, setNewPATs] = React.useState<IUserPAT[]>([]);
-  useEffect(() => {
-    appstateDispatch({type:'title', data:'Developer Settings - PSNext'});
-  }, []);
+  const [examples, setExamples] = React.useState('');
+
+  useEffect(()=>{
+    fetch('/assets/examples.md')
+      .then(res=>res.text())
+      .then(txt=>setExamples(txt));
+  },[])
+
+  const exPATS:IUserPAT[] = useMemo(()=>{
+    if (!allPATS) return [];
+    return allPATS.filter(p=>p.permissions.filter(n=>n.startsWith('chat.')).length>0);
+  },[allPATS]);
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -189,7 +202,7 @@ export function DevSettings(props: DevSettingsProps) {
   const onCreateNewPAT = (data: IUserPAT) => {
     console.log(data);
     setNewPATs(pats=>{
-      return [data, ...pats];
+      return [data, ...pats,];
     })
   }
 
@@ -201,19 +214,21 @@ export function DevSettings(props: DevSettingsProps) {
   }
 
   return (
-    <Box sx={{m:2}}>
+    <Paper elevation={2} className='scrollbarv'
+      sx={{display:'flex', height:'100%', flexDirection:'column', p:{xs:0, sm:1}}}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabValue} onChange={handleChange} aria-label="basic tabs example">
           <Tab label="Personal access tokens" {...a11yProps('devsettings', 0)} />
-          <Tab label="Activity" {...a11yProps('devsettings', 1)} />
+          <Tab label="Documentation" {...a11yProps('devsettings', 1)} />
         </Tabs>
       </Box>
       <TabPanel value={tabValue} index={0} idprefix={'devsettings'}>
         <GeneratePAT onSuccess={onCreateNewPAT}/> <Button color='error' size='small'>Revoke all</Button>
         <hr/>
-        <Typography variant='body1'>Tokens you have generated that can be used to access the <a href={`${process.env['NX_API_URL']}/api-docs`} target='blank'>PSNext API</a>.</Typography>
+        <Typography variant='body1'>Tokens you have generated that can be used to access the <a href={`${process.env['NX_API_URL']}/chatapi-docs`} target='blank'>PSChat API</a>.</Typography>
+        <Typography variant='body2'>Note: the api calls are currently restricted to <strong>25</strong> per hour per model.</Typography>
         <Paper elevation={0} sx={{display:'flex', flexDirection:'column', justifyContent:'stretch', alignItems:'center'}}>
-          {[...newPATs, ...(data||[])].map(t=><Grid key={t.id} container spacing={1}>
+          {[...newPATs, ...(exPATS||[])].map(t=><Grid key={t.id} container spacing={1}>
             <Grid item xs={12}>
               <Row sx={{p:1}} justifyContent='space-between'>
                 <Row>
@@ -247,10 +262,12 @@ export function DevSettings(props: DevSettingsProps) {
         </Paper>
       </TabPanel>
       <TabPanel value={tabValue} index={1} idprefix={'devsettings'}>
-        <Typography variant='h6'>App Activity</Typography>
+        <Box >
+          <MarkDown>
+            {examples}
+          </MarkDown>
+        </Box>
       </TabPanel>
-    </Box>
+    </Paper>
   );
 }
-
-export default DevSettings;

@@ -35,7 +35,7 @@ export function Home(props: HomeProps) {
         </Row>
         <AddWidget
           apiKey={auth.auth.accessToken ? auth.auth.accessToken : ''}
-          apiurl="http://localhost:3000"
+          apiurl={process.env['NX_API_URL']||''}
           filters={{
             maxDate: new Date().toISOString(),
             minDate: '2000-12-31T05:30:00.000Z',

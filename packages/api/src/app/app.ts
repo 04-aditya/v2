@@ -18,6 +18,7 @@ import { bootstrapDB } from '../databases/bootstrapdb';
 import { HttpErrorHandler } from '@/utils/HttpErrorHandler';
 import promClient from 'prom-client';
 import path from 'path';
+import { ChatController } from '@/controllers/chat.controller';
 class App {
   public app: express.Application;
   public env: string;
@@ -150,6 +151,42 @@ class App {
     });
 
     this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(spec));
+
+    const chatroutingControllersOptions = {
+      controllers: [ChatController],
+    };
+
+    const cstorage = getMetadataArgsStorage();
+    const chatspec = routingControllersToSpec(cstorage, chatroutingControllersOptions, {
+      components: {
+        //schemas: { ...schemas },
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        },
+      },
+      security: [{ bearerAuth: [] }],
+      info: {
+        description: 'API endpoints for PSChat',
+        title: 'PSChat API',
+        version: '0.2.0',
+      },
+    });
+
+    for (const p in chatspec.paths) {
+      if (p.startsWith('/api/chat') === false) {
+        delete chatspec.paths[p];
+      }
+    }
+
+    this.app.use('/chatopenapi.json', (_req, res) => {
+      res.json(chatspec);
+    });
+
+    this.app.use('/chatapi-docs', swaggerUi.serve, swaggerUi.setup(chatspec));
 
     this.app.get('/metrics', async (req, res) => {
       res.setHeader('Content-Type', this.register.contentType);
