@@ -17,6 +17,12 @@ export function ReleasesPage(props: ReleasesPageProps) {
         {/* <ReleaseInfo date={'**Date**'} content={'**Description**'}/>
         <Divider/> */}
         <Box sx={theme=>({maxHeight:'600px', p:3})} className='scrollbarv'>
+        <ReleaseInfo date={'2023-06-13'} content={
+            ` * Enabled API access option. \n\n` +
+            `\t![developer](/assets/releases/developer.png)\n\n` +
+            `\t![PAT tab](/assets/releases/pat.png)\n\n` +
+            `\n\n`
+          }/>
         <ReleaseInfo date={'2023-05-28'} content={
             ` * Added GPT4 model option. \n\n` +
             `\t![gpt4 model option](/assets/releases/gpt4.png)\n\n` +

@@ -565,6 +565,7 @@ export class ChatController {
       session.name = name_param || message.substring(0, 45);
       session.userid = currentUser.email;
       session.messages = [];
+      session.options = { source: options.source || 'api' };
     }
 
     const model = (await ModelFactory.models()).get(modelid);
@@ -593,7 +594,7 @@ export class ChatController {
     newMessage.content = message;
     newMessage.role = 'user';
     newMessage.index = messages.length;
-    newMessage.options = { model: modelid, contexts, web: options.web };
+    newMessage.options = { model: modelid, contexts, web: options.web, source: options.source || 'api' };
     messages.push(newMessage);
 
     const calloptions: Record<string, any> = {

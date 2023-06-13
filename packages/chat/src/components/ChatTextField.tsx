@@ -286,6 +286,7 @@ export function ChatTextField(props: ChatTextFieldProps) {
             assistant: options.assistant,
             contexts: options.contexts,
             parameters,
+            source: 'pschat',
           },
           message: newMessage.trimEnd(),
           async: true,
