@@ -7,7 +7,7 @@ In all the examples below ensure that we have the access token set as environmen
 Get a list of models
 ```bash
 
-$ curl -H "Authorization: Bearer $PSCHATACCESSTOKEN" http://localhost:3000/api/chat/models
+$ curl -H "Authorization: Bearer $PSCHATACCESSTOKEN" https://api.psnext.info/api/chat/models
 ```
 
 output
@@ -29,7 +29,7 @@ Create a new chat session and get a response
 $ curl -H "Authorization: Bearer $PSCHATACCESSTOKEN"  --header "Content-Type: application/json" \
   --request POST \
   --data '{"message":"Give a example of POST call using curl","options": {"model": "gpt35turbo"}}' \
-  http://localhost:3000/api/chat
+  https://api.psnext.info/api/chat
 ```
 
 output
