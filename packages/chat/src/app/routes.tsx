@@ -43,6 +43,9 @@ const PrivacyPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Pr
 const Files = React.lazy(() => import("../pages/files-page/files-page"));
 const FilesPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><Files/></React.Suspense>
 
+const DevSettings = React.lazy(() => import("../pages/devsettings/devsettings"));
+const DevSettingsPage = ()=><React.Suspense fallback={<PageLoadingPlaceholder/>}><DevSettings/></React.Suspense>
+
 const routeMap:RouteMap = {
   path: '/',
   element:<AppLayout/>,
@@ -63,6 +66,7 @@ const routeMap:RouteMap = {
         {index:true, path:'/', element:<HomePage/>},
         {path:'/chat/:chatId', element:<ChatSessionPage/>},
         {path:'/files', element:<FilesPage/>},
+        {path:'/devsettings', element:<DevSettingsPage/>},
       ],
     },
   ],

@@ -25,7 +25,7 @@ import {
   ForbiddenError,
 } from 'routing-controllers';
 import { Not, MoreThan, Equal, And } from 'typeorm';
-import { OpenAPI } from 'routing-controllers-openapi';
+import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
 import { ChatSessionEntity } from '@/entities/chatsession.entity';
 import { ChatMessageEntity } from '@/entities/chatmessage.entity';
 import { UserDataEntity } from '@/entities/userdata.entity';
@@ -37,13 +37,40 @@ import AsyncTask, { updateFn } from '@/utils/asyncTask';
 import { BlobServiceClient } from '@azure/storage-blob';
 import { BingAPI } from '@/models/tools/BingAPI';
 import { SlidingCounter } from '@/utils/redisInstance';
+import { JSONSchema } from 'class-validator-jsonschema';
 
 @JsonController('/api/chat')
 @UseBefore(authMiddleware)
 export class ChatController {
   static readonly CHATFAVOURITEKEY = 'chatfavourite';
   @Get('/models')
-  @OpenAPI({ summary: 'Return the chat models for the current user' })
+  @OpenAPI({
+    summary: 'Returns a available LLM models for the current user',
+    responses: {
+      200: {
+        description: `Returns a array of the LLM models for the current user,
+        \nexample:\n\n
+        {
+          data: [
+            {
+              "id": "gpt35turbo",
+              "name": "GPT 3.5 Turbo",
+              "group": "Standard",
+              "enabled": true,
+              tokencontextlength: 4097,
+            },
+            {
+              name: 'modelid2',
+              group: 'groupname',
+              enabled: true,
+              tokencontextlength: 4097,
+            },
+          ],
+        }`,
+      },
+      403: { description: 'Unauthorized' },
+    },
+  })
   async getChatModels(@CurrentUser() currentUser: UserEntity) {
     if (!currentUser) throw new HttpException(403, 'Unauthorized');
     const result = new APIResponse<IChatModel[]>();
@@ -57,7 +84,27 @@ export class ChatController {
   }
 
   @Get('/models/:modelid/contexts')
-  @OpenAPI({ summary: 'get chat contexts for the specified model' })
+  @OpenAPI({
+    summary: 'get chat contexts for the specified model',
+    responses: {
+      200: {
+        description: `array of contexts available for the given modelid.
+        \nexample\n\n
+        {
+          data:[{
+            "id": "data_coe_f3b54921_db1d_48b4_ad77_f43b126a4e4c",
+            "name": "Data CoE Confluence content",
+            "description": "Use this tool for any information about Data CoE Community Center of Excellence, Partnerships with companies, Competencies for Data Analytics, Engineering and Data Science, Sudhan Sudharsan",
+            "enabled": true
+          }],
+        }
+        `,
+      },
+      403: {
+        description: 'Unauthorized',
+      }
+    },
+  })
   async getContext(@Param('modelid') modelId) {
     const result = new APIResponse<IChatContext[]>();
     try {
@@ -72,43 +119,43 @@ export class ChatController {
     return result;
   }
 
-  @Post('/models/:modelid/contexts')
-  @OpenAPI({ summary: 'Create a new chat context for the specified model' })
-  async createContext(
-    @Param('modelid') modelid: string,
-    @CurrentUser() currentUser,
-    @BodyParam('name') name: string,
-    @BodyParam('description') description?: string,
-  ) {
-    const result = new APIResponse<IChatContext>();
-    if (modelid !== 'psbodhi') throw new HttpException(400, `Model ${modelid} not supported.`);
-    try {
-      const newcontext = {
-        id: `${modelid}-${name}-${crypto.randomBytes(6).toString('hex')}`,
-        name,
-        description,
-        enabled: true,
-        metadata: JSON.stringify({
-          userid: currentUser.id,
-        }),
-      };
+  // @Post('/models/:modelid/contexts')
+  // @OpenAPI({ summary: 'Create a new chat context for the specified model' })
+  // async createContext(
+  //   @Param('modelid') modelid: string,
+  //   @CurrentUser() currentUser,
+  //   @BodyParam('name') name: string,
+  //   @BodyParam('description') description?: string,
+  // ) {
+  //   const result = new APIResponse<IChatContext>();
+  //   if (modelid !== 'psbodhi') throw new HttpException(400, `Model ${modelid} not supported.`);
+  //   try {
+  //     const newcontext = {
+  //       id: `${modelid}-${name}-${crypto.randomBytes(6).toString('hex')}`,
+  //       name,
+  //       description,
+  //       enabled: true,
+  //       metadata: JSON.stringify({
+  //         userid: currentUser.id,
+  //       }),
+  //     };
 
-      const ar = await axios.post(`${process.env['PSBODHI_URL']}/contexts`, newcontext, {
-        headers: {
-          'access-token': process.env['PSBODHI_KEY'],
-          'Content-Type': 'application/json',
-        },
-        timeout: 60000,
-      });
+  //     const ar = await axios.post(`${process.env['PSBODHI_URL']}/contexts`, newcontext, {
+  //       headers: {
+  //         'access-token': process.env['PSBODHI_KEY'],
+  //         'Content-Type': 'application/json',
+  //       },
+  //       timeout: 60000,
+  //     });
 
-      result.data = ar.data;
-    } catch (ex) {
-      console.log(ex);
-      logger.error(JSON.stringify(ex));
-      throw new HttpError(500);
-    }
-    return result;
-  }
+  //     result.data = ar.data;
+  //   } catch (ex) {
+  //     console.log(ex);
+  //     logger.error(JSON.stringify(ex));
+  //     throw new HttpError(500);
+  //   }
+  //   return result;
+  // }
 
   @Get('/commands')
   @OpenAPI({ summary: 'Return the chat commands for the current user' })
@@ -448,6 +495,7 @@ export class ChatController {
     @BodyParam('tags') tags_param?: string[],
     @BodyParam('type') type_param?: string,
     @BodyParam('messageid') messageid_param?: number,
+    @BodyParam('async') async_param?: boolean,
     // @BodyParam('model') model_param?: string,
     // @BodyParam('assistant') assistant_param?: string,
     // @BodyParam('contexts') contexts_param?: string[],
@@ -517,6 +565,7 @@ export class ChatController {
       session.name = name_param || message.substring(0, 45);
       session.userid = currentUser.email;
       session.messages = [];
+      session.options = { source: options.source || 'api' };
     }
 
     const model = (await ModelFactory.models()).get(modelid);
@@ -545,7 +594,7 @@ export class ChatController {
     newMessage.content = message;
     newMessage.role = 'user';
     newMessage.index = messages.length;
-    newMessage.options = { model: modelid, contexts, web: options.web };
+    newMessage.options = { model: modelid, contexts, web: options.web, source: options.source || 'api' };
     messages.push(newMessage);
 
     const calloptions: Record<string, any> = {
@@ -562,12 +611,17 @@ export class ChatController {
     inputMessages[0].content += `\n\nCurrent date: ${new Date().toLocaleDateString()}.\n`;
     logger.debug(inputMessages[0].content);
     logger.debug(`Starting processing User data`);
-    const qt = new AsyncTask(updater => this.callModel(updater, model, messages, calloptions, session), req.user.id);
-    return new APIResponse<IChatSession>(null, 'created', qt.id);
+    if (async_param) {
+      const qt = new AsyncTask(updater => this.callModel(updater, model, messages, calloptions, session), req.user.id);
+      return new APIResponse<IChatSession>(null, 'created', qt.id);
+    }
+
+    const apires: APIResponse<IChatSession> = await this.callModel(null, model, messages, calloptions, session);
+    return apires;
   }
 
   private async callModel(
-    updater: updateFn,
+    updater: updateFn | null,
     model: IChatModel,
     messages: ChatMessageEntity[],
     options: Record<string, any>,

@@ -35,6 +35,7 @@ import useAxiosPrivate from "psnapi/useAxiosPrivate";
 import LogoutButton from "sharedui/components/LogoutButton";
 import { AboutDialog } from "../components/AboutDialog";
 import { UserAvatar } from "../components/UserAvatar";
+import DeveloperModeIcon from '@mui/icons-material/DeveloperMode';
 
 const drawerWidth = 280;
 
@@ -96,6 +97,14 @@ const DrawerContent = (dprops: any)=>{
               <FolderIcon/>
             </ListItemIcon>
             <ListItemText primary={'Files'} />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton onClick={()=>navigate('/devsettings')}>
+            <ListItemIcon>
+              <DeveloperModeIcon/>
+            </ListItemIcon>
+            <ListItemText primary={'Developer'} />
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>

@@ -96,6 +96,8 @@
     "webpack-merge": "^5.9.0"
   },
   "dependencies": {
+    "@ag-grid-community/core": "^30.0.0",
+    "@ag-grid-enterprise/master-detail": "^30.0.0",
     "@akebifiky/remark-simple-plantuml": "^1.0.2",
     "@azure/storage-blob": "^12.14.0",
     "@datalust/winston-seq": "^2.0.0",

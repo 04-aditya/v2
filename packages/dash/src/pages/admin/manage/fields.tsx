@@ -9,6 +9,10 @@ import BasicUserCard from '@/components/BasicUserCard';
 import { getUserName } from '@/../../shared/types/src';
 import { Row } from '@/components/RowColumn';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
+import { ModuleRegistry } from '@ag-grid-community/core';
+import { MasterDetailModule } from '@ag-grid-enterprise/master-detail';
+
+ModuleRegistry.registerModules([ MasterDetailModule ]);
 
 const FieldDetailCellRenderer = ({ data }: ICellRendererParams) => {
   const gridStyle = React.useMemo(() => ({height:200, width: '100%'}), []);
