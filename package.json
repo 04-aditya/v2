@@ -110,7 +110,7 @@
     "@mui/material": "^5.13.2",
     "@mui/x-data-grid": "^6.5.0",
     "@mui/x-date-pickers": "^6.0.3",
-    "@ps-next/ps-next-widgets": "^1.3.2",
+    "@ps-next/ps-next-widgets": "^1.3.3",
     "@sendgrid/mail": "^7.7.0",
     "@tanstack/react-query": "^4.29.11",
     "@tanstack/react-query-devtools": "^4.29.11",
@@ -195,4 +195,3 @@
     "yup": "^1.2.0"
   }
 }
-

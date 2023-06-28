@@ -26,9 +26,19 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { theme } from './theme';
-import {notificationDispatch, useNotificationStore} from 'sharedui/hooks/useNotificationState';
-import {useAppStore} from 'sharedui/hooks/useAppState';
-import { CircularProgress, ListItem, ListItemAvatar, Menu, MenuItem, useTheme } from '@mui/material';
+import {
+  notificationDispatch,
+  useNotificationStore,
+} from 'sharedui/hooks/useNotificationState';
+import { useAppStore } from 'sharedui/hooks/useAppState';
+import {
+  CircularProgress,
+  ListItem,
+  ListItemAvatar,
+  Menu,
+  MenuItem,
+  useTheme,
+} from '@mui/material';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -45,7 +55,8 @@ const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== 'open',
 })<AppBarProps>(({ theme, open }) => ({
   zIndex: theme.zIndex.drawer + 1,
-  background: alpha(theme.palette.background.paper,0.3),
+  position: 'fixed',
+  background: 'white', //alpha(theme.palette.background.paper, 0.3),
   transition: theme.transitions.create(['width', 'margin'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
@@ -60,98 +71,106 @@ const AppBar = styled(MuiAppBar, {
   }),
 }));
 
-const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' })(
-  ({ theme, open }) => ({
-    '& .MuiDrawer-paper': {
-      position: 'relative',
-      whiteSpace: 'nowrap',
-      width: drawerWidth,
-      borderWidth:0,
-      background: 'transparent', // theme.palette.background.default,
+const Drawer = styled(MuiDrawer, {
+  shouldForwardProp: (prop) => prop !== 'open',
+})(({ theme, open }) => ({
+  '& .MuiDrawer-paper': {
+    position: 'fixed',
+    whiteSpace: 'nowrap',
+    width: drawerWidth,
+    borderWidth: 0,
+    background: 'white',
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    boxSizing: 'border-box',
+    ...(!open && {
+      overflowX: 'hidden',
       transition: theme.transitions.create('width', {
         easing: theme.transitions.easing.sharp,
-        duration: theme.transitions.duration.enteringScreen,
+        duration: theme.transitions.duration.leavingScreen,
       }),
-      boxSizing: 'border-box',
-      ...(!open && {
-        overflowX: 'hidden',
-        transition: theme.transitions.create('width', {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.leavingScreen,
-        }),
-        width: theme.spacing(7),
-        [theme.breakpoints.up('sm')]: {
-          width: theme.spacing(9),
-        },
-      }),
-    },
-  }),
-);
+      width: theme.spacing(7),
+      [theme.breakpoints.up('sm')]: {
+        width: theme.spacing(9),
+      },
+    }),
+  },
+}));
 
-const AppLayout = ()=>{
-
+const AppLayout = () => {
   const [open, setOpen] = React.useState(false);
   const toggleDrawer = () => setOpen(!open);
-  const {auth}= useAuth();
+  const { auth } = useAuth();
 
-  const isAdmin = useMemo(()=>{
-    return auth.user?auth.user.roles.find((r:any)=>r.name==='admin'):false;
+  const isAdmin = useMemo(() => {
+    return auth.user
+      ? auth.user.roles.find((r: any) => r.name === 'admin')
+      : false;
   }, [auth.user]);
 
-  return <ThemeProvider theme={theme}>
-  <CssBaseline />
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
 
-  <AppBar position="absolute" open={open} elevation={0} >
-    <Toolbar
-      sx={{//ml:(open?-2:7), pr: '24px', // keep right padding when drawer closed
-      }}
-    >
-      <Box sx={{pr:2, pt:1}}>
-        <img src={logo4light} height={'32px'} alt='publicis sapient logo'/>
-      </Box>
-      <Title/>
-      <NotificationIcon/>
-    </Toolbar>
-  </AppBar>
-  <div id='content'>
-    <Drawer variant="permanent" open={open} onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}>
-      <AppBar position='static' elevation={0} sx={{background:'transparent'}}>
-      <Toolbar
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          px: [1],
-        }}
-      >
-        {open?<IconButton onClick={toggleDrawer} color="inherit">
-          <ChevronLeftIcon />
-        </IconButton>:null}
-      </Toolbar>
+      <AppBar position="absolute" open={open} elevation={0}>
+        <Toolbar
+          sx={
+            {
+              //ml:(open?-2:7), pr: '24px', // keep right padding when drawer closed
+            }
+          }
+        >
+          <Box sx={{ pr: 2, pt: 1 }}>
+            <img src={logo4light} height={'32px'} alt="publicis sapient logo" />
+          </Box>
+          <Title />
+          <NotificationIcon />
+        </Toolbar>
       </AppBar>
-      <DrawerMenu isAdmin={isAdmin}/>
-    </Drawer>
-    <section id='contentbody'>
-      <Toolbar/>
-      <Outlet/>
-    </section>
-  </div>
-  <footer><Typography variant='subtitle2' sx={{color:'#555'}}>Built on <em>{process.env['NX_BUILD_DATE']}</em>&nbsp; &nbsp; Version: <em>{process.env['NX_BUILD_VERSION']}</em></Typography> </footer>
-  </ThemeProvider>
-}
+      <div
+        id="content"
+        style={{ display: 'flex', flexWrap: 'wrap', marginLeft: '70px' }}
+      >
+        <Drawer
+          variant="permanent"
+          open={open}
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+        >
+          <Toolbar />
+          <DrawerMenu isAdmin={isAdmin} />
+        </Drawer>
+        <section id="contentbody" style={{ width: '100%' }}>
+          <Toolbar />
+          <Outlet />
+        </section>
+      </div>
+      <footer>
+        <Typography variant="subtitle2" sx={{ color: '#555' }}>
+          Built on <em>{process.env['NX_BUILD_DATE']}</em>&nbsp; &nbsp; Version:{' '}
+          <em>{process.env['NX_BUILD_VERSION']}</em>
+        </Typography>{' '}
+      </footer>
+    </ThemeProvider>
+  );
+};
 
 function Title() {
   const theme = useTheme();
   const title = useAppStore('title');
-  return <Typography
-    component="h1"
-    variant="h6"
-    color={theme.palette.primary.dark}
-    noWrap
-    sx={{ flexGrow: 1 }}
-  >
-    {title}
-  </Typography>;
+  return (
+    <Typography
+      component="h1"
+      variant="h6"
+      color={theme.palette.primary.dark}
+      noWrap
+      sx={{ flexGrow: 1 }}
+    >
+      {title}
+    </Typography>
+  );
 }
 
 function NotificationIcon() {
@@ -162,99 +181,138 @@ function NotificationIcon() {
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
-    notificationDispatch({type: 'resetunreadcount'})
+    notificationDispatch({ type: 'resetunreadcount' });
   };
   const handleClose = () => {
     setAnchorEl(null);
   };
 
-  return <React.Fragment>
-    <IconButton color="inherit" onClick={handleClick}
-      aria-controls={open ? 'notifications-menu' : undefined}
-      aria-haspopup="true"
-      aria-expanded={open ? 'true' : undefined}
-    >
-      <Badge badgeContent={unreadCount} color="secondary">
-        {busy?<CircularProgress sx={{
-                position:'absolute',
+  return (
+    <React.Fragment>
+      <IconButton
+        color="inherit"
+        onClick={handleClick}
+        aria-controls={open ? 'notifications-menu' : undefined}
+        aria-haspopup="true"
+        aria-expanded={open ? 'true' : undefined}
+      >
+        <Badge badgeContent={unreadCount} color="secondary">
+          {busy ? (
+            <CircularProgress
+              sx={{
+                position: 'absolute',
                 top: -8,
                 left: -8,
-                zIndex: 1
-            }}/>:null}
-        <NotificationsIcon color="inherit"/>
-      </Badge>
-    </IconButton>
-    <Menu
-      anchorEl={anchorEl}
-      id="notifications-menu"
-      open={open}
-      onClose={handleClose}
-      onClick={handleClose}
-      PaperProps={{
-        elevation: 0,
-        sx: {
-          maxWidth: 400,
-          overflow: 'visible',
-          filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-          mt: 1.5,
-          '& .MuiAvatar-root': {
-            width: 32,
-            height: 32,
-            ml: -0.5,
-            mr: 1,
+                zIndex: 1,
+              }}
+            />
+          ) : null}
+          <NotificationsIcon color="inherit" />
+        </Badge>
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        id="notifications-menu"
+        open={open}
+        onClose={handleClose}
+        onClick={handleClose}
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            maxWidth: 400,
+            overflow: 'visible',
+            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+            mt: 1.5,
+            '& .MuiAvatar-root': {
+              width: 32,
+              height: 32,
+              ml: -0.5,
+              mr: 1,
+            },
+            '&:before': {
+              content: '""',
+              display: 'block',
+              position: 'absolute',
+              top: 0,
+              right: 14,
+              width: 10,
+              height: 10,
+              bgcolor: 'background.paper',
+              transform: 'translateY(-50%) rotate(45deg)',
+              zIndex: 0,
+            },
           },
-          '&:before': {
-            content: '""',
-            display: 'block',
-            position: 'absolute',
-            top: 0,
-            right: 14,
-            width: 10,
-            height: 10,
-            bgcolor: 'background.paper',
-            transform: 'translateY(-50%) rotate(45deg)',
-            zIndex: 0,
-          },
-        },
-      }}
-      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-    >
-      {notifications.map(n=>{
-        return <ListItem key={n.id} dense>
-          <ListItemAvatar>
-            {n.status==='error'?<ErrorOutlineIcon color='error'/>:(
-              n.status==='done'?<TaskAltIcon color='success'/>:<QueryBuilderIcon color='info'/>
-            )}
-          </ListItemAvatar>
-          <ListItemText primary={n.title} secondary={n.description}/>
-        </ListItem>
-      })}
-      {notifications.length===0?<ListItem key={'empty'} dense>
-        <ListItemText primary={''} secondary={'no notifications'}/>
-      </ListItem>:null}
-    </Menu>
-  </React.Fragment>;
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        {notifications.map((n) => {
+          return (
+            <ListItem key={n.id} dense>
+              <ListItemAvatar>
+                {n.status === 'error' ? (
+                  <ErrorOutlineIcon color="error" />
+                ) : n.status === 'done' ? (
+                  <TaskAltIcon color="success" />
+                ) : (
+                  <QueryBuilderIcon color="info" />
+                )}
+              </ListItemAvatar>
+              <ListItemText primary={n.title} secondary={n.description} />
+            </ListItem>
+          );
+        })}
+        {notifications.length === 0 ? (
+          <ListItem key={'empty'} dense>
+            <ListItemText primary={''} secondary={'no notifications'} />
+          </ListItem>
+        ) : null}
+      </Menu>
+    </React.Fragment>
+  );
 }
 
-function DrawerMenu(props:any) {
-  return <List component="nav">
-  <MenuEntry path="/" text="Home" icon={<HomeIcon />}/>
-  <MenuEntry path="/dashboard/me" text="Dashboard" icon={<DashboardIcon />}/>
-  <MenuEntry path="/profile/me" text="Profile" icon={<PersonIcon />}/>
-  <MenuEntry path="/teams/me" text="Teams" icon={<GroupsIcon/>}/>
-  <MenuEntry path="/developer" text="Developer Settings" icon={<ExtensionIcon />}/>
-  <Divider/>
-  {props.isAdmin?<MenuEntry path="/admin" text="Admin" icon={<AdminPanelSettingsIcon/>}/>:null}
-</List>
+function DrawerMenu(props: any) {
+  return (
+    <List component="nav">
+      <MenuEntry path="/" text="Home" icon={<HomeIcon />} />
+      <MenuEntry
+        path="/dashboard/me"
+        text="Dashboard"
+        icon={<DashboardIcon />}
+      />
+      <MenuEntry path="/profile/me" text="Profile" icon={<PersonIcon />} />
+      <MenuEntry path="/teams/me" text="Teams" icon={<GroupsIcon />} />
+      <MenuEntry
+        path="/developer"
+        text="Developer Settings"
+        icon={<ExtensionIcon />}
+      />
+      <Divider />
+      {props.isAdmin ? (
+        <MenuEntry
+          path="/admin"
+          text="Admin"
+          icon={<AdminPanelSettingsIcon />}
+        />
+      ) : null}
+    </List>
+  );
 }
-function MenuEntry({path, text, icon}:{path:string, text:string, icon:React.ReactNode}) {
-  return <ListItemButton component={Link} to={path}>
-    <ListItemIcon sx={{ color: "inherit" }}>
-      {icon}
-    </ListItemIcon>
-    <ListItemText primary={text} />
-  </ListItemButton>;
+function MenuEntry({
+  path,
+  text,
+  icon,
+}: {
+  path: string;
+  text: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <ListItemButton component={Link} to={path}>
+      <ListItemIcon sx={{ color: 'inherit' }}>{icon}</ListItemIcon>
+      <ListItemText primary={text} />
+    </ListItemButton>
+  );
 }
 export default AppLayout;
-
