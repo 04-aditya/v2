@@ -91,9 +91,9 @@ export class UserDataEntity extends BaseEntity implements IUserData {
 
   static async getCustomUserDataKeys(userId?: string | number) {
     const data = await AppDataSource.query(
-      `select distinct(key) from psuserdata where key like 'c-%'` + (userId ? `OR key like 'u-${userId}%'` : '') + ';',
+      `select distinct(key), c.id as id, c.name as name, c.type as type, c.details as details FROM psuserdata INNER JOIN config c on c.name=psuserdata.key where key like 'c-%'` + (userId ? `OR key like 'u-${userId}%'` : '') + ';',
     );
-    return data.map(d => d.key);
+    return data.map(d => ({ key: d.key, config: { id: d.id, name: d.name, type: d.type, details: d.details } }));
   }
 
   static async getUserData(userId: number, timestamp: Date, keys?: string[]) {
@@ -105,10 +105,12 @@ export class UserDataEntity extends BaseEntity implements IUserData {
       .map(key => `(SELECT * FROM psuserdata WHERE key='${key}' AND userid=$1 AND timestamp<=$2 ORDER BY timestamp DESC LIMIT 1)`)
       .join(' UNION ALL ');
     const data = await AppDataSource.query(query, [userId, timestamp]);
-    const result: any = {};
+    const result: any = { data: {} };
     data.forEach((d: { key: string; value: { supervisor_id: any } }) => {
       if (d.key === 'supervisor_id') {
         result[d.key] = d.value.supervisor_id;
+      } else if (d.key.startsWith('c-') || d.key.startsWith('u-') || d.key.startsWith('s-')) {
+        result.data[d.key] = d.value;
       } else {
         result[d.key] = d.value;
       }

@@ -607,7 +607,9 @@ export class UserEntity extends BaseEntity implements IUser {
         });
         totalExp += expDuration.years + expDuration.months / 12;
       } catch (ex) {
-        logger.error(JSON.stringify(ex));
+        logger.error(
+          `${__filename} - Cannot calculate Total Experience for user ${u.email},\n most_recent_hire_date ${u.most_recent_hire_date} \n error:${JSON.stringify(ex)}`,
+        );
       }
 
       try {
@@ -617,7 +619,11 @@ export class UserEntity extends BaseEntity implements IUser {
         });
         titleExp += titDuration.years + titDuration.months / 12;
       } catch (ex) {
-        logger.error(JSON.stringify(ex));
+        logger.error(
+          `${__filename} - Cannot calculate Title Experience for user ${u.email},\n last_promotion_date: ${
+            u.last_promotion_date
+          }, most_recent_hire_date ${u.most_recent_hire_date} \n error:${JSON.stringify(ex)}`,
+        );
       }
     });
 

@@ -5,7 +5,7 @@ import { UserEntity } from '@/entities/user.entity';
 import { HttpException } from '@/exceptions/HttpException';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { logger } from '@/utils/logger';
-import { JsonController, UseBefore, Get, Authorized, Post, Body, CurrentUser, Delete, BodyParam } from 'routing-controllers';
+import { JsonController, UseBefore, Get, Authorized, Post, Body, CurrentUser, Delete, BodyParam, QueryParam } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
 import { In } from 'typeorm';
 
@@ -22,31 +22,48 @@ export class StatsController {
       where: { type: ConfigType.STATCONFIGTYPE },
     });
     logger.debug(`fetched ${matchedStats.length} stats.`);
-    result.data = matchedStats.map((p: IConfigItem) => p.details.value as IStatType);
+    result.data = matchedStats.map((p: IConfigItem) => ({ ...(p.details as IStatType), id: p.id }));
 
     return result;
   }
 
+  @Post('/types/:id')
+  @OpenAPI({ summary: 'Update a `stat` config item' })
+  @Authorized(['stats.write.all', 'config.write.all'])
+  async updateStats(@QueryParam('id') id: number, @Body() data: IStatType) {
+    try {
+      const result = new APIResponse<IStatType>();
+      const repo = AppDataSource.getRepository(ConfigEntity);
+      const statconfig: ConfigEntity[] = await repo.find({
+        where: {
+          id,
+          type: ConfigType.STATCONFIGTYPE,
+        },
+      });
+      if (!statconfig || statconfig.length < 1) throw new HttpException(404, 'Not found');
+      logger.debug(statconfig[0].toJSON());
+      statconfig[0].name = data.name;
+      statconfig[0].details = { ...data, id };
+      await statconfig[0].save();
+      result.data = { ...data, id: statconfig[0].id };
+      return result;
+    } catch (ex) {
+      console.error(ex);
+      throw ex;
+    }
+  }
+
   @Post('/types')
   @OpenAPI({ summary: 'Create a new `stat` config item' })
-  @Authorized(['stats.write.all'])
-  async upsertStats(@Body() data: IStatType) {
+  @Authorized(['stats.write.all', 'config.write.all'])
+  async insertStats(@Body() data: IStatType) {
     const result = new APIResponse<IStatType>();
-    let statconfig = await AppDataSource.getRepository(ConfigEntity).findOne({
-      where: {
-        name: data.name,
-        type: ConfigType.STATCONFIGTYPE,
-      },
-    });
-    if (!statconfig) {
-      statconfig = new ConfigEntity();
-      statconfig.name = data.name;
-      statconfig.type = ConfigType.STATCONFIGTYPE;
-    }
-    statconfig.details = { value: data };
+    const statconfig = new ConfigEntity();
+    statconfig.name = data.name;
+    statconfig.type = ConfigType.STATCONFIGTYPE;
+    statconfig.details = data;
     await statconfig.save();
-    result.data = statconfig.toJSON();
-
+    result.data = { ...data, id: statconfig.id };
     return result;
   }
 

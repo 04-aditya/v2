@@ -33,6 +33,7 @@ export function Home(props: HomeProps) {
             PS Next (Our data driven future...)
           </Typography>
         </Row>
+        {/*
         <AddWidget
           apiKey={auth.auth.accessToken ? auth.auth.accessToken : ''}
           apiurl={process.env['NX_API_URL']||''}
@@ -42,8 +43,8 @@ export function Home(props: HomeProps) {
             usergroups: 'org:Team',
           }}
           id="AW1"
-        />
-        {/* <Typography variant="h1" component="div" gutterBottom>
+          />
+        <Typography variant="h1" component="div" gutterBottom>
           h1. Heading
         </Typography>
         <Typography variant="h2" gutterBottom component="div">

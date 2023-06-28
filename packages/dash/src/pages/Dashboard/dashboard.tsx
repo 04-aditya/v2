@@ -1,5 +1,5 @@
-import { Avatar, Box, Button, Card, CardHeader, CircularProgress, Divider, FormControl, FormHelperText, Grid, Grow, IconButton, InputLabel, MenuItem, MenuList, Paper, Popper, Select, SelectChangeEvent, Tab, Tabs, Tooltip, Typography } from '@mui/material';
-import { Route, Link, Outlet, useParams,useSearchParams, useNavigate } from 'react-router-dom';
+import { Avatar, Box, Button, Card, CardHeader, CircularProgress, Divider, FormControl, FormHelperText, Grid, Grow, IconButton, InputLabel, List, MenuItem, MenuList, Paper, Popper, Select, SelectChangeEvent, SxProps, Tab, Tabs, Tooltip, Typography } from '@mui/material';
+import { useParams,useSearchParams, useNavigate } from 'react-router-dom';
 import { appstateDispatch } from 'sharedui/hooks/useAppState';
 import styles from './dashboard.module.scss';
 import React, { useEffect, useMemo } from 'react';
@@ -18,13 +18,47 @@ import Skeleton from '@mui/material/Skeleton';
 import EmailIcon from '@mui/icons-material/Email';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { getUserName, IStatsData } from 'sharedtypes';
+import { getUserName, IStatsData, IStatType } from 'sharedtypes';
 import useAxiosPrivate from 'psnapi/useAxiosPrivate';
 import { displayNotification } from 'sharedui/hooks/useNotificationState';
 import { FileUploadButton } from '@/components/FileUploadDialog';
 import ButtonPopover from '@/components/ButtonPopover';
 import { PageContainer } from 'sharedui/components/PageContainer';
+import { useStatTypes } from 'psnapi/stats';
 
+
+type CustomStatProps = {
+  stat: IStatType,
+  size: 'small'|'medium'|'large',
+  userId?: string|number,
+  userGroup:string,
+  snapshot_date: string|Date,
+  sx?: SxProps;
+  onClose?: ()=>void;
+}
+
+function CustomStat({stat, size, userId, sx, userGroup='org:Team', snapshot_date='last', onClose}:CustomStatProps) {
+  const {data:stats, isLoading} = useUserStats(userId,[stat.name], [userGroup], snapshot_date);
+
+  if (isLoading) {
+    return <StatWidget size={size} title={stat.name}>
+      <CircularProgress size={size==='small'?20:40}/>
+    </StatWidget>
+  }
+  if (!stats) return <StatWidget size={size} title={stat.name}>NA</StatWidget>;
+
+  switch(stat.type) {
+    case 'number':
+      return <NumberStatWidget size={size} title={stat.name} value={stats[0].value} sx={sx} onClose={onClose}/>;
+    case 'percent':
+      return <PercentStatWidget size={size} title={stat.name} value={Math.trunc((stats[0].value*1000)/10)} sx={sx} onClose={onClose}/>;
+    case 'pie':
+      return <PieStatWidget size={size} title={stat.name} value={stats[0].value} sx={sx} onClose={onClose}/>;
+  }
+  return <StatWidget size={size} title={stat.name} sx={sx} onClose={onClose}>
+    {stats[0].value}
+  </StatWidget>
+}
 
 type PeopleStatsProps = {
   snapshot_date: string|Date,
@@ -34,15 +68,18 @@ type PeopleStatsProps = {
 }
 
 function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
+  const {data: statTypes=[]} = useStatTypes();
   const {data:user} = useUser(userId);
   const {data:userGroups=[]} = useUserGroups(userId);
   const [userGroup, setUserGroup] = React.useState<string>('org:Team');
-  const {data:stats, isLoading} = useUserStats(userId,['Total Count', 'Directs', 'Leverage', 'Diversity %', 'FTE %', 'PS Exp','TiT Exp'], [userGroup], snapshot_date);
   const [statDetails, setStatDetails] = React.useState<React.ReactNode>(null);
+  const [customStats, setCustomStats] = React.useState<IStatType[]>([]);
+  const {data:stats, isLoading} = useUserStats(userId,['people:default'], [userGroup], snapshot_date);
 
   useEffect(()=>{
     setUserGroup('org:Team');
   }, [userId])
+
   // const options = useMemo(()=>{
   //   if (!stats) return [];
   //   const ops = [];
@@ -55,7 +92,7 @@ function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
   // }, [stats])
   const totalStat: IStatsData<number> = stats?.find(s=>s.name==='Count');
   const directsStat: IStatsData<number> = stats?.find(s=>s.name==='Directs');
-  const leverageStat: IStatsData< Array<{name: string, value: number}> > = stats?.find(s=>s.name==='Leverage');
+  const leverageStat: IStatsData<Array<{name: string, value: number}> > = stats?.find(s=>s.name==='Leverage');
   const deiStat: IStatsData<number> = stats?.find(s=>s.name==='Diversity %');
   const fteStat: IStatsData<number> = stats?.find(s=>s.name==='FTE %');
   const psexpStat: IStatsData<number> = stats?.find(s=>s.name==='PS Exp');
@@ -110,29 +147,41 @@ function PeopleStats({snapshot_date, userId, size}:PeopleStatsProps) {
         valueBottomLeft={deiStat.all ? Math.trunc(deiStat.all*1000)/10 : ''} valueBottomRight={deiStat.capability ? Math.trunc(deiStat.capability*1000)/10 : ''}
         title='Diversity %'
         sx={{m:0.5}}/>:null}
-      <PieStatWidget size={size}
-        valueTopLeft={[{name:'JA', value:11},{name:'A', value:35},{name:'SA', value:35},{name:'Mgr', value:10.5},{name:'SM', value:2},{name:'D', value:1},{name:'VP', value:0.5}]}
-        valueTopRight={[{name:'JA', value:5},{name:'A', value:30},{name:'SA', value:45},{name:'Mgr', value:13.5},{name:'SM', value:4},{name:'D', value:2},{name:'VP', value:0.5}]}
-        value={leverageStat?.value||[]}
-        title='Leverage' sx={{m:0.5}}/>
+      {leverageStat?<PieStatWidget size={size}
+        //valueTopLeft={[{name:'JA', value:11},{name:'A', value:35},{name:'SA', value:35},{name:'Mgr', value:10.5},{name:'SM', value:2},{name:'D', value:1},{name:'VP', value:0.5}]}
+        //valueTopRight={[{name:'JA', value:5},{name:'A', value:30},{name:'SA', value:45},{name:'Mgr', value:13.5},{name:'SM', value:4},{name:'D', value:2},{name:'VP', value:0.5}]}
+        value={leverageStat.value||[]}
+        title='Leverage' sx={{m:0.5}}/>:null}
       {psexpStat?<NumberStatWidget size={size}
         valueTopLeft={psexpStat.industry ? Math.trunc(psexpStat.industry*100)/100 : ''} valueTopRight={psexpStat.account ? Math.trunc(psexpStat.account*100)/100 : ''}
         value={Math.trunc(psexpStat.value*100)/100}
         valueBottomLeft={psexpStat.all ? Math.trunc(psexpStat.all*100)/100 : ''} valueBottomRight={psexpStat.capability ? Math.trunc(psexpStat.capability*100)/100 : ''}
         title='Avg PS Experience'
         sx={{m:0.5}}/>:null}
-        {titexpStat?<NumberStatWidget size={size}
-          valueTopLeft={titexpStat.industry ? Math.trunc(titexpStat.industry*100)/100 : ''} valueTopRight={titexpStat.account ? Math.trunc(titexpStat.account*100)/100 : ''}
-          value={Math.trunc(titexpStat.value*100)/100}
-          valueBottomLeft={titexpStat.all ? Math.trunc(titexpStat.all*100)/100 : ''} valueBottomRight={titexpStat.capability ? Math.trunc(titexpStat.capability*100)/100 : ''}
-          title='Avg Time in Title'
-          sx={{m:0.5}}/>:null}
+      {titexpStat?<NumberStatWidget size={size}
+        valueTopLeft={titexpStat.industry ? Math.trunc(titexpStat.industry*100)/100 : ''} valueTopRight={titexpStat.account ? Math.trunc(titexpStat.account*100)/100 : ''}
+        value={Math.trunc(titexpStat.value*100)/100}
+        valueBottomLeft={titexpStat.all ? Math.trunc(titexpStat.all*100)/100 : ''} valueBottomRight={titexpStat.capability ? Math.trunc(titexpStat.capability*100)/100 : ''}
+        title='Avg Time in Title'
+        sx={{m:0.5}}/>:null}
+      {customStats.map(cs=><CustomStat key={cs.id} stat={cs} size={size} userId={userId} userGroup={userGroup} snapshot_date={snapshot_date} sx={{m:0.5}}
+        onClose={()=>{
+          setCustomStats(cstats=>(cstats.filter(c=>c.id!==cs.id)));
+        }}
+      />)}
       <StatContainer size={size} elevation={0} sx={{
         backgroundColor:'#fff6', display:'grid', borderStyle: 'dashed',
         borderWidth: 'thin', borderColor: 'lightskyblue',}}>
           <ButtonPopover icon={<AddCircleIcon sx={{fontSize:'1em'}}/>} color='primary'>
             <Paper sx={{p:1, minWidth:128, minHeight:256}} elevation={6}>
-
+              <List>
+                {statTypes.map(s=>{
+                  if (customStats.find(cs=>cs.id===s.id)) return null;
+                  return <MenuItem key={s.id} onClick={()=>{
+                    setCustomStats(cs=>([...cs,s]));
+                  }}>{s.name}</MenuItem>
+                })}
+              </List>
             </Paper>
           </ButtonPopover>
       </StatContainer>

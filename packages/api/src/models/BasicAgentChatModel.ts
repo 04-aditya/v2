@@ -195,8 +195,8 @@ export class BasicAgentChatModel implements IChatModel {
       new UnitConvertorTool(),
       dalletool,
       //new WebBrowser({model: model as LLM}),
-      new RequestsGetTool(),
-      new RequestsPostTool(),
+      //new RequestsGetTool(),
+      //new RequestsPostTool(),
       // new AzReadFileTool({ store: filestore }),
       // new AzWriteFileTool({ store: filestore }),
       // new DynamicTool({

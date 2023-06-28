@@ -785,34 +785,34 @@ export class ChatController {
       updatedAt: () => '"updatedAt"',
     });
     if (newtype === 'public') {
-      try {
-        const hasTokens = await checkADTokens(currentUser);
-        const adtokens = JSON.parse(currentUser.adtokens);
-        console.log(adtokens);
-        if (hasTokens) {
-          axios
-            .post(
-              `https://graph.microsoft.com/v1.0/teams/${process.env.TEAMID}/channels/${process.env.TEAMCHANNEL}/messages`,
-              {
-                body: {
-                  content: 'share test',
-                },
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${adtokens.access_token}`,
-                },
-              },
-            )
-            .then(ar => {
-              console.log(ar.status);
-              console.log(ar.data);
-            })
-            .catch(ex => console.error(ex));
-        }
-      } catch (ex) {
-        logger.error(JSON.stringify(ex));
-      }
+      // try {
+      //   const hasTokens = await checkADTokens(currentUser);
+      //   const adtokens = JSON.parse(currentUser.adtokens);
+      //   console.log(adtokens);
+      //   if (hasTokens) {
+      //     axios
+      //       .post(
+      //         `https://graph.microsoft.com/v1.0/teams/${process.env.TEAMID}/channels/${process.env.TEAMCHANNEL}/messages`,
+      //         {
+      //           body: {
+      //             content: 'share test',
+      //           },
+      //         },
+      //         {
+      //           headers: {
+      //             Authorization: `Bearer ${adtokens.access_token}`,
+      //           },
+      //         },
+      //       )
+      //       .then(ar => {
+      //         console.log(ar.status);
+      //         console.log(ar.data);
+      //       })
+      //       .catch(ex => console.error(ex));
+      //   }
+      // } catch (ex) {
+      //   logger.error(JSON.stringify(ex));
+      // }
     }
     const result = new APIResponse<IChatSession>();
     result.data = { ...session.toJSON(), type: newtype };

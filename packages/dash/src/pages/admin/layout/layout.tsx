@@ -14,6 +14,7 @@ export function AdminLayout(props: AdminLayoutProps) {
     {path: '/admin/clients', label:'Clients'},
     {path: '/admin/capabilities', label:'Capabilities'},
     {path: '/admin/crafts', label:'Crafts'},
+    {path: '/admin/config', label:'Config'},
     {path: '/admin/stats', label:'Stats'},
     {path: '/admin/fields', label:'Fields'},
     {path: '/admin/cache', label:'Cache'},
