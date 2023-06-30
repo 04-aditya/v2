@@ -23,29 +23,31 @@ import {
 import { OpenAPI } from 'routing-controllers-openapi';
 import { AppDataSource } from '@/databases';
 import { UserEntity } from '@/entities/user.entity';
-import { IUser, APIResponse, IPermission, IUserPAT, IUserData, IStatType } from '@sharedtypes';
+import { IUser, APIResponse, IPermission, IUserPAT, IUserData, IStatType, IConfigItem, ConfigType } from '@sharedtypes';
 import authMiddleware from '@/middlewares/auth.middleware';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserPATEntity } from '@/entities/userpat.entity';
 import { format, parse as parseDate, parseJSON, intervalToDuration, parseISO, isDate } from 'date-fns';
 import { logger } from '@/utils/logger';
-import { LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
+import { In, LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
 import { groupBy } from '@/utils/util';
 import { UserDataEntity } from '@/entities/userdata.entity';
 import { BlobServiceClient } from '@azure/storage-blob';
 import AsyncTask, { updateFn } from '@/utils/asyncTask';
 import Excel from 'exceljs';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
+import { ConfigEntity } from '@/entities/config.entity';
+import jp from 'jsonpath';
 
-const StatTypes: ReadonlyArray<IStatType> = [
-  { group: 'people', name: 'Count', type: 'number', expression: '', aggregation: 'count' },
-  { group: 'people', name: 'Directs', type: 'number', expression: '', aggregation: 'count' },
-  { group: 'people', name: 'Leverage', type: 'array', expression: '$..career_stage', aggregation: 'count' },
-  { group: 'people', name: 'FTE %', type: 'number', expression: '', aggregation: 'percent' },
-  { group: 'people', name: 'Diversity %', type: 'number', expression: '', aggregation: 'percent' },
-  { group: 'people', name: 'PS Exp', type: 'number', expression: '', aggregation: 'avg' },
-  { group: 'people', name: 'TiT Exp', type: 'number', expression: '', aggregation: 'avg' },
-] as const;
+// const StatTypes: ReadonlyArray<IStatType> = [
+//   { group: 'people', name: 'Count', type: 'number', expression: '', aggregation: 'count' },
+//   { group: 'people', name: 'Directs', type: 'number', expression: '', aggregation: 'count' },
+//   { group: 'people', name: 'Leverage', type: 'array', expression: '$..career_stage', aggregation: 'count' },
+//   { group: 'people', name: 'FTE %', type: 'number', expression: '', aggregation: 'percent' },
+//   { group: 'people', name: 'Diversity %', type: 'number', expression: '', aggregation: 'percent' },
+//   { group: 'people', name: 'PS Exp', type: 'number', expression: '', aggregation: 'avg' },
+//   { group: 'people', name: 'TiT Exp', type: 'number', expression: '', aggregation: 'avg' },
+// ] as const;
 
 @JsonController('/api/users')
 @UseBefore(authMiddleware)
@@ -84,19 +86,20 @@ export class UsersController {
   }
   @Get('/datakeys')
   @OpenAPI({ summary: 'Get all allowed keys for user data' })
+  @Authorized(['user.read'])
   async getDataKeys(@CurrentUser() currentUser: UserEntity) {
-    const result = new APIResponse<string[]>();
+    const result = new APIResponse<{ key: string; config: IConfigItem }>();
     result.data = await UserDataEntity.getCustomUserDataKeys(currentUser.id);
     return result;
   }
 
-  @Get('/stattypes')
-  @OpenAPI({ summary: 'Get supported type of aggregations' })
-  async getStatTypes() {
-    const result = new APIResponse<ReadonlyArray<IStatType>>();
-    result.data = StatTypes;
-    return result;
-  }
+  // @Get('/stattypes')
+  // @OpenAPI({ summary: 'Get supported type of aggregations' })
+  // async getStatTypes() {
+  //   const result = new APIResponse<ReadonlyArray<IStatType>>();
+  //   result.data = StatTypes;
+  //   return result;
+  // }
 
   @Get('/:id')
   @OpenAPI({ summary: 'Return user matched by the `id`' })
@@ -406,7 +409,9 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
     @QueryParam('snapshot_date') snapshot_date?: string,
     @CurrentUser() currentUser?: UserEntity,
   ) {
-    const result = new APIResponse<{ name: string; value: any; all?: any; capability?: any; industry?: any; account?: any; craft?: any }[]>();
+    const result = new APIResponse<
+      { name: string; type: string; value: any; all?: any; capability?: any; industry?: any; account?: any; craft?: any }[]
+    >();
     if (userId === '-1') return [];
     const matchedUser = await this.getUser(userId, currentUser);
 
@@ -414,7 +419,15 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
 
     const groups = usergroup.split(',').map(g => g.trim());
 
+    const statTypes: string[] = types ? types.split(',').map(t => t.trim()) : [];
+
     try {
+      const statsConfigs = await AppDataSource.getRepository(ConfigEntity).find({
+        where: {
+          name: In(statTypes),
+          type: ConfigType.STATCONFIGTYPE,
+        },
+      });
       const readPerms = req.permissions.filter(p => p.startsWith('user.read'));
       const canRead = await currentUser.canRead(matchedUser, readPerms);
       if (canRead === false) {
@@ -425,23 +438,46 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
       const { industries, clients, crafts, capabilities } = allowedGroups;
 
       logger.debug(`getting stats for ${groupUsers.length} for ${usergroup} users`);
-
+      const datakeys = [];
+      statsConfigs.forEach(sconfig => {
+        sconfig.details.datakeys.forEach(k => {
+          if (datakeys.includes(k)) return;
+          datakeys.push(k);
+        });
+      });
       const dataworkers = groupUsers.map(u => {
         return new Promise(resolve => {
           if (!u.snapshot_date) {
             logger.debug(`user ${u.email} has no snapshot date`);
             return resolve(u);
           }
-          if (u.snapshot_date.getTime() === reqdate.getTime()) return resolve(u);
-          UserDataEntity.getUserData(u.id, reqdate).then(data => {
-            UserEntity.merge(u, data);
+          try {
+            if (!u.snapshot_date) return resolve(u);
+            if (typeof u.snapshot_date === 'string') u.snapshot_date = parseJSON(u.snapshot_date);
+            if (u.snapshot_date.getTime() === reqdate.getTime() && datakeys.length === 0) return resolve(u);
+            const additionalkeys = [...datakeys];
+            if (u.snapshot_date.getTime() !== reqdate.getTime()) {
+              additionalkeys.push(...UserEntity.UserDataMap.default);
+            }
+            UserDataEntity.getUserData(u.id, reqdate, additionalkeys)
+              .then(data => {
+                UserEntity.merge(u, data);
+                u.data = data.data;
+                resolve(u);
+              })
+              .catch(ex => {
+                logger.error(`${__filename} - Error getting datakeys for ${u.email} ${JSON.stringify(ex)}`);
+                resolve(u);
+              });
+          } catch (ex) {
+            logger.error(`${__filename} - Error getting additional data for ${u.email} ${JSON.stringify(ex)}`);
             resolve(u);
-          });
+          }
         });
       });
       await Promise.all(dataworkers);
 
-      console.log(allowedGroups);
+      logger.debug({ allowedGroups });
       const pdastats = await UserEntity.getPDAStats(reqdate);
       const groupStats = UserEntity.calculatePDAStats(groupUsers);
       const cpStats = capabilities.map(c => pdastats.capability[c]).filter(s => s !== undefined);
@@ -453,6 +489,7 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
 
       const countStat = {
         name: 'Count',
+        type: 'number',
         value: groupStats.totalCount,
         all: !canReadPSStats ? undefined : pdastats.all.totalCount,
         capability: cpStats.reduce((s, c) => s + c.totalCount, 0),
@@ -461,66 +498,162 @@ someone@example.com, 2023/01/01 10:10:00.000z, score, 90,   50,             40
         craft: cfStats.reduce((s, c) => s + c.totalCount, 0),
       };
 
-      result.data.push({
-        name: 'Directs',
-        value: groupUsers.filter(u => u.supervisor_id === matchedUser.oid).length,
-        all: !canReadPSStats ? undefined : Math.trunc(pdastats.all.avgDirectsCount * 100) / 100,
-        capability: cpStats.length > 0 ? Math.trunc((cpStats.reduce((s, c) => s + c.avgDirectsCount, 0) / cpStats.length) * 100) / 100 : undefined,
-        industry:
-          teamStats.length > 0 ? Math.trunc((teamStats.reduce((s, c) => s + c.avgDirectsCount, 0) / teamStats.length) * 100) / 100 : undefined,
-        account:
-          accountStats.length > 0
-            ? Math.trunc((accountStats.reduce((s, c) => s + c.avgDirectsCount, 0) / accountStats.length) * 100) / 100
-            : undefined,
-        craft: cfStats.length > 0 ? Math.trunc((cfStats.reduce((s, c) => s + c.avgDirectsCount, 0) / cfStats.length) * 100) / 100 : undefined,
+      statsConfigs.forEach(sconfig => {
+        const stat: IStatType = sconfig.details as IStatType;
+        console.log(stat);
+        let calculatedValue: any;
+
+        const data = new Array<any>();
+        let datasample: any;
+        groupUsers.forEach(u => {
+          const v = jp.query([u], stat.expression);
+          if (v[0] && datasample === undefined) {
+            datasample = v[0];
+            console.log(datasample);
+          }
+          if (stat.filter && stat.filter !== '') {
+            if (stat.filter.startsWith('!')) {
+              if (stat.filter === '!blank') {
+                if (v[0]) data.push(v[0]);
+                return;
+              }
+              if (v[0] !== stat.filter.substring(1)) data.push(v[0]);
+            } else if (stat.filter === 'blank') {
+              if (!v[0]) data.push(v[0]);
+              return;
+            } else if (v[0] === stat.filter) {
+              data.push(v[0]);
+            }
+          } else {
+            data.push(v[0]);
+          }
+        });
+        logger.debug(data);
+        logger.debug(datasample);
+        if (stat.aggregation === 'count') {
+          calculatedValue = data.filter(d => d).length;
+        } else if (stat.aggregation === 'percent') {
+          calculatedValue = data.filter(d => d).length / groupUsers.length;
+        } else if (stat.aggregation.startsWith('distinct') || stat.aggregation.startsWith('group')) {
+          const distinctSet = new Set<string>([...data]);
+          const distinctValues: string[] = [];
+          distinctSet.forEach(val => distinctValues.push(val ? val : 'blank'));
+          if (stat.aggregation === 'group-count') {
+            calculatedValue = [...distinctValues].map((val: string) => ({
+              name: val,
+              value: data.filter((d: string) => (d ? d : 'blank') === val).length,
+            }));
+          } else if (stat.aggregation === 'distinct') {
+            calculatedValue = [...distinctValues];
+          }
+        } else if (stat.aggregation.startsWith('sum')) {
+          calculatedValue = data.reduce((a: number, b: number) => a + b, 0);
+        } else if (stat.aggregation.startsWith('avg')) {
+          calculatedValue = data.reduce((a: number, b: number) => a + b, 0) / data.length;
+        } else if (stat.aggregation.startsWith('min')) {
+          calculatedValue = Math.min(...data);
+        } else if (stat.aggregation.startsWith('max')) {
+          calculatedValue = Math.max(...data);
+        }
+
+        const statdata = {
+          name: stat.name,
+          type: stat.type,
+          value: calculatedValue,
+          // all: !canReadPSStats ? undefined : pdastats.all[sconfig.name],
+          // capability: cpStats.reduce((s, c) => s + c[sconfig.name], 0),
+          // industry: teamStats.reduce((s, c) => s + c[sconfig.name], 0),
+          // account: accountStats.reduce((s, c) => s + c[sconfig.name], 0),
+          // craft: cfStats.reduce((s, c) => s + c[sconfig.name], 0),
+        };
+        result.data.push(statdata);
       });
 
-      result.data.push({
-        name: 'Leverage',
-        value: groupStats.cs_map,
-        all: !canReadPSStats ? undefined : pdastats.all.cs_map,
-        // capability: cpStats.cs_map,
-        // industry: teamStats.cs_map,
-        // account: accountStats.cs_map,
-        // craft: cfStats.cs_map,
-      });
-      result.data.push(countStat);
-      result.data.push({
-        name: 'FTE %',
-        value: groupStats.fteCount / groupUsers.length,
-        all: !canReadPSStats ? undefined : pdastats.all.fteCount / pdastats.all.totalCount,
-        capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.fteCount, 0) / countStat.capability : undefined,
-        industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.fteCount, 0) / countStat.industry : undefined,
-        account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.fteCount, 0) / countStat.account : undefined,
-        craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.fteCount, 0) / countStat.craft : undefined,
-      });
-      result.data.push({
-        name: 'Diversity %',
-        value: groupStats.diversityCount / groupUsers.length,
-        all: !canReadPSStats ? undefined : pdastats.all.diversityCount / pdastats.all.totalCount,
-        capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.capability : undefined,
-        industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.industry : undefined,
-        account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.account : undefined,
-        craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.craft : undefined,
-      });
-      result.data.push({
-        name: 'PS Exp',
-        value: groupStats.totalExp / groupUsers.length,
-        all: !canReadPSStats ? undefined : pdastats.all.totalExp / pdastats.all.totalCount,
-        capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.totalExp, 0) / countStat.capability : undefined,
-        industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.totalExp, 0) / countStat.industry : undefined,
-        account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.totalExp, 0) / countStat.account : undefined,
-        craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.totalExp, 0) / countStat.craft : undefined,
-      });
-      result.data.push({
-        name: 'TiT Exp',
-        value: groupStats.titleExp / groupUsers.length,
-        all: !canReadPSStats ? undefined : pdastats.all.titleExp / pdastats.all.totalCount,
-        capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.titleExp, 0) / countStat.capability : undefined,
-        industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.titleExp, 0) / countStat.industry : undefined,
-        account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.titleExp, 0) / countStat.account : undefined,
-        craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.titleExp, 0) / countStat.craft : undefined,
-      });
+      if (statTypes.includes('Count') || statTypes.includes('people:default')) {
+        result.data.push(countStat);
+      }
+      if (statTypes.includes('Directs') || statTypes.includes('people:default')) {
+        result.data.push({
+          name: 'Directs',
+          type: 'number',
+          value: groupUsers.filter(u => u.supervisor_id === matchedUser.oid).length,
+          all: !canReadPSStats ? undefined : Math.trunc(pdastats.all.avgDirectsCount * 100) / 100,
+          capability: cpStats.length > 0 ? Math.trunc((cpStats.reduce((s, c) => s + c.avgDirectsCount, 0) / cpStats.length) * 100) / 100 : undefined,
+          industry:
+            teamStats.length > 0 ? Math.trunc((teamStats.reduce((s, c) => s + c.avgDirectsCount, 0) / teamStats.length) * 100) / 100 : undefined,
+          account:
+            accountStats.length > 0
+              ? Math.trunc((accountStats.reduce((s, c) => s + c.avgDirectsCount, 0) / accountStats.length) * 100) / 100
+              : undefined,
+          craft: cfStats.length > 0 ? Math.trunc((cfStats.reduce((s, c) => s + c.avgDirectsCount, 0) / cfStats.length) * 100) / 100 : undefined,
+        });
+      }
+
+      if (statTypes.includes('Leverage') || statTypes.includes('people:default')) {
+        result.data.push({
+          name: 'Leverage',
+          type: 'group',
+          value: groupStats.cs_map,
+          all: !canReadPSStats ? undefined : pdastats.all.cs_map,
+          // capability: cpStats.cs_map,
+          // industry: teamStats.cs_map,
+          // account: accountStats.cs_map,
+          // craft: cfStats.cs_map,
+        });
+      }
+
+      if (statTypes.includes('FTE %') || statTypes.includes('people:default')) {
+        result.data.push({
+          name: 'FTE %',
+          type: 'percent',
+          value: groupStats.fteCount / groupUsers.length,
+          all: !canReadPSStats ? undefined : pdastats.all.fteCount / pdastats.all.totalCount,
+          capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.fteCount, 0) / countStat.capability : undefined,
+          industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.fteCount, 0) / countStat.industry : undefined,
+          account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.fteCount, 0) / countStat.account : undefined,
+          craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.fteCount, 0) / countStat.craft : undefined,
+        });
+      }
+
+      if (statTypes.includes('Diversity %') || statTypes.includes('people:default')) {
+        result.data.push({
+          name: 'Diversity %',
+          type: 'percent',
+          value: groupStats.diversityCount / groupUsers.length,
+          all: !canReadPSStats ? undefined : pdastats.all.diversityCount / pdastats.all.totalCount,
+          capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.capability : undefined,
+          industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.industry : undefined,
+          account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.account : undefined,
+          craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.diversityCount, 0) / countStat.craft : undefined,
+        });
+      }
+
+      if (statTypes.includes('PS Exp') || statTypes.includes('people:default')) {
+        result.data.push({
+          name: 'PS Exp',
+          type: 'number',
+          value: groupStats.totalExp / groupUsers.length,
+          all: !canReadPSStats ? undefined : pdastats.all.totalExp / pdastats.all.totalCount,
+          capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.totalExp, 0) / countStat.capability : undefined,
+          industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.totalExp, 0) / countStat.industry : undefined,
+          account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.totalExp, 0) / countStat.account : undefined,
+          craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.totalExp, 0) / countStat.craft : undefined,
+        });
+      }
+
+      if (statTypes.includes('TiT Exp') || statTypes.includes('people:default')) {
+        result.data.push({
+          name: 'TiT Exp',
+          type: 'number',
+          value: groupStats.titleExp / groupUsers.length,
+          all: !canReadPSStats ? undefined : pdastats.all.titleExp / pdastats.all.totalCount,
+          capability: countStat.capability > 0 ? cpStats.reduce((s, c) => s + c.titleExp, 0) / countStat.capability : undefined,
+          industry: countStat.industry > 0 ? teamStats.reduce((s, c) => s + c.titleExp, 0) / countStat.industry : undefined,
+          account: countStat.account > 0 ? accountStats.reduce((s, c) => s + c.titleExp, 0) / countStat.account : undefined,
+          craft: countStat.craft > 0 ? cfStats.reduce((s, c) => s + c.titleExp, 0) / countStat.craft : undefined,
+        });
+      }
+
       return result;
     } catch (ex) {
       console.error(ex);

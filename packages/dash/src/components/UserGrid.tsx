@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
-import { IUser, IUserData } from "sharedtypes";
+import { IConfigItem, IUser, IUserData } from "sharedtypes";
 import { Box, IconButton, MenuItem, Select } from "@mui/material";
 import { ColDef, ColumnVisibleEvent, SideBarDef, GetContextMenuItemsParams, MenuItemDef, ColGroupDef, IRowNode, IToolPanelParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { BasicUserCardTooltip } from "./BasicUserCard";
 import { RegionRenderer } from "./RegionRenderer";
 import 'ag-grid-enterprise';
-import { isDate, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { Typography } from '@mui/material';
 import { Stack } from '@mui/system';
 import { Avatar } from '@mui/material';
@@ -129,7 +129,7 @@ const DataPanel = (props: {usergroups?:string[]} & IToolPanelParams<IUser>) => {
     </Box>
   );
 }
-const standardColumns: ColDef<IUser>[] = [
+const standardColumns: ColDef[] = [
   { field: 'csid', enableRowGroup: false, tooltipField: 'csid', headerTooltip:'Career Settings ID'},
   { field: 'email', enableRowGroup: false, tooltipField: 'email', },
   { field: 'name', valueGetter: 'data.first_name + " " + data.last_name', enableRowGroup: false, colId: 'name', tooltipField: 'first_name', tooltipComponent: BasicUserCardTooltip },
@@ -146,7 +146,7 @@ const standardColumns: ColDef<IUser>[] = [
 export interface UserGridProps {
   users: IUser[];
   onColumnVisible?: (event: ColumnVisibleEvent<IUser>) => void;
-  datakeys?: string[];
+  datakeys?: {key:string, config:IConfigItem}[];
   usergroups?: string[];
 }
 
@@ -355,7 +355,8 @@ export function UserGrid(props: UserGridProps) {
       (window as any).users = props.users;
 
     const coldefs = [...standardColumns];
-    for(const key of props.datakeys) {
+    for(const datakey of props.datakeys) {
+      const key = datakey.key;
       const fparts = key.split(':');
       const kparts: string[] = fparts[0].split('-');
       const headerName = `${fparts[1]} (${kparts[0]})`;

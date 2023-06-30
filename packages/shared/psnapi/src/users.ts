@@ -1,6 +1,6 @@
 import useAxiosPrivate from "./useAxiosPrivate";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { APIResponse, IPermission, IStatsData, IUser, IUserData, IUserPAT } from "sharedtypes";
+import { APIResponse, IPermission, IStatsData, IUser, IUserData, IUserPAT, IConfigItem } from "sharedtypes";
 
 
 const USERAPI = '/api/users';
@@ -32,7 +32,7 @@ export const useAllDataKeys = () => {
   const keys = ['alldatakeys'];
   const query = useQuery(keys, async ()=>{
     const res = await axios.get(`${ADMINAPI}/datakeys`);
-    const result = res.data as APIResponse<string[]>;
+    const result = res.data as APIResponse<{key:string, config:IConfigItem}[]>;
     return result.data;
   },{
     enabled: !!axios,
@@ -141,13 +141,13 @@ export const useUserSnapshotDates = () => {
   return {...query, invalidateCache};
 }
 
-export const useUserDataKeys = () => {
+export const  useUserDataKeys = () => {
   const queryClient = useQueryClient();
   const axios = useAxiosPrivate();
   const keys = [CACHEKEY, 'datakeys'];
   const query = useQuery(keys, async ()=>{
     const res = await axios.get(`${USERAPI}/datakeys`);
-    const result = res.data as APIResponse<string[]>;
+    const result = res.data as APIResponse<{key:string, config:IConfigItem}[]>;
     return result.data;
   },{
     enabled: !!axios,

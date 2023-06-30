@@ -1,5 +1,5 @@
 import React, { ReactNode, useCallback } from 'react';
-import { Box, BoxProps, Card, CardContent, CardHeader, CircularProgress, CircularProgressProps, Paper, Tooltip, Typography } from "@mui/material";
+import { Box, BoxProps, Card, CardContent, CardHeader, CircularProgress, CircularProgressProps, IconButton, Paper, SxProps, Tooltip, Typography } from "@mui/material";
 import { Row } from "./RowColumn";
 import { styled } from '@mui/material/styles';
 import Badge from '@mui/material/Badge';
@@ -7,7 +7,7 @@ import Avatar from '@mui/material/Avatar';
 import Stack from '@mui/material/Stack';
 import { ResponsiveContainer, PieChart, Pie, Legend, Sector, Cell } from 'recharts';
 import Popover from '@mui/material/Popover';
-
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 
 const StyledBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
@@ -39,11 +39,12 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
 }));
 
 interface CommonStatWidgetProps {
-  sx?: BoxProps['sx'],
+  sx?: SxProps,
   elevation?: number,
   title?: string,
   size?: 'large'|'medium'|'small';
   onClick?: () => void;
+  onClose?: ()=> void;
 }
 interface StatContainerProps extends CommonStatWidgetProps {
   children: React.ReactNode,
@@ -53,12 +54,15 @@ export function StatContainer(props: StatContainerProps) {
   const [isMouseOver, setMouseOver] = React.useState(false);
 
   const size = props.size||'medium';
-  const sx = {minWidth:size!=='small'?128:undefined, minHeight: size!=='small'?168:undefined, background:'#fff', ...props.sx};
+  const sx: SxProps = {minWidth:size!=='small'?128:undefined, minHeight: size!=='small'?168:undefined, background:'#fff', ...props.sx, position: 'relative'};
   const elevation = props.elevation===undefined ? (size === 'small' ? 0 : 1) : props.elevation;
 
   return <Paper elevation={isMouseOver?elevation+4:elevation} sx={sx}
     onMouseOver={()=>setMouseOver(true)}
     onMouseOut={()=>setMouseOver(false)}>
+      {(isMouseOver && props.onClose) ? <IconButton aria-label="close" sx={{position:'absolute', top:0, right:0}} onClick={props.onClose} size='small'>
+        <HighlightOffIcon/>
+      </IconButton> : null}
     {props.children}
   </Paper>
 }
@@ -94,7 +98,7 @@ export const StatWidget: React.FC<StatWidgetProps> = (props) => {
     setAnchorEl(null);
   };
 
-  return <StatContainer sx={props.sx} elevation={props.elevation} size={size}>
+  return <StatContainer sx={props.sx} elevation={props.elevation} size={size} onClose={props.onClose}>
     <Box
       sx={{display:'flex', flexDirection:'column', justifyContent:'space-between', height:'100%'}}
       onClick={handleOpenPopover}
@@ -373,7 +377,7 @@ export const PieStatWidget: React.FC<PieStatWidgetProps> = (props) => {
             outerRadius={25}
             onMouseEnter={onPieEnter}
           >
-             {props.value.map((entry, index) => (
+            {props.value.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>

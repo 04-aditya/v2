@@ -20,7 +20,7 @@ export const useStatTypes = () => {
     staleTime:  5 * 60 * 1000 // 5 minute
   });
   const mutation = useMutation(async (stat: IStatType) => {
-    const res = await axios.post(`${STATSAPI}/types`, stat);
+    const res = await axios.post(`${STATSAPI}/types/${stat.id??''}`, stat);
     const output = res.data as APIResponse<IStatType>;
     return output.data;
   });

@@ -2,8 +2,8 @@ import { Alert, Box, Grid, IconButton, Snackbar, Stack, Typography } from '@mui/
 import ReactMarkdown from 'react-markdown';
 import gfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { coy, okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { useEffect, useState } from 'react';
+import { coy, okaidia, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useEffect, useMemo, useState } from 'react';
 import { useTheme as useThemeMode } from 'sharedui/theme';
 import rehypeRaw from "rehype-raw";
 import rehypeColorChips from 'rehype-color-chips';
@@ -32,6 +32,10 @@ function CodeContent(args: any) {
   const showSnackbar = (msg: string)=>{
     setSnackbarMessage(msg);
   }
+
+  const codeStyle = useMemo(()=>{
+    return mode === 'dark' ? okaidia : oneDark//coy
+  },[mode]);
 
   useEffect(() => {
     if (className === 'language-mermaid' && !partial) {
@@ -84,7 +88,7 @@ function CodeContent(args: any) {
         {showImage?<div dangerouslySetInnerHTML={{ __html: svg }} />:<SyntaxHighlighter
           {...props}
           children={String(children).replace(/\n$/, '')}
-          style={mode === 'dark' ? okaidia : coy}
+          style={codeStyle}
           language={'mermaid'}
           PreTag="div" />}
       </Box>
@@ -122,7 +126,7 @@ function CodeContent(args: any) {
       <SyntaxHighlighter
         {...props}
         children={String(children).replace(/\n$/, '')}
-        style={mode === 'dark' ? okaidia : coy}
+        style={codeStyle}
         language={match[1]}
         PreTag="div" />
       <Stack direction={'row'} spacing={1} alignItems={'center'} justifyContent={'space-between'}

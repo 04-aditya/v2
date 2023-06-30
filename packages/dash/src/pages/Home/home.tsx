@@ -32,17 +32,18 @@ export function Home(props: HomeProps) {
           PS Next (Our data driven future...)
         </Typography>
       </Row>
-      <AddWidget
-        apiKey={auth.auth.accessToken ? auth.auth.accessToken : ''}
-        apiurl={process.env['NX_API_URL'] || ''}
-        filters={{
-          maxDate: new Date().toISOString(),
-          minDate: '2000-12-31T05:30:00.000Z',
-          usergroups: 'org:Team',
-        }}
-        id="AW1"
-      />
-      {/* <Typography variant="h1" component="div" gutterBottom>
+      {/*
+        <AddWidget
+          apiKey={auth.auth.accessToken ? auth.auth.accessToken : ''}
+          apiurl={process.env['NX_API_URL']||''}
+          filters={{
+            maxDate: new Date().toISOString(),
+            minDate: '2000-12-31T05:30:00.000Z',
+            usergroups: 'org:Team',
+          }}
+          id="AW1"
+          />
+        <Typography variant="h1" component="div" gutterBottom>
           h1. Heading
         </Typography>
         <Typography variant="h2" gutterBottom component="div">

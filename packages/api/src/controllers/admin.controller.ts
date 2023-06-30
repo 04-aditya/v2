@@ -1,7 +1,7 @@
 import Excel from 'exceljs';
 import { logger } from '@/utils/logger';
 import { AppDataSource } from '@/databases';
-import { IUser, APIResponse } from '@sharedtypes';
+import { IUser, APIResponse, IConfigItem, ConfigType } from '@sharedtypes';
 import { UserEntity } from '@/entities/user.entity';
 import { OpenAPI } from 'routing-controllers-openapi';
 import AsyncTask, { updateFn } from '@/utils/asyncTask';
@@ -12,7 +12,22 @@ import { UserDataEntity } from '@/entities/userdata.entity';
 import { RequestWithUser } from '@/interfaces/auth.interface';
 import { UserGroupEntity } from '@/entities/usergroup.entity';
 import { format, parse as parseDate, addYears } from 'date-fns';
-import { Get, Post, UseBefore, JsonController, Authorized, CurrentUser, BodyParam, UploadedFile, Req, QueryParam, Param } from 'routing-controllers';
+import {
+  Get,
+  Post,
+  UseBefore,
+  JsonController,
+  Authorized,
+  CurrentUser,
+  BodyParam,
+  UploadedFile,
+  Req,
+  QueryParam,
+  Param,
+  Delete,
+  HttpError,
+} from 'routing-controllers';
+import { ConfigEntity } from '@/entities/config.entity';
 
 @JsonController('/api/admin')
 @UseBefore(authMiddleware)
@@ -46,12 +61,68 @@ export class AdminController {
     return result;
   }
 
+  @Get('/config')
+  @OpenAPI({ summary: 'Return config items' })
+  @Authorized(['user.read.all.all'])
+  async getConfig() {
+    const result = new APIResponse<IConfigItem>();
+    const data = await AppDataSource.getRepository(ConfigEntity).find();
+    result.data = data.map(d => d.toJSON());
+    return result;
+  }
+
+  @Post('/config/')
+  @OpenAPI({ summary: 'create a config item' })
+  @Authorized(['user.write.all.all'])
+  async createConfigItem(
+    @BodyParam('name') name?: string,
+    @BodyParam('type') type?: ConfigType,
+    @BodyParam('details') details?: Record<string, any>,
+  ) {
+    const result = new APIResponse<IConfigItem>();
+    const data = new ConfigEntity();
+    if (name) data.name = name;
+    if (type) data.type = type;
+    if (details) data.details = details;
+    await data.save();
+    result.data = data.toJSON();
+    return result;
+  }
+
+  @Post('/config/:id')
+  @OpenAPI({ summary: 'Update config item' })
+  @Authorized(['user.write.all.all'])
+  async updateConfig(
+    @Param('id') id: number,
+    @BodyParam('name') name?: string,
+    @BodyParam('type') type?: string,
+    @BodyParam('details') details?: Record<string, any>,
+  ) {
+    const result = new APIResponse<IConfigItem>();
+    const data = await AppDataSource.getRepository(ConfigEntity).findOne({
+      where: {
+        id,
+      },
+    });
+    if (!data) {
+      throw new HttpException(404, 'Invalid id: ' + id);
+    }
+    if (name) data.name = name;
+    if (type) data.type = type as ConfigType;
+    if (details) data.details = details;
+    await data.save();
+    result.data = data.toJSON();
+    return result;
+  }
+
   @Get('/datakeys')
   @OpenAPI({ summary: 'Get all allowed keys for user data' })
   async getDataKeys() {
-    const result = new APIResponse<string[]>();
-    const data = await AppDataSource.query(`SELECT distinct(key) FROM psuserdata WHERE key LIKE 's-%' OR key LIKE 'c-%' OR key LIKE 'u-%';`);
-    result.data = data.map((d: any) => d.key) as string[];
+    const result = new APIResponse<{ key: string; config: IConfigItem }[]>();
+    const data = await AppDataSource.query(
+      `SELECT distinct(key), c.id as id, c.name as name, c.type as type, c.details as details FROM psuserdata INNER JOIN config c on c.name=psuserdata.key  WHERE key LIKE 's-%' OR key LIKE 'c-%' OR key LIKE 'u-%';`,
+    );
+    result.data = data.map((d: any) => ({ key: d.key, config: { id: d.id, name: d.name, type: d.type, details: d.details } }));
     return result;
   }
 
@@ -79,6 +150,16 @@ export class AdminController {
     res = await AppDataSource.query(`DELETE FROM psuserdata where key=$1`, [value + ':old']);
     logger.debug(`Deleted ${res} old records with key ${value}`);
     logger.debug(res);
+    return { message: 'ok' };
+  }
+
+  @Delete('/datakeys/:key')
+  @OpenAPI({ summary: 'Delete user data identified by `key` for all users' })
+  @Authorized(['user.write.all.all'])
+  async deleteDataKeys(@Param('key') key: string) {
+    //delete records
+    const res = await AppDataSource.query(`Delete from psuserdata WHERE key = $1`, [key]);
+    logger.warn(`deleted ${res} records with key ${key}`);
     return { message: 'ok' };
   }
 
