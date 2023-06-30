@@ -141,7 +141,7 @@ const AppLayout = () => {
         </section>
       </div>
       <footer style={{ position: 'fixed', bottom: 0, right: 3 }}>
-        <Typography variant="subtitle2" color="secondary">
+        <Typography variant="subtitle2" color="primary">
           Built on <em>{process.env['NX_BUILD_DATE']}</em>&nbsp; &nbsp; Version:{' '}
           <em>{process.env['NX_BUILD_VERSION']}</em>
         </Typography>{' '}
@@ -188,7 +188,7 @@ function NotificationIcon() {
         aria-haspopup="true"
         aria-expanded={open ? 'true' : undefined}
       >
-        <Badge badgeContent={unreadCount} color="primary">
+        <Badge badgeContent={unreadCount} color="secondary">
           {busy ? (
             <CircularProgress
               sx={{
@@ -310,7 +310,7 @@ function MenuEntry({
         borderRadius: '5px',
         color: window.location.pathname.endsWith(path) ? 'black' : 'white',
         backgroundColor: window.location.pathname.endsWith(path)
-          ? theme.palette.primary.main
+          ? theme.palette.secondary.main
           : 'transparent',
         '&:hover': {
           backgroundColor: 'grey',
