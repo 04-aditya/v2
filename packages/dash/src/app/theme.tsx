@@ -2,13 +2,15 @@ import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
 let theme = createTheme({
   typography: {
-    fontSize: 14
+    fontSize: 14,
   },
   palette: {
     primary: {
-      main: '#079fff',
+      main: 'rgb(49, 49, 49)',
+      // main: '#fe414d',
     },
     secondary: {
+      // main: '#079fff',
       main: '#fe414d',
     },
     success: {
@@ -17,14 +19,14 @@ let theme = createTheme({
     warning: {
       main: '#ffe63b',
     },
-    text:{
+    text: {
       primary: 'rgba(58, 53, 65, 0.87)',
     },
     divider: '#e0e0e0',
-    background:{
+    background: {
       paper: '#fff',
       default: '#EEEEEE', //'#F4F5FA',
-    }
+    },
   },
 });
 theme = responsiveFontSizes(theme);

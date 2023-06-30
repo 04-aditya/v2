@@ -22,28 +22,27 @@ export function Home(props: HomeProps) {
   return (
     <div className={styles['container']}>
       <Outlet />
-      <Container>
-        <Row justifyContent={'center'}>
-          <Typography variant="h1" component="div" gutterBottom>
-            Welcome
-          </Typography>
-        </Row>
-        <Row justifyContent={'center'}>
-          <Typography variant="h4" gutterBottom component="div">
-            PS Next (Our data driven future...)
-          </Typography>
-        </Row>
-        <AddWidget
-          apiKey={auth.auth.accessToken ? auth.auth.accessToken : ''}
-          apiurl={process.env['NX_API_URL']||''}
-          filters={{
-            maxDate: new Date().toISOString(),
-            minDate: '2000-12-31T05:30:00.000Z',
-            usergroups: 'org:Team',
-          }}
-          id="AW1"
-        />
-        {/* <Typography variant="h1" component="div" gutterBottom>
+      <Row justifyContent={'center'}>
+        <Typography variant="h1" component="div" gutterBottom>
+          Welcome
+        </Typography>
+      </Row>
+      <Row justifyContent={'center'}>
+        <Typography variant="h4" gutterBottom component="div">
+          PS Next (Our data driven future...)
+        </Typography>
+      </Row>
+      <AddWidget
+        apiKey={auth.auth.accessToken ? auth.auth.accessToken : ''}
+        apiurl={process.env['NX_API_URL'] || ''}
+        filters={{
+          maxDate: new Date().toISOString(),
+          minDate: '2000-12-31T05:30:00.000Z',
+          usergroups: 'org:Team',
+        }}
+        id="AW1"
+      />
+      {/* <Typography variant="h1" component="div" gutterBottom>
           h1. Heading
         </Typography>
         <Typography variant="h2" gutterBottom component="div">
@@ -90,7 +89,6 @@ export function Home(props: HomeProps) {
         <Typography variant="overline" display="block" gutterBottom>
           overline text
         </Typography> */}
-      </Container>
     </div>
   );
 }

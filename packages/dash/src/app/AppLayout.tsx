@@ -43,20 +43,20 @@ import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import useAuth from 'psnapi/useAuth';
-import logo4light from 'sharedui/assets/PS_Logo_RGB_light.png';
+import logo4dark from 'sharedui/assets/PS_Logo_RGB_dark.png';
 
 interface AppBarProps extends MuiAppBarProps {
   open?: boolean;
 }
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== 'open',
 })<AppBarProps>(({ theme, open }) => ({
   zIndex: theme.zIndex.drawer + 1,
   position: 'fixed',
-  background: 'white', //alpha(theme.palette.background.paper, 0.3),
+  background: 'rgb(49, 49, 49)', //alpha(theme.palette.background.paper, 0.3),
   transition: theme.transitions.create(['width', 'margin'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
@@ -78,8 +78,8 @@ const Drawer = styled(MuiDrawer, {
     position: 'fixed',
     whiteSpace: 'nowrap',
     width: drawerWidth,
-    borderWidth: 0,
-    background: 'white',
+    border: 'none',
+    background: 'rgb(49, 49, 49)',
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
@@ -93,7 +93,7 @@ const Drawer = styled(MuiDrawer, {
       }),
       width: theme.spacing(7),
       [theme.breakpoints.up('sm')]: {
-        width: theme.spacing(9),
+        width: theme.spacing(8.5),
       },
     }),
   },
@@ -101,7 +101,6 @@ const Drawer = styled(MuiDrawer, {
 
 const AppLayout = () => {
   const [open, setOpen] = React.useState(false);
-  const toggleDrawer = () => setOpen(!open);
   const { auth } = useAuth();
 
   const isAdmin = useMemo(() => {
@@ -114,16 +113,10 @@ const AppLayout = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
 
-      <AppBar position="absolute" open={open} elevation={0}>
-        <Toolbar
-          sx={
-            {
-              //ml:(open?-2:7), pr: '24px', // keep right padding when drawer closed
-            }
-          }
-        >
-          <Box sx={{ pr: 2, pt: 1 }}>
-            <img src={logo4light} height={'32px'} alt="publicis sapient logo" />
+      <AppBar position="absolute" open={open} elevation={3}>
+        <Toolbar>
+          <Box sx={{ pr: 2, pt: 1, flexGrow: 1 }}>
+            <img src={logo4dark} height={'32px'} alt="publicis sapient logo" />
           </Box>
           <Title />
           <NotificationIcon />
@@ -131,7 +124,7 @@ const AppLayout = () => {
       </AppBar>
       <div
         id="content"
-        style={{ display: 'flex', flexWrap: 'wrap', marginLeft: '70px' }}
+        style={{ display: 'flex', flexWrap: 'wrap', marginLeft: '67px' }}
       >
         <Drawer
           variant="permanent"
@@ -147,8 +140,8 @@ const AppLayout = () => {
           <Outlet />
         </section>
       </div>
-      <footer>
-        <Typography variant="subtitle2" sx={{ color: '#555' }}>
+      <footer style={{ position: 'fixed', bottom: 0, right: 3 }}>
+        <Typography variant="subtitle2" color="secondary">
           Built on <em>{process.env['NX_BUILD_DATE']}</em>&nbsp; &nbsp; Version:{' '}
           <em>{process.env['NX_BUILD_VERSION']}</em>
         </Typography>{' '}
@@ -164,7 +157,7 @@ function Title() {
     <Typography
       component="h1"
       variant="h6"
-      color={theme.palette.primary.dark}
+      color="white"
       noWrap
       sx={{ flexGrow: 1 }}
     >
@@ -190,13 +183,12 @@ function NotificationIcon() {
   return (
     <React.Fragment>
       <IconButton
-        color="inherit"
         onClick={handleClick}
         aria-controls={open ? 'notifications-menu' : undefined}
         aria-haspopup="true"
         aria-expanded={open ? 'true' : undefined}
       >
-        <Badge badgeContent={unreadCount} color="secondary">
+        <Badge badgeContent={unreadCount} color="primary">
           {busy ? (
             <CircularProgress
               sx={{
@@ -207,7 +199,7 @@ function NotificationIcon() {
               }}
             />
           ) : null}
-          <NotificationsIcon color="inherit" />
+          <NotificationsIcon sx={{ color: 'white' }} />
         </Badge>
       </IconButton>
       <Menu
@@ -309,8 +301,29 @@ function MenuEntry({
   icon: React.ReactNode;
 }) {
   return (
-    <ListItemButton component={Link} to={path}>
-      <ListItemIcon sx={{ color: 'inherit' }}>{icon}</ListItemIcon>
+    <ListItemButton
+      component={Link}
+      to={path}
+      sx={{
+        justifyContent: 'initial',
+        margin: '7.5px',
+        borderRadius: '5px',
+        color: window.location.pathname.endsWith(path) ? 'black' : 'white',
+        backgroundColor: window.location.pathname.endsWith(path)
+          ? theme.palette.primary.main
+          : 'transparent',
+        '&:hover': {
+          backgroundColor: 'grey',
+        },
+      }}
+    >
+      <ListItemIcon
+        sx={{
+          color: window.location.pathname.endsWith(path) ? 'black' : 'white',
+        }}
+      >
+        {icon}
+      </ListItemIcon>
       <ListItemText primary={text} />
     </ListItemButton>
   );
