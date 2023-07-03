@@ -94,36 +94,44 @@ export interface IStatType {
 // }
 export class StatsHelper {
   static extractData(jp: any, rawdata: any, expression: string, filter?: string) {
-    const data = new Array<any>();
-    let datasample: any;
-    rawdata.forEach((u:any) => {
-      const v=jp.query([u], expression);
-      if (v[0] && datasample===undefined) {
-        datasample = v[0];
-      }
-      if (filter && filter.trim() !== '') {
-        if (filter.startsWith('!')) {
-          if (filter==='!blank'){
-            if (v[0]) data.push({data:v[0], raw:u});
+    const dataset = new Array<any>();
+
+    const colexps = expression.split(',')
+    colexps.forEach(exp=>{
+      const data = new Array<any>();
+      let datasample: any;
+      rawdata.forEach((u: any) => {
+        const v=jp.query([u], exp);
+        if (v[0] && datasample===undefined) {
+          datasample = v[0];
+        }
+        if (filter && filter.trim() !== '') {
+          if (filter.startsWith('!')) {
+            if (filter==='!blank'){
+              if (v[0]) data.push({data:v[0], raw:u});
+              return;
+            }
+            if (v[0] !== filter.substring(1)) data.push({data:v[0], raw:u});
+          }
+          else if (filter==='blank') {
+            if (!v[0]) data.push({data:v[0], raw:u});
             return;
           }
-          if (v[0] !== filter.substring(1)) data.push({data:v[0], raw:u});
-        }
-        else if (filter==='blank') {
-          if (!v[0]) data.push({data:v[0], raw:u});
-          return;
-        }
-        else if (v[0] === filter) {
+          else if (v[0] === filter) {
+            data.push({data:v[0], raw:u});
+          }
+        } else {
           data.push({data:v[0], raw:u});
         }
-      } else {
-        data.push({data:v[0], raw:u})
-      }
+      });
+      dataset.push({data, datasample})
     });
-    return {data, datasample};
+    return dataset;
   }
 
-  static calculateAgg(statAgg: string, data: any[], datasample: any, rawdata: any[]) {
+  static calculateAgg(statAgg: string, dataset:Array<{data:Array<any>, datasample:any}>, rawdata: any[]) {
+    const data = dataset[0].data;
+    const datasample = dataset[0].datasample;
     const datatype = typeof datasample;
     console.log(datatype);
     console.log(data.length);

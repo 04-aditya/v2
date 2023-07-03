@@ -1,4 +1,4 @@
-import { Box, Button, CircularProgress, Divider, FormControl, FormControlLabel, FormHelperText, Grid, Input, InputLabel, LinearProgress, MenuItem, Select, SelectChangeEvent, Tab, Tabs, TextField, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Divider, FormControl, FormControlLabel, FormHelperText, Grid, Input, InputLabel, LinearProgress, MenuItem, OutlinedInput, Select, SelectChangeEvent, Tab, Tabs, TextField, Typography } from '@mui/material'
 import * as React from 'react'
 import { PageHeader } from 'sharedui/components/PageHeader';
 import { PageContainer } from 'sharedui/components/PageContainer';
@@ -125,8 +125,8 @@ function StatEditor(props: {value?:IStatType, onChange:(newValue:IStatType)=>voi
       colDefs.push({headerName:'user', valueGetter:p=>p.data?.raw.email,filter: 'agTextColumnFilter'})
       // const ast = esprima.parseScript(statExp).body[0].expression;
       // evaluate(ast,{})
-      const {data, datasample} = StatsHelper.extractData(jp, users, statExp, statFilter);
-      const aggregatedValue = StatsHelper.calculateAgg(statAgg, data, datasample, users);
+      const dataset = StatsHelper.extractData(jp, users, statExp, statFilter);
+      const aggregatedValue = StatsHelper.calculateAgg(statAgg, dataset, users);
       setComputedValues({value: aggregatedValue});
       // console.log(data);
       // const datatype = typeof datasample;
@@ -163,6 +163,7 @@ function StatEditor(props: {value?:IStatType, onChange:(newValue:IStatType)=>voi
       //       setComputedValues({value: Math.max(...data)});
       //     }
       //   }
+      const {data, datasample} = dataset[0];
       if (typeof datasample === 'object') {
         const keys = Object.keys(datasample)
         console.log(keys);
@@ -244,7 +245,7 @@ function StatEditor(props: {value?:IStatType, onChange:(newValue:IStatType)=>voi
     <Grid container spacing={1} sx={{ mt: 1 }}>
       <Grid item xs={6}>
         <Stack spacing={1} sx={{ mt: 1 }} direction={'column'}>
-          <Select
+          <Select multiple
             label="Additional Data Keys"
             value={statDataKeys}
             onChange={handleStatDataKeysChange} >
@@ -279,10 +280,12 @@ function StatEditor(props: {value?:IStatType, onChange:(newValue:IStatType)=>voi
           <TextField id="stat-filter-input"
               fullWidth size="small"
               label="Filter"
+              defaultValue="!blank"
               value={statFilter}
               onChange={handleStatFilterChange} />
           <Select
             label="Aggregation"
+            input={<OutlinedInput label="Aggregation" />}
             value={statAgg||'count'}
             onChange={handleStatAggChange} >
             <MenuItem value={'count'}>Count</MenuItem>
@@ -297,6 +300,7 @@ function StatEditor(props: {value?:IStatType, onChange:(newValue:IStatType)=>voi
           <TextField fullWidth size="small"
             id="stat-desc-input"
             label="Description"
+            defaultValue={''}
             multiline
             rows={3}
             value={statDesc}
@@ -315,12 +319,15 @@ function StatEditor(props: {value?:IStatType, onChange:(newValue:IStatType)=>voi
         </Tabs>
         <TabPanel value={tabValue} index={0} idprefix={'info'}>
           <ButtonPopover buttonContent={'Fields'}>
-            <Typography variant='h6'>Fields</Typography>
-            <Box>
-              {fieldList.map(f=><Grid container>
-                <Grid item xs={6}>{f.name}</Grid>
-                <Grid item xs={6}>{f.expression}</Grid>
-              </Grid>)}
+            <Box sx={{p:1}}>
+              <Typography variant='h6'>Fields</Typography>
+              <hr/>
+              <Box>
+                {fieldList.map(f=><Grid container sx={{p:1}}>
+                  <Grid item xs={6}>{f.name}</Grid>
+                  <Grid item xs={6}><strong>{f.expression}</strong></Grid>
+                </Grid>)}
+              </Box>
             </Box>
           </ButtonPopover>
           <Typography variant='h6'>Computed Value</Typography>

@@ -175,9 +175,9 @@ export class AuthController {
     const newRefreshToken = foundUser.createRefeshToken();
 
     // Save accessToken to the user list
-    foundUser.accessTokens = [...(foundUser.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
+    foundUser.accessTokens = accessToken + ''; // [...(foundUser.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
     // Saving refreshToken with current user
-    foundUser.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
+    foundUser.refreshTokens = newRefreshToken + ''; // [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
     await foundUser.save();
     //check and update adtokens asyncronoursly as needed
     checkADTokens(foundUser);
@@ -199,74 +199,74 @@ export class AuthController {
     };
   }
 
-  @Post('/gettoken')
-  async gettoken(
-    @BodyParam('email') emailValue: String,
-    @BodyParam('code') codeValue: String,
-    @Res() res: Response,
-    @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string,
-  ) {
-    const email = emailValue.toLocaleLowerCase().trim();
-    const code = codeValue.trim();
-    const userRepo = AppDataSource.getRepository(UserEntity);
+  // @Post('/gettoken')
+  // async gettoken(
+  //   @BodyParam('email') emailValue: String,
+  //   @BodyParam('code') codeValue: String,
+  //   @Res() res: Response,
+  //   @CookieParam(REFRESHTOKENCOOKIE) cjwt?: string,
+  // ) {
+  //   const email = emailValue.toLocaleLowerCase().trim();
+  //   const code = codeValue.trim();
+  //   const userRepo = AppDataSource.getRepository(UserEntity);
 
-    const user = await userRepo.findOne({ where: { email }, relations: { roles: true } });
+  //   const user = await userRepo.findOne({ where: { email }, relations: { roles: true } });
 
-    if (user === null) {
-      throw new ForbiddenError('Invalid email or code');
-    }
+  //   if (user === null) {
+  //     throw new ForbiddenError('Invalid email or code');
+  //   }
 
-    const isValid = await user.validateCode(code);
+  //   const isValid = await user.validateCode(code);
 
-    if (!isValid) {
-      throw new ForbiddenError('Invalid email or code');
-    }
+  //   if (!isValid) {
+  //     throw new ForbiddenError('Invalid email or code');
+  //   }
 
-    await user.setCode(generateCODE(6)); // reset the code
+  //   await user.setCode(generateCODE(6)); // reset the code
 
-    // create JWTs
-    const accessToken = user.createAccessToken();
-    const newRefreshToken = user.createRefeshToken();
+  //   // create JWTs
+  //   const accessToken = user.createAccessToken();
+  //   const newRefreshToken = user.createRefeshToken();
 
-    const existingTokens = (user.refreshTokens || '').split(',');
-    let newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
+  //   const existingTokens = (user.refreshTokens || '').split(',');
+  //   let newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
 
-    if (cjwt) {
-      /*
-      Scenario added here:
-          1) User logs in but never uses RT and does not logout
-          2) RT is stolen
-          3) If 1 & 2, reuse detection is needed to clear all RTs when user logs in
-      */
-      const foundToken = await userRepo.findOne({ where: { refreshTokens: Like(`%${cjwt}%`) } });
+  //   if (cjwt) {
+  //     /*
+  //     Scenario added here:
+  //         1) User logs in but never uses RT and does not logout
+  //         2) RT is stolen
+  //         3) If 1 & 2, reuse detection is needed to clear all RTs when user logs in
+  //     */
+  //     const foundToken = await userRepo.findOne({ where: { refreshTokens: Like(`%${cjwt}%`) } });
 
-      // Detected refresh token reuse!
-      if (!foundToken) {
-        // clear out ALL previous refresh tokens
-        newRefreshTokenArray = [];
-      }
-      res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
-    }
+  //     // Detected refresh token reuse!
+  //     if (!foundToken) {
+  //       // clear out ALL previous refresh tokens
+  //       newRefreshTokenArray = [];
+  //     }
+  //     res.clearCookie(REFRESHTOKENCOOKIE, { httpOnly: true, sameSite: 'none', secure: true });
+  //   }
 
-    // Save accessToken to the user list
-    user.accessTokens = [...(user.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
-    // Saving refreshToken with current user
-    user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
-    await UserDataEntity.Add(user.id, 's-:login', { value: new Date().toISOString() }, new Date());
-    await user.save();
-    // Creates Secure Cookie with refresh token
-    res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });
+  //   // Save accessToken to the user list
+  //   user.accessTokens = [...(user.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
+  //   // Saving refreshToken with current user
+  //   user.refreshTokens = [...newRefreshTokenArray, newRefreshToken].filter(t => t).join(',');
+  //   await UserDataEntity.Add(user.id, 's-:login', { value: new Date().toISOString() }, new Date());
+  //   await user.save();
+  //   // Creates Secure Cookie with refresh token
+  //   res.cookie(REFRESHTOKENCOOKIE, newRefreshToken, { httpOnly: true, secure: true, sameSite: 'none', domain: DOMAIN, maxAge: 24 * 60 * 60 * 1000 });
 
-    const roleMap = new Map<string, IUserRole>();
-    for await (const role of user.roles) {
-      roleMap.set(role.name, { id: role.id, name: role.name, permissions: role.permissions });
-      const includedRoles = await role.loadChildren();
-      includedRoles.forEach(prole => {
-        roleMap.set(prole.name, { id: prole.id, name: prole.name, permissions: prole.permissions });
-      });
-    }
-    return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
-  }
+  //   const roleMap = new Map<string, IUserRole>();
+  //   for await (const role of user.roles) {
+  //     roleMap.set(role.name, { id: role.id, name: role.name, permissions: role.permissions });
+  //     const includedRoles = await role.loadChildren();
+  //     includedRoles.forEach(prole => {
+  //       roleMap.set(prole.name, { id: prole.id, name: prole.name, permissions: prole.permissions });
+  //     });
+  //   }
+  //   return { accessToken, user: { id: user.id, email: user.email, roles: Array.from(roleMap.values()).map(r => ({ id: r.id, name: r.name })) } };
+  // }
 
   @Get('/logout')
   @UseBefore(authMiddleware)
@@ -500,9 +500,9 @@ export class AuthController {
       // const newRefreshTokenArray = !cjwt ? existingTokens : existingTokens.filter(rt => rt !== cjwt);
 
       // Saving accessTokens with current user
-      user.accessTokens = [...(user.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
+      user.accessTokens = accessToken; // [...(user.accessTokens || '').split(','), accessToken].filter(t => t).join(',');
       // Saving refreshToken with current user
-      user.refreshTokens = [...existingTokens, newRefreshToken].filter(t => t).join(',');
+      user.refreshTokens = newRefreshToken; // [...existingTokens, newRefreshToken].filter(t => t).join(',');
       await UserDataEntity.Add(user.id, 's-:login', { value: new Date().toISOString() }, new Date());
       await user.save();
 
@@ -565,29 +565,35 @@ export async function checkADTokens(user: UserEntity) {
 }
 
 export async function refreshADTokens(adtokens: any) {
-  if (!OAuthConfig) {
-    await getOAuthConfig();
-  }
-  const scopes = [...OAuthConfig.scopes_supported].join('%20');
-  const tokenResponse = await axios.post(
-    `${OAuthConfig.token_endpoint}`,
-    qs.stringify({
-      client_id: CLID,
-      grant_type: 'refresh_token',
-      scope: scopes,
-      refresh_token: adtokens.refresh_token,
-      // client_secret: CLIS,
-    }),
-  );
+  try {
+    if (!OAuthConfig) {
+      await getOAuthConfig();
+    }
+    const scopes = [...OAuthConfig.scopes_supported].join('%20');
+    const tokenResponse = await axios.post(
+      `${OAuthConfig.token_endpoint}`,
+      qs.stringify({
+        client_id: CLID,
+        grant_type: 'refresh_token',
+        scope: scopes,
+        refresh_token: adtokens.refresh_token,
+        // client_secret: CLIS,
+      }),
+    );
 
-  if (tokenResponse.status !== 200) {
-    logger.error({ status: tokenResponse.status, data: tokenResponse.data });
-    throw new Error('Invalid response from the token endpoint.');
-  }
+    if (tokenResponse.status !== 200) {
+      logger.error({ status: tokenResponse.status, data: tokenResponse.data });
+      throw new Error('Invalid response from the token endpoint.');
+    }
 
-  const tokenData = tokenResponse.data;
-  logger.debug(tokenResponse.data);
-  return tokenData;
+    const tokenData = tokenResponse.data;
+    logger.debug(tokenResponse.data);
+    return tokenData;
+  } catch (ex) {
+    logger.error('Unable to refresh AD Tokens');
+    logger.error(ex);
+  }
+  return '';
 }
 
 export async function getOAuthConfig() {
